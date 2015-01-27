@@ -14,7 +14,7 @@ func TestDriverSanity(t *testing.T) {
 	log.Println("Handler sanity test passed")
 }
 
-func TestDigitalOcean(t *testing.T) {
+func xTestDigitalOcean(t *testing.T) {
 	resourceId := "DO-" + strconv.FormatInt(time.Now().Unix(), 10)
 	digOceanHost := &api.PhysicalHost{
 		AccessToken: "",

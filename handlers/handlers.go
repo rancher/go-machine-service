@@ -21,6 +21,13 @@ func CreateMachine(event *events.Event, replyHandler events.ReplyEventHandler, a
 	log.Printf("Creating machine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
 	physHost, err := apiClient.GetPhysicalHost(event.ResourceId)
+
+	if physHost.Kind != "machineHost" {
+		replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
+		replyHandler(replyEvent)
+		return nil
+	}
+
 	if err != nil {
 		return err
 	}
@@ -79,6 +86,13 @@ func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	if err != nil {
 		return err
 	}
+
+	if physHost.Kind != "machineHost" {
+		replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
+		replyHandler(replyEvent)
+		return nil
+	}
+
 	name := convertToName(physHost.ExternalId)
 
 	client, err := utils.GetDockerClient(name)
@@ -243,79 +257,34 @@ func PingNoOp(event *events.Event, handler events.ReplyEventHandler, apiClient a
 
 func buildMachineCreateCmd(name string, physHost *api.PhysicalHost) ([]string, error) {
 	// TODO Quick and dirty. Refactor to use reflection and maps
+	// TODO Write a separate test for this function
 	cmd := []string{"create", "-d"}
 
-	switch physHost.Kind {
-	case "digitalOceanHost":
+	switch strings.ToLower(physHost.Driver) {
+	case "digitalocean":
 		cmd = append(cmd, "digitalocean")
-		if physHost.Image != "" {
-			cmd = append(cmd, "--digitalocean-image", physHost.Image)
+		if img, ok := physHost.DigitaloceanConfig["image"]; ok && img != "" {
+			cmd = append(cmd, "--digitalocean-image", img.(string))
 		}
-		if physHost.Size != "" {
-			cmd = append(cmd, "--digitalocean-size", physHost.Size)
+		if size, ok := physHost.DigitaloceanConfig["size"]; ok && size != "" {
+			cmd = append(cmd, "--digitalocean-size", size.(string))
 		}
-		if physHost.Region != "" {
-			cmd = append(cmd, "--digitalocean-region", physHost.Region)
+		if region, ok := physHost.DigitaloceanConfig["region"]; ok && region != "" {
+			cmd = append(cmd, "--digitalocean-region", region.(string))
 		}
-		if physHost.AccessToken != "" {
-			cmd = append(cmd, "--digitalocean-access-token", physHost.AccessToken)
+		if accessToken, ok := physHost.DigitaloceanConfig["accessToken"]; ok && accessToken != "" {
+			cmd = append(cmd, "--digitalocean-access-token", accessToken.(string))
 		}
-	case "googleHost":
-		cmd = append(cmd, "google")
-		if physHost.MachineType != "" {
-			cmd = append(cmd, "--google-machine-type", physHost.MachineType)
-		}
-		if physHost.Project != "" {
-			cmd = append(cmd, "--google-project", physHost.Project)
-		}
-		if physHost.Username != "" {
-			cmd = append(cmd, "--google-username", physHost.Username)
-		}
-		if physHost.Zone != "" {
-			cmd = append(cmd, "--google-zone", physHost.Zone)
-		}
-	case "virtualBoxHost":
+	case "virtualbox":
 		cmd = append(cmd, "virtualbox")
-		if physHost.Boot2dockerUrl != "" {
-			cmd = append(cmd, "--virtualbox-boot2docker-url", physHost.Boot2dockerUrl)
+		if b2dUrl, ok := physHost.VirtualboxConfig["boot2dockerUrl"]; ok && b2dUrl != "" {
+			cmd = append(cmd, "--virtualbox-boot2docker-url", b2dUrl.(string))
 		}
-		if physHost.DiskSize != "" {
-			cmd = append(cmd, "--virtualbox-disk-size", physHost.DiskSize)
+		if diskSize, ok := physHost.VirtualboxConfig["diskSize"]; ok && diskSize != "" {
+			cmd = append(cmd, "--virtualbox-disk-size", diskSize.(string))
 		}
-		if physHost.Memory != "" {
-			cmd = append(cmd, "--virtualbox-memory", physHost.Memory)
-		}
-	case "amazonEc2Host":
-		cmd = append(cmd, "amazonec2")
-		if physHost.AccessKey != "" {
-			cmd = append(cmd, "--amazonec2-access-key", physHost.AccessKey)
-		}
-		if physHost.Ami != "" {
-			cmd = append(cmd, "--amazonec2-ami", physHost.Ami)
-		}
-		if physHost.InstanceType != "" {
-			cmd = append(cmd, " --amazonec2-instance-type", physHost.InstanceType)
-		}
-		if physHost.Region != "" {
-			cmd = append(cmd, "--amazonec2-region", physHost.Region)
-		}
-		if physHost.RootSize != "" {
-			cmd = append(cmd, "--amazonec2-root-size", physHost.RootSize)
-		}
-		if physHost.SecretKey != "" {
-			cmd = append(cmd, "--amazonec2-secret-key", physHost.SecretKey)
-		}
-		if physHost.SessionToken != "" {
-			cmd = append(cmd, "--amazonec2-session-token", physHost.SessionToken)
-		}
-		if physHost.SessionToken != "" {
-			cmd = append(cmd, "--amazonec2-subnet-id", physHost.SessionToken)
-		}
-		if physHost.VpcId != "" {
-			cmd = append(cmd, "--amazonec2-vpc-id", physHost.VpcId)
-		}
-		if physHost.Zone != "" {
-			cmd = append(cmd, "--amazonec2-zone", physHost.Zone)
+		if memory, ok := physHost.VirtualboxConfig["memory"]; ok && memory != "" {
+			cmd = append(cmd, "--virtualbox-memory", memory.(string))
 		}
 	default:
 		return nil, fmt.Errorf("Unrecognize PhysicalHost.Kind: %v", physHost.Kind)

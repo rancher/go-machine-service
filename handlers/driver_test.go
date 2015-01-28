@@ -15,13 +15,21 @@ func TestDriverSanity(t *testing.T) {
 }
 
 func xTestDigitalOcean(t *testing.T) {
+	accessToken := ""
+	if accessToken == "" {
+		log.Println("This is a manual test meant for locally exercising DigitalOcean integration. " +
+			"Must set access token manually.")
+		t.FailNow()
+	}
+
 	resourceId := "DO-" + strconv.FormatInt(time.Now().Unix(), 10)
 	digOceanHost := &api.PhysicalHost{
-		AccessToken: "",
-		Id:          resourceId,
-		ExternalId:  "ext-" + resourceId,
-		Type:        "digitalOceanHost",
-		Kind:        "digitalOceanHost",
+		DigitaloceanConfig: map[string]interface{}{"accessToken": accessToken},
+		Id:                 resourceId,
+		ExternalId:         "ext-" + resourceId,
+		Type:               "machineHost",
+		Kind:               "machineHost",
+		Driver:             "DigitalOcean",
 	}
 
 	event := &events.Event{

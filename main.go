@@ -10,10 +10,10 @@ import (
 func main() {
 	log.Println("Beginning go-machine-service...")
 	eventHandlers := map[string]events.EventHandler{
-		"physicalhost.create":   handlers.CreateMachine,
-		"physicalhost.activate": handlers.ActivateMachine,
-		"physicalhost.purge":    handlers.PurgeMachine,
-		"ping":                  handlers.PingNoOp,
+		"physicalhost.create":    handlers.CreateMachine,
+		"physicalhost.bootstrap": handlers.ActivateMachine,
+		"physicalhost.remove":    handlers.PurgeMachine,
+		"ping":                   handlers.PingNoOp,
 	}
 
 	apiUrl := utils.GetRancherUrl(false) + "/v1"

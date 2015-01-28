@@ -11,10 +11,12 @@ type MockApiClient struct {
 func (m *MockApiClient) GetPhysicalHost(id string) (*api.PhysicalHost, error) {
 	if m.MockPhysicalHost == nil {
 		return &api.PhysicalHost{
-			Id:         id,
-			ExternalId: "ext-" + id,
-			Type:       "virtualBoxHost",
-			Kind:       "virtualBoxHost",
+			Id:               id,
+			ExternalId:       "ext-" + id,
+			Type:             "machineHost",
+			Kind:             "machineHost",
+			Driver:           "VirtualBox",
+			VirtualboxConfig: map[string]interface{}{},
 		}, nil
 	}
 

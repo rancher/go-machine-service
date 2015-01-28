@@ -1,43 +1,32 @@
 package api
 
 type PhysicalHost struct {
-	Id         string
-	ExternalId string
-	Type       string
-	Kind       string
-	Links      map[string]string
+	Id                       string
+	ExternalId               string
+	Type                     string
+	Kind                     string
+	Links                    map[string]string
+	Driver                   string
+	AuthCertificateAuthority string
+	AuthKey                  string
+	ExtractedConfig          string
+	VirtualboxConfig         map[string]interface{}
+	DigitaloceanConfig       map[string]interface{}
 
 	// boot2docker
-	Memory         string
-	DiskSize       string
-	Boot2dockerUrl string
+	// Memory         string
+	//DiskSize       string
+	// Boot2dockerUrl string
 
 	// digitalocean
-	Image       string
-	Region      string
-	Size        string
-	AccessToken string
-
-	// google
-	MachineType string
-	Project     string
-	Username    string
-	Zone        string
-
-	// amazonec2
-	AccessKey    string
-	Ami          string
-	InstanceType string
-	// Region    string dupe
-	RootSize     string
-	SecretKey    string
-	SessionToken string
-	SubnetId     string
-	VpcId        string
-	// Zone      string dupe
+	// Image       string
+	// Region      string
+	// Size        string
+	// AccessToken string
 }
 
 /*
+TODO THIS IS OUT OF DATE
 {
   "id": "1ph1",
   "type": "dockerMachine",

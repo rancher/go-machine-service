@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/fsouza/go-dockerclient"
+	"github.com/rancherio/go-machine-service/api"
 	"github.com/rancherio/go-machine-service/events"
 	tu "github.com/rancherio/go-machine-service/test_utils"
 	"github.com/rancherio/go-machine-service/utils"
@@ -26,15 +27,27 @@ func TestMachineHandlers(t *testing.T) {
 		ReplyTo:    "reply-to-id",
 	}
 
-	mockApiClient := &tu.MockApiClient{}
-	mockPhysHost, _ := mockApiClient.GetPhysicalHost(event.ResourceId)
+	mockPhysHost := &api.PhysicalHost{
+		VirtualboxConfig: map[string]interface{}{
+			"diskSize": "40000",
+			"memory":   "2048",
+		},
+		Id:         resourceId,
+		ExternalId: "ext-" + resourceId,
+		Type:       "machineHost",
+		Kind:       "machineHost",
+		Driver:     "VirtualBox",
+	}
+	mockApiClient := &tu.MockApiClient{MockPhysicalHost: mockPhysHost}
 
 	replyCalled := false
 	replyEventHandler := func(replyEvent *events.ReplyEvent) {
 		replyCalled = true
 	}
 
-	CreateMachine(event, replyEventHandler, mockApiClient)
+	err := CreateMachine(event, replyEventHandler, mockApiClient)
+	tu.CheckError(err, t)
+
 	if !replyCalled {
 		tu.FailNowStackf(t, "Reply not called for event [%v]", event.Id)
 	}
@@ -64,7 +77,18 @@ func andActivateMachine(resourceId string, machineName string, t *testing.T) {
 		os.Setenv("CATTLE_URL_FOR_AGENT", "http://10.0.2.2:8080")
 	}
 
-	mockApiClient := &tu.MockApiClient{}
+	virtualBoxHost := &api.PhysicalHost{
+		VirtualboxConfig: map[string]interface{}{
+			"diskSize": "40000",
+			"memory":   "2048",
+		},
+		Id:         resourceId,
+		ExternalId: "ext-" + resourceId,
+		Type:       "machineHost",
+		Kind:       "machineHost",
+		Driver:     "VirtualBox",
+	}
+	mockApiClient := &tu.MockApiClient{MockPhysicalHost: virtualBoxHost}
 
 	event := &events.Event{
 		ResourceId: resourceId,

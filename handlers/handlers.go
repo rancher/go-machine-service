@@ -114,7 +114,7 @@ func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 
 	rancherUrl := utils.GetRancherUrl(true)
 	if rancherUrl == "" {
-		return errors.New("Couldn't find Rancher server URL. Can't start agent. Returning.")
+		return errors.New("Couldn't find Rancher server URL. Can't start agent.")
 	}
 
 	imgRepo, imgTag := utils.GetRancherAgentImage()

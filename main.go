@@ -16,7 +16,7 @@ func main() {
 		"ping":                   handlers.PingNoOp,
 	}
 
-	apiUrl := utils.GetRancherUrl(false) + "/v1"
+	apiUrl := utils.GetRancherUrl(false)
 	router := events.NewEventRouter("goMachineService", 2000, apiUrl, eventHandlers, 3)
 	router.Start(nil)
 	log.Println("Leaving go-machine-service...")

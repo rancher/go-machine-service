@@ -26,8 +26,16 @@ func GetRancherUrl(forRancherAgent bool) string {
 	return cattleUrl
 }
 
+func GetRancherAccessKey() string {
+	return os.Getenv("CATTLE_ACCESS_KEY")
+}
+
+func GetRancherSecret() string {
+	return os.Getenv("CATTLE_SECRET")
+}
+
 func GetRancherAgentImage() (string, string) {
-	return "cjellick/agent", "latest"
+	return "rancher/agent", "latest"
 }
 
 func getMachineStoragePath() string {

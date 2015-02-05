@@ -9,6 +9,13 @@ import (
 
 var subscriberChannels []chan string
 
+func ResetTestServer() {
+	for _, channel := range subscriberChannels {
+		close(channel)
+	}
+	subscriberChannels = subscriberChannels[:0]
+}
+
 func publishHandler(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, "A response.")
 }
@@ -31,9 +38,9 @@ func subscribeHandler(w http.ResponseWriter, req *http.Request) {
 
 func pushToSubscribers(message string) {
 	if len(subscriberChannels) > 0 {
-		for i := range subscriberChannels {
+		for _, channel := range subscriberChannels {
 			log.Printf("sending events: %s", message)
-			subscriberChannels[i] <- message
+			channel <- message
 		}
 	}
 }

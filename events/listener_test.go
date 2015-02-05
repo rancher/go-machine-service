@@ -3,8 +3,8 @@ package events
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/rancherio/go-machine-service/api"
-	"github.com/rancherio/go-machine-service/test_utils"
+	tu "github.com/rancherio/go-machine-service/test_utils"
+	"github.com/rancherio/go-rancher/client"
 	"io/ioutil"
 	//"log"
 	"net/http"
@@ -19,19 +19,28 @@ const baseUrl string = "http://localhost:" + eventServerPort
 const pushUrl string = baseUrl + "/pushEvent"
 const subscribeUrl string = baseUrl + "/subscribe"
 
+func newRouter(eventHandlers map[string]EventHandler, workerCount int, t *testing.T) *EventRouter {
+	fakeApiClient := &client.RancherClient{}
+	router, err := NewEventRouter("testRouter", 2000, baseUrl, "accKey", "secret", fakeApiClient, eventHandlers, workerCount)
+	tu.CheckError(err, t)
+	return router
+}
+
 // Tests the simplest case of successfully receiving, routing, and handling
 // three events.
 func TestSimpleRouting(t *testing.T) {
 	eventsReceived := make(chan *Event)
-	testHandler := func(event *Event, handler ReplyEventHandler, apiClient api.Client) error {
+	testHandler := func(event *Event, handler ReplyEventHandler, apiClient *client.RancherClient) error {
 		eventsReceived <- event
 		return nil
 	}
 
 	eventHandlers := map[string]EventHandler{"physicalhost.create": testHandler}
-	router := NewEventRouter("testRouter", 2000, baseUrl, eventHandlers, 3)
+	router := newRouter(eventHandlers, 3, t)
 	ready := make(chan bool, 1)
 	go router.Start(ready)
+	defer router.Stop()
+	defer tu.ResetTestServer()
 	// Wait for start to be ready
 	<-ready
 
@@ -61,8 +70,6 @@ func TestSimpleRouting(t *testing.T) {
 			t.Errorf("Didn't get event %v", i)
 		}
 	}
-
-	router.Stop()
 }
 
 // If no workers are available (because they're all busy), an event should simply be dropped.
@@ -70,7 +77,7 @@ func TestSimpleRouting(t *testing.T) {
 func TestEventDropping(t *testing.T) {
 	eventsReceived := make(chan *Event)
 	stopWaiting := make(chan bool)
-	testHandler := func(event *Event, handler ReplyEventHandler, apiClient api.Client) error {
+	testHandler := func(event *Event, handler ReplyEventHandler, apiClient *client.RancherClient) error {
 		eventsReceived <- event
 		<-stopWaiting
 		return nil
@@ -79,9 +86,11 @@ func TestEventDropping(t *testing.T) {
 	eventHandlers := map[string]EventHandler{"physicalhost.create": testHandler}
 
 	// 2 workers, not 3, means the last event should be droppped
-	router := NewEventRouter("testRouter", 2000, baseUrl, eventHandlers, 2)
+	router := newRouter(eventHandlers, 2, t)
 	ready := make(chan bool, 1)
 	go router.Start(ready)
+	defer router.Stop()
+	defer tu.ResetTestServer()
 	// Wait for start to be ready
 	<-ready
 
@@ -109,14 +118,13 @@ func TestEventDropping(t *testing.T) {
 	if len(receivedEvents) != 2 {
 		t.Errorf("Unexpected length %v", len(receivedEvents))
 	}
-	router.Stop()
 }
 
 // Tests that when we have more events than workers, workers are added back to the pool
 // when they are done doing their work and capable of handling more work.
 func TestWorkerReuse(t *testing.T) {
 	eventsReceived := make(chan *Event)
-	testHandler := func(event *Event, handler ReplyEventHandler, apiClient api.Client) error {
+	testHandler := func(event *Event, handler ReplyEventHandler, apiClient *client.RancherClient) error {
 		time.Sleep(10 * time.Millisecond)
 		eventsReceived <- event
 		return nil
@@ -124,9 +132,11 @@ func TestWorkerReuse(t *testing.T) {
 
 	eventHandlers := map[string]EventHandler{"physicalhost.create": testHandler}
 
-	router := NewEventRouter("testRouter", 2000, baseUrl, eventHandlers, 1)
+	router := newRouter(eventHandlers, 1, t)
 	ready := make(chan bool, 1)
 	go router.Start(ready)
+	defer router.Stop()
+	defer tu.ResetTestServer()
 	// Wait for start to be ready
 	<-ready
 	preCount := 1
@@ -207,7 +217,7 @@ func prepAndPostEvent(eventFile string, preFunc PreFunc) (err error) {
 
 func TestMain(m *testing.M) {
 	ready := make(chan string, 1)
-	go test_utils.InitializeServer(eventServerPort, ready)
+	go tu.InitializeServer(eventServerPort, ready)
 	<-ready
 	result := m.Run()
 	// TODO Kill event server

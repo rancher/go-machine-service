@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"github.com/rancherio/go-machine-service/api"
 	"github.com/rancherio/go-machine-service/locks"
+	"github.com/rancherio/go-rancher/client"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,11 +15,15 @@ import (
 type ReplyEventHandler func(*ReplyEvent)
 
 // Defines the function "interface" that handlers must conform to.
-type EventHandler func(*Event, ReplyEventHandler, api.Client) error
+type EventHandler func(*Event, ReplyEventHandler, *client.RancherClient) error
 
 type EventRouter struct {
 	name                string
 	priority            int
+	apiUrl              string
+	accessKey           string
+	secretKey           string
+	apiClient           *client.RancherClient
 	registerUrl         string
 	subscribeUrl        string
 	replyUrl            string
@@ -90,7 +94,7 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 
 		select {
 		case worker := <-workers:
-			go worker.DoWork(line, router.replyHandler, handlers, workers)
+			go worker.DoWork(line, router.replyHandler, handlers, router.apiClient, workers)
 		default:
 			log.Printf("No workers available dropping event.")
 		}
@@ -111,7 +115,7 @@ func (r *EventRouter) replyHandler(replyEvent *ReplyEvent) {
 
 	replyEventJson, err := json.Marshal(replyEvent)
 	if err != nil {
-		log.Printf("Can't marshal event. Error: %v. Returning", err)
+		log.Printf("Can't marshal event. Error: %v.", err)
 		return
 	}
 
@@ -134,7 +138,7 @@ type Worker struct {
 }
 
 func (w *Worker) DoWork(rawEvent []byte, replyEventHandler ReplyEventHandler,
-	eventHandlers map[string]EventHandler, workers chan *Worker) {
+	eventHandlers map[string]EventHandler, apiClient *client.RancherClient, workers chan *Worker) {
 	defer func() { workers <- w }()
 
 	event := &Event{}
@@ -153,7 +157,7 @@ func (w *Worker) DoWork(rawEvent []byte, replyEventHandler ReplyEventHandler,
 	defer unlocker.Unlock()
 
 	if fn, ok := eventHandlers[event.Name]; ok {
-		err = fn(event, replyEventHandler, api.NewRestClient())
+		err = fn(event, replyEventHandler, apiClient)
 		if err != nil {
 			log.Printf("Error processing event. Event name: %v. Event id: %v Resource id: %v. Error: %v",
 				event.Name, event.Id, event.ResourceId, err)
@@ -163,17 +167,34 @@ func (w *Worker) DoWork(rawEvent []byte, replyEventHandler ReplyEventHandler,
 	}
 }
 
-func NewEventRouter(name string, priority int, baseUrl string,
-	eventHandlers map[string]EventHandler, workerCount int) *EventRouter {
+func NewEventRouter(name string, priority int, apiUrl string, accessKey string, secretKey string,
+	apiClient *client.RancherClient, eventHandlers map[string]EventHandler, workerCount int) (*EventRouter, error) {
+
+	if apiClient == nil {
+		var err error
+		apiClient, err = client.NewRancherClient(&client.ClientOpts{
+			Url:       apiUrl,
+			AccessKey: accessKey,
+			SecretKey: secretKey,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &EventRouter{
 		name:          name,
 		priority:      priority,
+		apiUrl:        apiUrl,
+		accessKey:     accessKey,
+		secretKey:     secretKey,
+		apiClient:     apiClient,
 		registerUrl:   baseUrl + "/externalhandlers",
 		subscribeUrl:  baseUrl + "/subscribe",
 		replyUrl:      baseUrl + "/publish",
 		eventHandlers: eventHandlers,
 		workerCount:   workerCount,
-	}
+	}, nil
 }
 
 func newWorker(replyUrl string) *Worker {

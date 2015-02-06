@@ -147,8 +147,7 @@ func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	if err != nil {
 		return err
 	}
-	// TODO Calmn down on this log statement
-	log.Printf("Container created: %v", container)
+	log.Printf("Container created: %+v", container)
 
 	err = client.StartContainer(container.ID, nil)
 	if err != nil {

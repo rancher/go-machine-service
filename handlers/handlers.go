@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fsouza/go-dockerclient"
-	"github.com/rancherio/go-machine-service/api"
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-machine-service/utils"
+	"github.com/rancherio/go-rancher/client"
 	"io"
 	"log"
 	"os/exec"
@@ -17,20 +17,15 @@ import (
 const bootstrapContName = "rancher-agent-bootstrap"
 const agentContName = "rancher-agent"
 
-func CreateMachine(event *events.Event, replyHandler events.ReplyEventHandler, apiClient api.Client) error {
-	log.Printf("Creating machine. ResourceId: %v. Event: %v.", event.ResourceId, event)
+func CreateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
+	apiClient *client.RancherClient) error {
+	log.Printf("Entering CreateMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
-	physHost, err := apiClient.GetPhysicalHost(event.ResourceId)
-
-	if physHost.Kind != "machineHost" {
-		replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
-		replyHandler(replyEvent)
-		return nil
-	}
-
+	physHost, err := apiClient.MachineHost.ById(event.ResourceId)
 	if err != nil {
-		return err
+		return handleByIdError(err, event, replyHandler)
 	}
+
 	name := convertToName(physHost.ExternalId)
 
 	// Be idempotent. Check if machine exists.
@@ -79,18 +74,13 @@ func CreateMachine(event *events.Event, replyHandler events.ReplyEventHandler, a
 	return nil
 }
 
-func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler, apiClient api.Client) error {
-	log.Printf("Activating machine. ResourceId: %v. Event: %v.", event.ResourceId, event)
+func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
+	apiClient *client.RancherClient) error {
+	log.Printf("Entering ActivateMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
-	physHost, err := apiClient.GetPhysicalHost(event.ResourceId)
+	physHost, err := apiClient.MachineHost.ById(event.ResourceId)
 	if err != nil {
-		return err
-	}
-
-	if physHost.Kind != "machineHost" {
-		replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
-		replyHandler(replyEvent)
-		return nil
+		return handleByIdError(err, event, replyHandler)
 	}
 
 	name := convertToName(physHost.ExternalId)
@@ -174,12 +164,13 @@ func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	return nil
 }
 
-func PurgeMachine(event *events.Event, replyHandler events.ReplyEventHandler, apiClient api.Client) error {
-	log.Printf("Purging machine. ResourceId: %v. Event: %v.", event.ResourceId, event)
+func PurgeMachine(event *events.Event, replyHandler events.ReplyEventHandler,
+	apiClient *client.RancherClient) error {
+	log.Printf("Entering PurgeMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
-	physHost, err := apiClient.GetPhysicalHost(event.ResourceId)
+	physHost, err := apiClient.MachineHost.ById(event.ResourceId)
 	if err != nil {
-		return err
+		return handleByIdError(err, event, replyHandler)
 	}
 	name := convertToName(physHost.ExternalId)
 
@@ -250,12 +241,12 @@ func machineExists(name string) (bool, error) {
 	return false, nil
 }
 
-func PingNoOp(event *events.Event, handler events.ReplyEventHandler, apiClient api.Client) error {
+func PingNoOp(event *events.Event, handler events.ReplyEventHandler, apiClient *client.RancherClient) error {
 	// No-op ping handler
 	return nil
 }
 
-func buildMachineCreateCmd(name string, physHost *api.PhysicalHost) ([]string, error) {
+func buildMachineCreateCmd(name string, physHost *client.MachineHost) ([]string, error) {
 	// TODO Quick and dirty. Refactor to use reflection and maps
 	// TODO Write a separate test for this function
 	cmd := []string{"create", "-d"}
@@ -263,28 +254,28 @@ func buildMachineCreateCmd(name string, physHost *api.PhysicalHost) ([]string, e
 	switch strings.ToLower(physHost.Driver) {
 	case "digitalocean":
 		cmd = append(cmd, "digitalocean")
-		if img, ok := physHost.DigitaloceanConfig["image"]; ok && img != "" {
-			cmd = append(cmd, "--digitalocean-image", img.(string))
+		if physHost.DigitaloceanConfig.Image != "" {
+			cmd = append(cmd, "--digitalocean-image", physHost.DigitaloceanConfig.Image)
 		}
-		if size, ok := physHost.DigitaloceanConfig["size"]; ok && size != "" {
-			cmd = append(cmd, "--digitalocean-size", size.(string))
+		if physHost.DigitaloceanConfig.Size != "" {
+			cmd = append(cmd, "--digitalocean-size", physHost.DigitaloceanConfig.Size)
 		}
-		if region, ok := physHost.DigitaloceanConfig["region"]; ok && region != "" {
-			cmd = append(cmd, "--digitalocean-region", region.(string))
+		if physHost.DigitaloceanConfig.Region != "" {
+			cmd = append(cmd, "--digitalocean-region", physHost.DigitaloceanConfig.Region)
 		}
-		if accessToken, ok := physHost.DigitaloceanConfig["accessToken"]; ok && accessToken != "" {
-			cmd = append(cmd, "--digitalocean-access-token", accessToken.(string))
+		if physHost.DigitaloceanConfig.AccessToken != "" {
+			cmd = append(cmd, "--digitalocean-access-token", physHost.DigitaloceanConfig.AccessToken)
 		}
 	case "virtualbox":
 		cmd = append(cmd, "virtualbox")
-		if b2dUrl, ok := physHost.VirtualboxConfig["boot2dockerUrl"]; ok && b2dUrl != "" {
-			cmd = append(cmd, "--virtualbox-boot2docker-url", b2dUrl.(string))
+		if physHost.VirtualboxConfig.Boot2dockerUrl != "" {
+			cmd = append(cmd, "--virtualbox-boot2docker-url", physHost.VirtualboxConfig.Boot2dockerUrl)
 		}
-		if diskSize, ok := physHost.VirtualboxConfig["diskSize"]; ok && diskSize != "" {
-			cmd = append(cmd, "--virtualbox-disk-size", diskSize.(string))
+		if physHost.VirtualboxConfig.DiskSize != "" {
+			cmd = append(cmd, "--virtualbox-disk-size", physHost.VirtualboxConfig.DiskSize)
 		}
-		if memory, ok := physHost.VirtualboxConfig["memory"]; ok && memory != "" {
-			cmd = append(cmd, "--virtualbox-memory", memory.(string))
+		if physHost.VirtualboxConfig.Memory != "" {
+			cmd = append(cmd, "--virtualbox-memory", physHost.VirtualboxConfig.Memory)
 		}
 	default:
 		return nil, fmt.Errorf("Unrecognize PhysicalHost.Kind: %v", physHost.Kind)
@@ -294,4 +285,15 @@ func buildMachineCreateCmd(name string, physHost *api.PhysicalHost) ([]string, e
 
 	log.Printf("Cmd slice: %v", cmd)
 	return cmd, nil
+}
+
+func handleByIdError(err error, event *events.Event, replyHandler events.ReplyEventHandler) error {
+	apiError, ok := err.(*client.ApiError)
+	if !ok || apiError.StatusCode != 404 {
+		return err
+	}
+	// 404 Indicates this is a physicalHost but not a machineHost. Just reply.
+	replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
+	replyHandler(replyEvent)
+	return nil
 }

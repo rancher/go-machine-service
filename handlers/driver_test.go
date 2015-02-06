@@ -1,18 +1,14 @@
 package handlers
 
 import (
-	"github.com/rancherio/go-machine-service/api"
 	"github.com/rancherio/go-machine-service/events"
 	tu "github.com/rancherio/go-machine-service/test_utils"
+	"github.com/rancherio/go-rancher/client"
 	"log"
 	"strconv"
 	"testing"
 	"time"
 )
-
-func TestDriverSanity(t *testing.T) {
-	log.Println("Handler sanity test passed")
-}
 
 func xTestDigitalOcean(t *testing.T) {
 	accessToken := ""
@@ -23,14 +19,6 @@ func xTestDigitalOcean(t *testing.T) {
 	}
 
 	resourceId := "DO-" + strconv.FormatInt(time.Now().Unix(), 10)
-	digOceanHost := &api.PhysicalHost{
-		DigitaloceanConfig: map[string]interface{}{"accessToken": accessToken},
-		Id:                 resourceId,
-		ExternalId:         "ext-" + resourceId,
-		Type:               "machineHost",
-		Kind:               "machineHost",
-		Driver:             "DigitalOcean",
-	}
 
 	event := &events.Event{
 		ResourceId: resourceId,
@@ -38,7 +26,19 @@ func xTestDigitalOcean(t *testing.T) {
 		ReplyTo:    "reply-to-id",
 	}
 
-	mockApiClient := &tu.MockApiClient{MockPhysicalHost: digOceanHost}
+	/*
+		digOceanHost := &api.PhysicalHost{
+			DigitaloceanConfig: map[string]interface{}{"accessToken": accessToken},
+			Id:                 resourceId,
+			ExternalId:         "ext-" + resourceId,
+			Type:               "machineHost",
+			Kind:               "machineHost",
+			Driver:             "DigitalOcean",
+		}
+
+		mockApiClient := &tu.MockApiClient{MockPhysicalHost: digOceanHost}
+	*/
+	mockApiClient := &client.RancherClient{}
 
 	replyCalled := false
 	replyEventHandler := func(replyEvent *events.ReplyEvent) {

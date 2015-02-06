@@ -1,24 +1,40 @@
 package test_utils
 
 import (
-	"github.com/rancherio/go-machine-service/api"
+	"github.com/rancherio/go-rancher/client"
 )
 
-type MockApiClient struct {
-	MockPhysicalHost *api.PhysicalHost
+type MockMachineHostClient struct {
+	MachineHost *client.MachineHost
 }
 
-func (m *MockApiClient) GetPhysicalHost(id string) (*api.PhysicalHost, error) {
-	if m.MockPhysicalHost == nil {
-		return &api.PhysicalHost{
-			Id:               id,
+func (c *MockMachineHostClient) ById(id string) (*client.MachineHost, error) {
+	if c.MachineHost == nil {
+		host := &client.MachineHost{
 			ExternalId:       "ext-" + id,
-			Type:             "machineHost",
 			Kind:             "machineHost",
 			Driver:           "VirtualBox",
-			VirtualboxConfig: map[string]interface{}{},
-		}, nil
+			VirtualboxConfig: client.VirtualboxConfig{},
+		}
+		host.Id = id
+		return host, nil
 	}
 
-	return m.MockPhysicalHost, nil
+	return c.MachineHost, nil
+}
+
+func (c *MockMachineHostClient) Create(container *client.MachineHost) (*client.MachineHost, error) {
+	return nil, nil
+}
+
+func (c *MockMachineHostClient) Update(existing *client.MachineHost, updates interface{}) (*client.MachineHost, error) {
+	return nil, nil
+}
+
+func (c *MockMachineHostClient) List(opts *client.ListOpts) (*client.MachineHostCollection, error) {
+	return nil, nil
+}
+
+func (c *MockMachineHostClient) Delete(container *client.MachineHost) error {
+	return nil
 }

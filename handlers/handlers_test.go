@@ -2,20 +2,15 @@ package handlers
 
 import (
 	"github.com/fsouza/go-dockerclient"
-	"github.com/rancherio/go-machine-service/api"
 	"github.com/rancherio/go-machine-service/events"
 	tu "github.com/rancherio/go-machine-service/test_utils"
 	"github.com/rancherio/go-machine-service/utils"
-	"log"
+	"github.com/rancherio/go-rancher/client"
 	"os"
 	"strconv"
 	"testing"
 	"time"
 )
-
-func TestCleanSanity(t *testing.T) {
-	log.Println("Handler sanity test passed")
-}
 
 func TestMachineHandlers(t *testing.T) {
 	// TODO Add env based switch to decide what type of machine to create
@@ -27,18 +22,20 @@ func TestMachineHandlers(t *testing.T) {
 		ReplyTo:    "reply-to-id",
 	}
 
-	mockPhysHost := &api.PhysicalHost{
-		VirtualboxConfig: map[string]interface{}{
-			"diskSize": "40000",
-			"memory":   "2048",
+	mockPhysHost := &client.MachineHost{
+		VirtualboxConfig: client.VirtualboxConfig{
+			DiskSize: "40000",
+			Memory:   "2048",
 		},
-		Id:         resourceId,
 		ExternalId: "ext-" + resourceId,
-		Type:       "machineHost",
 		Kind:       "machineHost",
 		Driver:     "VirtualBox",
 	}
-	mockApiClient := &tu.MockApiClient{MockPhysicalHost: mockPhysHost}
+	mockPhysHost.Id = resourceId
+	mockMachineHostClient := &tu.MockMachineHostClient{
+		MachineHost: mockPhysHost,
+	}
+	mockApiClient := &client.RancherClient{MachineHost: mockMachineHostClient}
 
 	replyCalled := false
 	replyEventHandler := func(replyEvent *events.ReplyEvent) {
@@ -77,18 +74,20 @@ func andActivateMachine(resourceId string, machineName string, t *testing.T) {
 		os.Setenv("CATTLE_URL_FOR_AGENT", "http://10.0.2.2:8080")
 	}
 
-	virtualBoxHost := &api.PhysicalHost{
-		VirtualboxConfig: map[string]interface{}{
-			"diskSize": "40000",
-			"memory":   "2048",
+	virtualBoxHost := &client.MachineHost{
+		VirtualboxConfig: client.VirtualboxConfig{
+			DiskSize: "40000",
+			Memory:   "2048",
 		},
-		Id:         resourceId,
 		ExternalId: "ext-" + resourceId,
-		Type:       "machineHost",
 		Kind:       "machineHost",
 		Driver:     "VirtualBox",
 	}
-	mockApiClient := &tu.MockApiClient{MockPhysicalHost: virtualBoxHost}
+	virtualBoxHost.Id = resourceId
+	mockMachineHostClient := &tu.MockMachineHostClient{
+		MachineHost: virtualBoxHost,
+	}
+	mockApiClient := &client.RancherClient{MachineHost: mockMachineHostClient}
 
 	event := &events.Event{
 		ResourceId: resourceId,
@@ -124,7 +123,7 @@ func andPurgeMachine(resourceId string, machineName string, t *testing.T) {
 		ReplyTo:    "reply-to-id",
 	}
 
-	mockApiClient := &tu.MockApiClient{}
+	mockApiClient := &client.RancherClient{MachineHost: &tu.MockMachineHostClient{}}
 
 	replyCalled := false
 	replyEventHandler := func(replyEvent *events.ReplyEvent) {

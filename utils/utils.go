@@ -2,13 +2,18 @@ package utils
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/fsouza/go-dockerclient"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"regexp"
+	"strings"
 )
 
-const MachineCmd = "machine"
+const (
+	MachineCmd   = "machine"
+	ParseMessage = "Failed to parse config: [%v]"
+)
 
 // Returns the URL at which the Cattle API can be reached.
 //
@@ -30,23 +35,12 @@ func GetRancherAccessKey() string {
 	return os.Getenv("CATTLE_ACCESS_KEY")
 }
 
-func GetRancherSecret() string {
+func GetRancherSecretKey() string {
 	return os.Getenv("CATTLE_SECRET")
 }
 
 func GetRancherAgentImage() (string, string) {
 	return "rancher/agent", "latest"
-}
-
-func getMachineStoragePath() string {
-	storagePath := os.Getenv("MACHINE_STORAGE_PATH")
-	if storagePath != "" {
-		return storagePath
-	} else {
-		home := os.Getenv("HOME")
-		// TODO Worry about windows. Could use machine's drivers/utils.go
-		return filepath.Join(home, ".docker", "machines")
-	}
 }
 
 // Returns a TLS-enabled docker client for the specified machine.
@@ -79,23 +73,54 @@ type tlsConnectionConfig struct {
 }
 
 func getConnectionConfig(machineName string) (*tlsConnectionConfig, error) {
-	storepath := getMachineStoragePath()
-	ca := filepath.Join(storepath, machineName, "ca.pem")
-	cert := filepath.Join(storepath, machineName, "cert.pem")
-	key := filepath.Join(storepath, machineName, "key.pem")
-
-	cmd := exec.Command(MachineCmd, "url", machineName)
-	result, err := cmd.Output()
+	cmd := exec.Command(MachineCmd, "config", machineName)
+	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
-	endpoint := string(bytes.TrimSpace(result))
+	args := string(bytes.TrimSpace(output))
 
-	connConfig := &tlsConnectionConfig{
-		endpoint: endpoint,
-		caCert:   ca,
-		cert:     cert,
-		key:      key,
+	connConfig, err := parseConnectionArgs(args)
+	if err != nil {
+		return nil, err
 	}
+
 	return connConfig, nil
+}
+
+func parseConnectionArgs(args string) (*tlsConnectionConfig, error) {
+	// Extract the -H (host) parameter
+	endpointRegEx := regexp.MustCompile("-H=\".*\"")
+	endpointMatches := endpointRegEx.FindAllString(args, -1)
+	if len(endpointMatches) != 1 {
+		return nil, fmt.Errorf(ParseMessage, args)
+	}
+	endpointKV := strings.Split(endpointMatches[0], "=")
+	if len(endpointKV) != 2 {
+		return nil, fmt.Errorf(ParseMessage, args)
+	}
+	endpoint := strings.Replace(endpointKV[1], "\"", "", -1)
+	config := &tlsConnectionConfig{endpoint: endpoint}
+	args = endpointRegEx.ReplaceAllString(args, "")
+
+	// Extract the tls args: tlscacert tlscert tlskey
+	whitespaceSplit := regexp.MustCompile("\\w*--")
+	tlsArgs := whitespaceSplit.Split(args, -1)
+	for _, arg := range tlsArgs {
+		kv := strings.Split(arg, "=")
+		if len(kv) == 2 {
+			key := strings.TrimSpace(kv[0])
+			val := strings.TrimSpace(kv[1])
+			switch key {
+			case "tlscacert":
+				config.caCert = val
+			case "tlscert":
+				config.cert = val
+			case "tlskey":
+				config.key = val
+			}
+		}
+	}
+
+	return config, nil
 }

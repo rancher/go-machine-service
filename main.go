@@ -17,7 +17,15 @@ func main() {
 	}
 
 	apiUrl := utils.GetRancherUrl(false)
-	router := events.NewEventRouter("goMachineService", 2000, apiUrl, eventHandlers, 3)
-	router.Start(nil)
+	accessKey := utils.GetRancherAccessKey()
+	secretKey := utils.GetRancherSecretKey()
+
+	router, err := events.NewEventRouter("goMachineService", 2000, apiUrl, accessKey, secretKey,
+		nil, eventHandlers, 10)
+	if err != nil {
+		log.Println("Unable to create EventRouter", err)
+	} else {
+		router.Start(nil)
+	}
 	log.Println("Leaving go-machine-service...")
 }

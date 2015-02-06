@@ -6,7 +6,6 @@ import (
 	tu "github.com/rancherio/go-machine-service/test_utils"
 	"github.com/rancherio/go-rancher/client"
 	"io/ioutil"
-	//"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -21,7 +20,8 @@ const subscribeUrl string = baseUrl + "/subscribe"
 
 func newRouter(eventHandlers map[string]EventHandler, workerCount int, t *testing.T) *EventRouter {
 	fakeApiClient := &client.RancherClient{}
-	router, err := NewEventRouter("testRouter", 2000, baseUrl, "accKey", "secret", fakeApiClient, eventHandlers, workerCount)
+	router, err := NewEventRouter("testRouter", 2000, baseUrl, "accKey", "secret", fakeApiClient,
+		eventHandlers, workerCount)
 	tu.CheckError(err, t)
 	return router
 }

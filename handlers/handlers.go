@@ -11,10 +11,12 @@ import (
 	"log"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 const bootstrapContName = "rancher-agent-bootstrap"
 const agentContName = "rancher-agent"
+const MaxWait = time.Duration(time.Second * 10)
 
 func CreateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	apiClient *client.RancherClient) error {
@@ -209,16 +211,52 @@ func getRegistrationUrl(accountId string, apiClient *client.RancherClient) (stri
 		return "", err
 	}
 
-	if len(tokenCollection.Data) < 1 {
-		return "", fmt.Errorf("Couldn't find a registration token for account [%v]", accountId)
+	var token client.RegistrationToken
+	if len(tokenCollection.Data) >= 1 {
+		log.Printf("Found token for accountId [%v]", accountId)
+		token = tokenCollection.Data[0]
+	} else {
+		log.Printf("Creating token for accountId [%v]", accountId)
+		createToken := &client.RegistrationToken{
+			AccountId: accountId,
+		}
+
+		createToken, err = apiClient.RegistrationToken.Create(createToken)
+		if err != nil {
+			return "", err
+		}
+		createToken, err = waitForTokenToActivate(createToken, apiClient)
+		if err != nil {
+			return "", err
+		}
+		token = *createToken
 	}
 
-	token := tokenCollection.Data[0]
 	regUrl, ok := token.Links["registrationUrl"]
 	if !ok {
 		return "", fmt.Errorf("No registration url on token [%v] for account [%v].", token.Id, accountId)
 	}
 	return regUrl, nil
+}
+
+func waitForTokenToActivate(token *client.RegistrationToken,
+	apiClient *client.RancherClient) (*client.RegistrationToken, error) {
+	timeoutAt := time.Now().Add(MaxWait)
+	ticker := time.NewTicker(time.Millisecond * 250)
+	defer ticker.Stop()
+	for t := range ticker.C {
+		token, err := apiClient.RegistrationToken.ById(token.Id)
+		if err != nil {
+			return nil, err
+		}
+		if token.State == "active" {
+			return token, nil
+		}
+		if t.After(timeoutAt) {
+			return nil, fmt.Errorf("Timed out waiting for token to activate.")
+		}
+	}
+	return nil, fmt.Errorf("Couldn't get active token.")
 }
 
 func convertToName(externalId string) string {

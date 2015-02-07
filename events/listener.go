@@ -151,7 +151,7 @@ func (w *Worker) DoWork(rawEvent []byte, replyEventHandler ReplyEventHandler,
 	log.Printf("Received event: %v", event.Name)
 	unlocker := locks.Lock(event.ResourceId)
 	if unlocker == nil {
-		log.Printf("Resouce [%v] locked. Dropping event.", event.ResourceId)
+		log.Printf("Resource [%v] locked. Dropping event.", event.ResourceId)
 		return
 	}
 	defer unlocker.Unlock()

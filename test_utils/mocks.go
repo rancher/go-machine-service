@@ -38,3 +38,37 @@ func (c *MockMachineHostClient) List(opts *client.ListOpts) (*client.MachineHost
 func (c *MockMachineHostClient) Delete(container *client.MachineHost) error {
 	return nil
 }
+
+type MockRegistrationTokenClient struct{}
+
+func (c *MockRegistrationTokenClient) Create(container *client.RegistrationToken) (*client.RegistrationToken, error) {
+	resp := &client.RegistrationToken{}
+	return resp, nil
+}
+
+func (c *MockRegistrationTokenClient) Update(existing *client.RegistrationToken,
+	updates interface{}) (*client.RegistrationToken, error) {
+	resp := &client.RegistrationToken{}
+	return resp, nil
+}
+
+func (c *MockRegistrationTokenClient) List(opts *client.ListOpts) (*client.RegistrationTokenCollection, error) {
+	regToken := client.RegistrationToken{}
+	regToken.Links = map[string]string{"registrationUrl": "http://1.2.3.4/v1"}
+
+	tokens := []client.RegistrationToken{regToken}
+	resp := &client.RegistrationTokenCollection{
+		Data: tokens,
+	}
+
+	return resp, nil
+}
+
+func (c *MockRegistrationTokenClient) ById(id string) (*client.RegistrationToken, error) {
+	resp := &client.RegistrationToken{}
+	return resp, nil
+}
+
+func (c *MockRegistrationTokenClient) Delete(container *client.RegistrationToken) error {
+	return nil
+}

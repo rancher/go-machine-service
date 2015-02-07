@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/rancherio/go-machine-service/events"
@@ -59,7 +58,8 @@ func CreateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 			log.Printf("%s \n", scanner.Text())
 		}
 		if err := scanner.Err(); err != nil {
-			log.Printf("Error while reading machine create output. Error: %v. Ignoring and continuing.", err)
+			log.Printf("Error while reading machine create output. Error: %v. Ignoring and continuing.",
+				err)
 		}
 	}(r)
 	err = cmd.Wait()
@@ -102,9 +102,9 @@ func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 		return nil
 	}
 
-	rancherUrl := utils.GetRancherUrl(true)
-	if rancherUrl == "" {
-		return errors.New("Couldn't find Rancher server URL. Can't start agent.")
+	registrationUrl, err := getRegistrationUrl(physHost.AccountId, apiClient)
+	if err != nil {
+		return err
 	}
 
 	imgRepo, imgTag := utils.GetRancherAgentImage()
@@ -116,12 +116,8 @@ func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	log.Printf("Pulling %v:%v image.", imgRepo, imgTag)
 	client.PullImage(imageOptions, imageAuth)
 
-	// We are constructing a create command that looks like this:
-	// docker create -it -v /var/run/docker.sock:/var/run/docker.sock --privileged \
-	// rancher/agent:latest --name=tmp-rancher-agent <cattle url>
-
 	volConfig := map[string]struct{}{"/var/run/docker.sock": {}}
-	cmd := []string{rancherUrl}
+	cmd := []string{registrationUrl}
 	envVars := []string{"CATTLE_PHYSICAL_HOST_UUID=" + physHost.ExternalId}
 	config := docker.Config{
 		AttachStdin: true,
@@ -198,9 +194,31 @@ func PurgeMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
 	replyHandler(replyEvent)
 
-	log.Printf("Done purging machine. ResourceId: %v. ExternalId: %v.", event.ResourceId, physHost.ExternalId)
+	log.Printf("Done purging machine. ResourceId: %v. ExternalId: %v.", event.ResourceId,
+		physHost.ExternalId)
 
 	return nil
+}
+
+func getRegistrationUrl(accountId string, apiClient *client.RancherClient) (string, error) {
+	listOpts := client.NewListOpts()
+	listOpts.Filters["accountId"] = accountId
+	listOpts.Filters["state"] = "active"
+	tokenCollection, err := apiClient.RegistrationToken.List(listOpts)
+	if err != nil {
+		return "", err
+	}
+
+	if len(tokenCollection.Data) < 1 {
+		return "", fmt.Errorf("Couldn't find a registration token for account [%v]", accountId)
+	}
+
+	token := tokenCollection.Data[0]
+	regUrl, ok := token.Links["registrationUrl"]
+	if !ok {
+		return "", fmt.Errorf("No registration url on token [%v] for account [%v].", token.Id, accountId)
+	}
+	return regUrl, nil
 }
 
 func convertToName(externalId string) string {

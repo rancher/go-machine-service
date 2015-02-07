@@ -22,20 +22,7 @@ func TestMachineHandlers(t *testing.T) {
 		ReplyTo:    "reply-to-id",
 	}
 
-	mockPhysHost := &client.MachineHost{
-		VirtualboxConfig: client.VirtualboxConfig{
-			DiskSize: "40000",
-			Memory:   "2048",
-		},
-		ExternalId: "ext-" + resourceId,
-		Kind:       "machineHost",
-		Driver:     "VirtualBox",
-	}
-	mockPhysHost.Id = resourceId
-	mockMachineHostClient := &tu.MockMachineHostClient{
-		MachineHost: mockPhysHost,
-	}
-	mockApiClient := &client.RancherClient{MachineHost: mockMachineHostClient}
+	mockApiClient := constructMockApiClient(resourceId)
 
 	replyCalled := false
 	replyEventHandler := func(replyEvent *events.ReplyEvent) {
@@ -57,7 +44,8 @@ func TestMachineHandlers(t *testing.T) {
 	}
 
 	// TODO Converting name here is cheating a bit. Should find a way to remove this inside knowlege
-	machineName := convertToName(mockPhysHost.ExternalId)
+	res, _ := mockApiClient.MachineHost.ById(resourceId)
+	machineName := convertToName(res.ExternalId)
 
 	// and test activating that machine
 	andActivateMachine(resourceId, machineName, t)
@@ -74,20 +62,7 @@ func andActivateMachine(resourceId string, machineName string, t *testing.T) {
 		os.Setenv("CATTLE_URL_FOR_AGENT", "http://10.0.2.2:8080")
 	}
 
-	virtualBoxHost := &client.MachineHost{
-		VirtualboxConfig: client.VirtualboxConfig{
-			DiskSize: "40000",
-			Memory:   "2048",
-		},
-		ExternalId: "ext-" + resourceId,
-		Kind:       "machineHost",
-		Driver:     "VirtualBox",
-	}
-	virtualBoxHost.Id = resourceId
-	mockMachineHostClient := &tu.MockMachineHostClient{
-		MachineHost: virtualBoxHost,
-	}
-	mockApiClient := &client.RancherClient{MachineHost: mockMachineHostClient}
+	mockApiClient := constructMockApiClient(resourceId)
 
 	event := &events.Event{
 		ResourceId: resourceId,
@@ -123,7 +98,7 @@ func andPurgeMachine(resourceId string, machineName string, t *testing.T) {
 		ReplyTo:    "reply-to-id",
 	}
 
-	mockApiClient := &client.RancherClient{MachineHost: &tu.MockMachineHostClient{}}
+	mockApiClient := constructMockApiClient(resourceId)
 
 	replyCalled := false
 	replyEventHandler := func(replyEvent *events.ReplyEvent) {
@@ -140,6 +115,28 @@ func andPurgeMachine(resourceId string, machineName string, t *testing.T) {
 	PurgeMachine(event, replyEventHandler, mockApiClient)
 	if !replyCalled {
 		tu.FailNowStackf(t, "Idempotent check failed for PurgeMachine. Event: %v", event.Id)
+	}
+}
+
+func constructMockApiClient(resourceId string) *client.RancherClient {
+	virtualBoxHost := &client.MachineHost{
+		VirtualboxConfig: client.VirtualboxConfig{
+			DiskSize: "40000",
+			Memory:   "2048",
+		},
+		ExternalId: "ext-" + resourceId,
+		Kind:       "machineHost",
+		Driver:     "VirtualBox",
+	}
+	virtualBoxHost.Id = resourceId
+	mockMachineHostClient := &tu.MockMachineHostClient{
+		MachineHost: virtualBoxHost,
+	}
+	mockRegistrationTokenClient := &tu.MockRegistrationTokenClient{}
+
+	return &client.RancherClient{
+		MachineHost:       mockMachineHostClient,
+		RegistrationToken: mockRegistrationTokenClient,
 	}
 }
 

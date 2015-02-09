@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -79,7 +80,7 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 		ready <- true
 	}
 
-	eventStream, err := subscribeToEvents(router.subscribeUrl, subscribeForm)
+	eventStream, err := subscribeToEvents(router.subscribeUrl, router.accessKey, router.secretKey, subscribeForm)
 	if err != nil {
 		return err
 	}
@@ -178,8 +179,15 @@ func newWorker() *Worker {
 	return &Worker{}
 }
 
-var subscribeToEvents = func(subscribeUrl string, subscribeForm url.Values) (resp *http.Response, err error) {
-	return http.PostForm(subscribeUrl, subscribeForm)
+var subscribeToEvents = func(subscribeUrl string, user string, pass string, data url.Values) (resp *http.Response, err error) {
+	subscribeClient := &http.Client{}
+	req, err := http.NewRequest("POST", subscribeUrl, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(user, pass)
+	return subscribeClient.Do(req)
 }
 
 var createNewHandler = func(externalHandler *client.ExternalHandler, apiClient *client.RancherClient) error {

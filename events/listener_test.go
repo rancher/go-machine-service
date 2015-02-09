@@ -39,7 +39,7 @@ func newRouter(eventHandlers map[string]EventHandler, workerCount int, t *testin
 // three events.
 func TestSimpleRouting(t *testing.T) {
 	eventsReceived := make(chan *Event)
-	testHandler := func(event *Event, handler ReplyEventHandler, apiClient *client.RancherClient) error {
+	testHandler := func(event *Event, apiClient *client.RancherClient) error {
 		eventsReceived <- event
 		return nil
 	}
@@ -88,7 +88,7 @@ func TestSimpleRouting(t *testing.T) {
 func TestEventDropping(t *testing.T) {
 	eventsReceived := make(chan *Event)
 	stopWaiting := make(chan bool)
-	testHandler := func(event *Event, handler ReplyEventHandler, apiClient *client.RancherClient) error {
+	testHandler := func(event *Event, apiClient *client.RancherClient) error {
 		eventsReceived <- event
 		<-stopWaiting
 		return nil
@@ -137,7 +137,7 @@ func TestEventDropping(t *testing.T) {
 // when they are done doing their work and capable of handling more work.
 func TestWorkerReuse(t *testing.T) {
 	eventsReceived := make(chan *Event)
-	testHandler := func(event *Event, handler ReplyEventHandler, apiClient *client.RancherClient) error {
+	testHandler := func(event *Event, apiClient *client.RancherClient) error {
 		time.Sleep(10 * time.Millisecond)
 		eventsReceived <- event
 		return nil

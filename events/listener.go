@@ -15,10 +15,8 @@ import (
 
 const MaxWait = time.Duration(time.Second * 10)
 
-type ReplyEventHandler func(*ReplyEvent)
-
 // Defines the function "interface" that handlers must conform to.
-type EventHandler func(*Event, ReplyEventHandler, *client.RancherClient) error
+type EventHandler func(*Event, *client.RancherClient) error
 
 type EventRouter struct {
 	name                string
@@ -28,7 +26,6 @@ type EventRouter struct {
 	secretKey           string
 	apiClient           *client.RancherClient
 	subscribeUrl        string
-	replyUrl            string
 	eventHandlers       map[string]EventHandler
 	workerCount         int
 	eventStreamResponse *http.Response
@@ -37,7 +34,7 @@ type EventRouter struct {
 func (router *EventRouter) Start(ready chan<- bool) (err error) {
 	workers := make(chan *Worker, router.workerCount)
 	for i := 0; i < router.workerCount; i++ {
-		w := newWorker(router.replyUrl)
+		w := newWorker()
 		workers <- w
 	}
 
@@ -101,7 +98,7 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 
 		select {
 		case worker := <-workers:
-			go worker.DoWork(line, router.replyHandler, handlers, router.apiClient, workers)
+			go worker.DoWork(line, handlers, router.apiClient, workers)
 		default:
 			log.Printf("No workers available dropping event.")
 		}
@@ -115,35 +112,12 @@ func (router *EventRouter) Stop() (err error) {
 	return nil
 }
 
-func (r *EventRouter) replyHandler(replyEvent *ReplyEvent) {
-	// TODO Is passing this function into a goroutine non-idiomatic?
-	log.Printf("Replying to [%v] with event [%v]", r.replyUrl, replyEvent)
-
-	replyEventJson, err := json.Marshal(replyEvent)
-	if err != nil {
-		log.Printf("Can't marshal event. Error: %v.", err)
-		return
-	}
-
-	eventBuffer := bytes.NewBuffer(replyEventJson)
-	replyRequest, err := http.NewRequest("POST", r.replyUrl, eventBuffer)
-	replyRequest.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	response, err := client.Do(replyRequest)
-	if err != nil {
-		log.Printf("Can't send reply event. Error: %v. Returning", err)
-		return
-	}
-	defer response.Body.Close()
-	log.Printf("Replied to event: %v. Response code: %s", replyEvent.Name, response.Status)
-}
-
 // TODO Privatize worker
 type Worker struct {
 }
 
-func (w *Worker) DoWork(rawEvent []byte, replyEventHandler ReplyEventHandler,
-	eventHandlers map[string]EventHandler, apiClient *client.RancherClient, workers chan *Worker) {
+func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, apiClient *client.RancherClient,
+	workers chan *Worker) {
 	defer func() { workers <- w }()
 
 	event := &Event{}
@@ -162,7 +136,7 @@ func (w *Worker) DoWork(rawEvent []byte, replyEventHandler ReplyEventHandler,
 	defer unlocker.Unlock()
 
 	if fn, ok := eventHandlers[event.Name]; ok {
-		err = fn(event, replyEventHandler, apiClient)
+		err = fn(event, apiClient)
 		if err != nil {
 			log.Printf("Error processing event. Event name: %v. Event id: %v Resource id: %v. Error: %v",
 				event.Name, event.Id, event.ResourceId, err)
@@ -195,13 +169,12 @@ func NewEventRouter(name string, priority int, apiUrl string, accessKey string, 
 		secretKey:     secretKey,
 		apiClient:     apiClient,
 		subscribeUrl:  apiUrl + "/subscribe",
-		replyUrl:      apiUrl + "/publish",
 		eventHandlers: eventHandlers,
 		workerCount:   workerCount,
 	}, nil
 }
 
-func newWorker(replyUrl string) *Worker {
+func newWorker() *Worker {
 	return &Worker{}
 }
 

@@ -25,39 +25,38 @@ func TestMachineHandlers(t *testing.T) {
 		ReplyTo:    "reply-to-id",
 	}
 	mockApiClient := &client.RancherClient{}
-	replyEventHandler := func(replyEvent *events.ReplyEvent) {}
 
-	err := CreateMachine(event, replyEventHandler, mockApiClient)
+	err := CreateMachine(event, mockApiClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Idempotent check. Should rerun and reply without error
-	err = CreateMachine(event, replyEventHandler, mockApiClient)
+	err = CreateMachine(event, mockApiClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// and test activating that machine
-	err = ActivateMachine(event, replyEventHandler, mockApiClient)
+	err = ActivateMachine(event, mockApiClient)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
 	}
 
-	err = ActivateMachine(event, replyEventHandler, mockApiClient)
+	err = ActivateMachine(event, mockApiClient)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
 	}
 
 	// and test purging that machine
-	err = PurgeMachine(event, replyEventHandler, mockApiClient)
+	err = PurgeMachine(event, mockApiClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = PurgeMachine(event, replyEventHandler, mockApiClient)
+	err = PurgeMachine(event, mockApiClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,4 +81,6 @@ func setupVB() {
 	getRegistrationUrl = func(accountId string, apiClient *client.RancherClient) (string, error) {
 		return "http://1.2.3.4/v1", nil
 	}
+
+	publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error { return nil }
 }

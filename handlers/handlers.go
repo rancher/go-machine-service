@@ -18,13 +18,12 @@ const bootstrapContName = "rancher-agent-bootstrap"
 const agentContName = "rancher-agent"
 const MaxWait = time.Duration(time.Second * 10)
 
-func CreateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
-	apiClient *client.RancherClient) error {
+func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.Printf("Entering CreateMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
 	physHost, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
-		return handleByIdError(err, event, replyHandler)
+		return handleByIdError(err, event, apiClient)
 	}
 
 	name := convertToName(physHost.ExternalId)
@@ -33,9 +32,8 @@ func CreateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	cmd := exec.Command(utils.MachineCmd, "inspect", name)
 	err = cmd.Run()
 	if err == nil {
-		replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
-		replyHandler(replyEvent)
-		return nil
+		reply := newReply(event)
+		return publishReply(reply, apiClient)
 	}
 
 	cmdWithArgs, err := buildMachineCreateCmd(name, physHost)
@@ -69,20 +67,18 @@ func CreateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 		return err
 	}
 
-	replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
-	replyHandler(replyEvent)
-
 	log.Printf("Done creating machine. ResourceId: %v. ExternalId: %v.", event.ResourceId, physHost.ExternalId)
-	return nil
+
+	reply := newReply(event)
+	return publishReply(reply, apiClient)
 }
 
-func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
-	apiClient *client.RancherClient) error {
+func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.Printf("Entering ActivateMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
 	physHost, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
-		return handleByIdError(err, event, replyHandler)
+		return handleByIdError(err, event, apiClient)
 	}
 
 	name := convertToName(physHost.ExternalId)
@@ -99,9 +95,8 @@ func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 		return err
 	}
 	if len(containers) > 0 {
-		replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
-		replyHandler(replyEvent)
-		return nil
+		reply := newReply(event)
+		return publishReply(reply, apiClient)
 	}
 
 	registrationUrl, err := getRegistrationUrl(physHost.AccountId, apiClient)
@@ -152,22 +147,19 @@ func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 		return err
 	}
 
-	replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
-	replyHandler(replyEvent)
-
 	log.Printf("Rancher-agent started. ResourceId: %v. ExternalId: %v Container id: %v.",
 		event.ResourceId, physHost.ExternalId, container.ID)
 
-	return nil
+	reply := newReply(event)
+	return publishReply(reply, apiClient)
 }
 
-func PurgeMachine(event *events.Event, replyHandler events.ReplyEventHandler,
-	apiClient *client.RancherClient) error {
+func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.Printf("Entering PurgeMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
 	physHost, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
-		return handleByIdError(err, event, replyHandler)
+		return handleByIdError(err, event, apiClient)
 	}
 	name := convertToName(physHost.ExternalId)
 
@@ -177,9 +169,8 @@ func PurgeMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 		return err
 	}
 	if !machineExists {
-		replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
-		replyHandler(replyEvent)
-		return nil
+		reply := newReply(event)
+		return publishReply(reply, apiClient)
 	}
 
 	cmd := exec.Command(utils.MachineCmd, "rm", "-f", name)
@@ -193,13 +184,16 @@ func PurgeMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 		return nil
 	}
 
-	replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
-	replyHandler(replyEvent)
-
 	log.Printf("Done purging machine. ResourceId: %v. ExternalId: %v.", event.ResourceId,
 		physHost.ExternalId)
 
-	return nil
+	reply := newReply(event)
+	return publishReply(reply, apiClient)
+}
+
+var publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error {
+	_, err := apiClient.Publish.Create(reply)
+	return err
 }
 
 var getMachine = func(id string, apiClient *client.RancherClient) (*client.MachineHost, error) {
@@ -300,7 +294,7 @@ func machineExists(name string) (bool, error) {
 	return false, nil
 }
 
-func PingNoOp(event *events.Event, handler events.ReplyEventHandler, apiClient *client.RancherClient) error {
+func PingNoOp(event *events.Event, apiClient *client.RancherClient) error {
 	// No-op ping handler
 	return nil
 }
@@ -346,13 +340,19 @@ func buildMachineCreateCmd(name string, physHost *client.MachineHost) ([]string,
 	return cmd, nil
 }
 
-func handleByIdError(err error, event *events.Event, replyHandler events.ReplyEventHandler) error {
+func handleByIdError(err error, event *events.Event, apiClient *client.RancherClient) error {
 	apiError, ok := err.(*client.ApiError)
 	if !ok || apiError.StatusCode != 404 {
 		return err
 	}
 	// 404 Indicates this is a physicalHost but not a machineHost. Just reply.
-	replyEvent := events.NewReplyEvent(event.ReplyTo, event.Id)
-	replyHandler(replyEvent)
-	return nil
+	reply := newReply(event)
+	return publishReply(reply, apiClient)
+}
+
+func newReply(event *events.Event) *client.Publish {
+	return &client.Publish{
+		Name:        event.ReplyTo,
+		PreviousIds: []string{event.Id},
+	}
 }

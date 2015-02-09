@@ -29,7 +29,9 @@ func newRouter(eventHandlers map[string]EventHandler, workerCount int, t *testin
 	fakeApiClient := &client.RancherClient{}
 	router, err := NewEventRouter("testRouter", 2000, baseUrl, "accKey", "secret", fakeApiClient,
 		eventHandlers, workerCount)
-	tu.CheckError(err, t)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return router
 }
 
@@ -62,7 +64,9 @@ func TestSimpleRouting(t *testing.T) {
 	// Push 3 events
 	for i := 0; i < 3; i++ {
 		err := prepAndPostEvent("../test_utils/resources/create_virtualbox.json", pre)
-		checkError(err, t)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	receivedEvents := map[string]*Event{}
 	for i := 0; i < 3; i++ {
@@ -112,7 +116,9 @@ func TestEventDropping(t *testing.T) {
 	// Push 3 events
 	for i := 0; i < 3; i++ {
 		err := prepAndPostEvent("../test_utils/resources/create_virtualbox.json", pre)
-		checkError(err, t)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	receivedEvents := map[string]*Event{}
 	for i := 0; i < 3; i++ {
@@ -158,7 +164,9 @@ func TestWorkerReuse(t *testing.T) {
 	receivedEvents := map[string]*Event{}
 	for i := 0; i < 2; i++ {
 		err := prepAndPostEvent("../test_utils/resources/create_virtualbox.json", pre)
-		checkError(err, t)
+		if err != nil {
+			t.Fatal(err)
+		}
 		receivedEvent := awaitEvent(eventsReceived, 200, t)
 		if receivedEvent != nil {
 			receivedEvents[receivedEvent.Id] = receivedEvent
@@ -185,12 +193,6 @@ func awaitEvent(eventsReceived chan *Event, millisToWait int, t *testing.T) *Eve
 		return nil
 	}
 	return nil
-}
-
-func checkError(err error, t *testing.T) {
-	if err != nil {
-		t.Error()
-	}
 }
 
 type PreFunc func(*Event)

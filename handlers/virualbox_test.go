@@ -1,0 +1,85 @@
+package handlers
+
+import (
+	"github.com/rancherio/go-machine-service/events"
+	"github.com/rancherio/go-rancher/client"
+	"os"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestMachineHandlers(t *testing.T) {
+	test_vbox := os.Getenv("TEST_VIRTUALBOX")
+	if !strings.EqualFold(test_vbox, "true") {
+		t.Log("Skipping virtualbox test.")
+		return
+	}
+	setupVB()
+
+	resourceId := "test-" + strconv.FormatInt(time.Now().Unix(), 10)
+	event := &events.Event{
+		ResourceId: resourceId,
+		Id:         "event-id",
+		ReplyTo:    "reply-to-id",
+	}
+	mockApiClient := &client.RancherClient{}
+	replyEventHandler := func(replyEvent *events.ReplyEvent) {}
+
+	err := CreateMachine(event, replyEventHandler, mockApiClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Idempotent check. Should rerun and reply without error
+	err = CreateMachine(event, replyEventHandler, mockApiClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// and test activating that machine
+	err = ActivateMachine(event, replyEventHandler, mockApiClient)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	err = ActivateMachine(event, replyEventHandler, mockApiClient)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	// and test purging that machine
+	err = PurgeMachine(event, replyEventHandler, mockApiClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = PurgeMachine(event, replyEventHandler, mockApiClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func setupVB() {
+	getMachine = func(id string, apiClient *client.RancherClient) (*client.MachineHost, error) {
+		machine := &client.MachineHost{
+			VirtualboxConfig: client.VirtualboxConfig{
+				DiskSize: "40000",
+				Memory:   "2048",
+			},
+			ExternalId: "ext-" + id,
+			Kind:       "machineHost",
+			Driver:     "VirtualBox",
+		}
+		machine.Id = id
+
+		return machine, nil
+	}
+
+	getRegistrationUrl = func(accountId string, apiClient *client.RancherClient) (string, error) {
+		return "http://1.2.3.4/v1", nil
+	}
+}

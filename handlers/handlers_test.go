@@ -44,7 +44,7 @@ func TestMachineHandlers(t *testing.T) {
 	}
 
 	// TODO Converting name here is cheating a bit. Should find a way to remove this inside knowlege
-	res, _ := mockApiClient.MachineHost.ById(resourceId)
+	res, _ := getMachine(resourceId, mockApiClient)
 	machineName := convertToName(res.ExternalId)
 
 	// and test activating that machine
@@ -119,25 +119,7 @@ func andPurgeMachine(resourceId string, machineName string, t *testing.T) {
 }
 
 func constructMockApiClient(resourceId string) *client.RancherClient {
-	virtualBoxHost := &client.MachineHost{
-		VirtualboxConfig: client.VirtualboxConfig{
-			DiskSize: "40000",
-			Memory:   "2048",
-		},
-		ExternalId: "ext-" + resourceId,
-		Kind:       "machineHost",
-		Driver:     "VirtualBox",
-	}
-	virtualBoxHost.Id = resourceId
-	mockMachineHostClient := &tu.MockMachineHostClient{
-		MachineHost: virtualBoxHost,
-	}
-	mockRegistrationTokenClient := &tu.MockRegistrationTokenClient{}
-
-	return &client.RancherClient{
-		MachineHost:       mockMachineHostClient,
-		RegistrationToken: mockRegistrationTokenClient,
-	}
+	return &client.RancherClient{}
 }
 
 func deleteContainer(machineName string, containerName string, t *testing.T) {
@@ -157,4 +139,28 @@ func deleteContainer(machineName string, containerName string, t *testing.T) {
 		err := client.RemoveContainer(removeOpts)
 		tu.CheckError(err, t)
 	}
+}
+
+func TestMain(m *testing.M) {
+	getMachine = func(id string, apiClient *client.RancherClient) (*client.MachineHost, error) {
+		machine := &client.MachineHost{
+			VirtualboxConfig: client.VirtualboxConfig{
+				DiskSize: "40000",
+				Memory:   "2048",
+			},
+			ExternalId: "ext-" + id,
+			Kind:       "machineHost",
+			Driver:     "VirtualBox",
+		}
+		machine.Id = id
+
+		return machine, nil
+	}
+
+	getRegistrationUrl = func(accountId string, apiClient *client.RancherClient) (string, error) {
+		return "http://1.2.3.4/v1", nil
+	}
+
+	result := m.Run()
+	os.Exit(result)
 }

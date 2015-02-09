@@ -19,6 +19,13 @@ const pushUrl string = baseUrl + "/pushEvent"
 const subscribeUrl string = baseUrl + "/subscribe"
 
 func newRouter(eventHandlers map[string]EventHandler, workerCount int, t *testing.T) *EventRouter {
+	// Mock out these functions
+	createNewHandler = func(externalHandler *client.ExternalHandler, apiClient *client.RancherClient) error {
+		return nil
+	}
+	removeOldHandler = func(name string, apiClient *client.RancherClient) error {
+		return nil
+	}
 	fakeApiClient := &client.RancherClient{}
 	router, err := NewEventRouter("testRouter", 2000, baseUrl, "accKey", "secret", fakeApiClient,
 		eventHandlers, workerCount)
@@ -220,6 +227,5 @@ func TestMain(m *testing.M) {
 	go tu.InitializeServer(eventServerPort, ready)
 	<-ready
 	result := m.Run()
-	// TODO Kill event server
 	os.Exit(result)
 }

@@ -22,7 +22,7 @@ func CreateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	apiClient *client.RancherClient) error {
 	log.Printf("Entering CreateMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
-	physHost, err := apiClient.MachineHost.ById(event.ResourceId)
+	physHost, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
 		return handleByIdError(err, event, replyHandler)
 	}
@@ -80,7 +80,7 @@ func ActivateMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	apiClient *client.RancherClient) error {
 	log.Printf("Entering ActivateMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
-	physHost, err := apiClient.MachineHost.ById(event.ResourceId)
+	physHost, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
 		return handleByIdError(err, event, replyHandler)
 	}
@@ -165,7 +165,7 @@ func PurgeMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	apiClient *client.RancherClient) error {
 	log.Printf("Entering PurgeMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
-	physHost, err := apiClient.MachineHost.ById(event.ResourceId)
+	physHost, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
 		return handleByIdError(err, event, replyHandler)
 	}
@@ -202,7 +202,11 @@ func PurgeMachine(event *events.Event, replyHandler events.ReplyEventHandler,
 	return nil
 }
 
-func getRegistrationUrl(accountId string, apiClient *client.RancherClient) (string, error) {
+var getMachine = func(id string, apiClient *client.RancherClient) (*client.MachineHost, error) {
+	return apiClient.MachineHost.ById(id)
+}
+
+var getRegistrationUrl = func(accountId string, apiClient *client.RancherClient) (string, error) {
 	listOpts := client.NewListOpts()
 	listOpts.Filters["accountId"] = accountId
 	listOpts.Filters["state"] = "active"

@@ -4,13 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/rancherio/go-machine-service/locks"
 	"github.com/rancherio/go-rancher/client"
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
+	"time"
 )
+
+const MaxWait = time.Duration(time.Second * 10)
 
 type ReplyEventHandler func(*ReplyEvent)
 
@@ -24,7 +27,6 @@ type EventRouter struct {
 	accessKey           string
 	secretKey           string
 	apiClient           *client.RancherClient
-	registerUrl         string
 	subscribeUrl        string
 	replyUrl            string
 	eventHandlers       map[string]EventHandler
@@ -38,43 +40,49 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 		w := newWorker(router.replyUrl)
 		workers <- w
 	}
-	registerForm := url.Values{}
-	subscribeForm := url.Values{}
-	// TODO Understand need/function of UUID
-	registerForm.Set("uuid", router.name)
-	registerForm.Set("name", router.name)
-	registerForm.Set("priority", strconv.Itoa(router.priority))
 
-	eventHandlerSuffix := ";handler=" + router.name
-	handlers := map[string]EventHandler{}
-
-	if pingHandler, ok := router.eventHandlers["ping"]; ok {
-		// Ping doesnt need registered in the POST and
-		// ping events don't have the handler suffix. If we
-		// start handling other non-suffix events,
-		// we might consider improving this.
-		handlers["ping"] = pingHandler
-	}
-
-	for event, handler := range router.eventHandlers {
-		registerForm.Add("processNames", event)
-		fullEventKey := event + eventHandlerSuffix
-		subscribeForm.Add("eventNames", fullEventKey)
-		handlers[fullEventKey] = handler
-	}
-
-	regResponse, err := http.PostForm(router.registerUrl, registerForm)
+	// If it exists, delete it, then create it
+	err = removeOldHandler(router.name, router.apiClient)
 	if err != nil {
 		return err
 	}
-	defer regResponse.Body.Close()
+
+	externalHandler := &client.ExternalHandler{
+		Name:         router.name,
+		Uuid:         router.name,
+		Priority:     router.priority,
+		ProcessNames: make([]string, len(router.eventHandlers)),
+	}
+
+	handlers := map[string]EventHandler{}
+
+	if pingHandler, ok := router.eventHandlers["ping"]; ok {
+		// Ping doesnt need registered in the POST and ping events don't have the handler suffix.
+		//If we start handling other non-suffix events, we might consider improving this.
+		handlers["ping"] = pingHandler
+	}
+
+	idx := 0
+	subscribeForm := url.Values{}
+	eventHandlerSuffix := ";handler=" + router.name
+	for event, handler := range router.eventHandlers {
+		externalHandler.ProcessNames[idx] = event
+		fullEventKey := event + eventHandlerSuffix
+		subscribeForm.Add("eventNames", fullEventKey)
+		handlers[fullEventKey] = handler
+		idx++
+	}
+
+	err = createNewHandler(externalHandler, router.apiClient)
+	if err != nil {
+		return err
+	}
 
 	if ready != nil {
 		ready <- true
 	}
 
-	// TODO Harden. Add reconnect logic.
-	eventStream, err := http.PostForm(router.subscribeUrl, subscribeForm)
+	eventStream, err := subscribeToEvents(router.subscribeUrl, subscribeForm)
 	if err != nil {
 		return err
 	}
@@ -86,7 +94,6 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 	for scanner.Scan() {
 		line := scanner.Bytes()
 
-		// TODO Ensure this wont break eventing paradigm
 		line = bytes.TrimSpace(line)
 		if len(line) == 0 {
 			continue
@@ -104,7 +111,6 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 }
 
 func (router *EventRouter) Stop() (err error) {
-	// TODO Revisit. Not sure if I need/want this
 	router.eventStreamResponse.Body.Close()
 	return nil
 }
@@ -128,7 +134,6 @@ func (r *EventRouter) replyHandler(replyEvent *ReplyEvent) {
 		log.Printf("Can't send reply event. Error: %v. Returning", err)
 		return
 	}
-	// TODO Is the right way to defer body closing right after getting response, before checking error?
 	defer response.Body.Close()
 	log.Printf("Replied to event: %v. Response code: %s", replyEvent.Name, response.Status)
 }
@@ -189,7 +194,6 @@ func NewEventRouter(name string, priority int, apiUrl string, accessKey string, 
 		accessKey:     accessKey,
 		secretKey:     secretKey,
 		apiClient:     apiClient,
-		registerUrl:   apiUrl + "/externalhandlers",
 		subscribeUrl:  apiUrl + "/subscribe",
 		replyUrl:      apiUrl + "/publish",
 		eventHandlers: eventHandlers,
@@ -199,4 +203,84 @@ func NewEventRouter(name string, priority int, apiUrl string, accessKey string, 
 
 func newWorker(replyUrl string) *Worker {
 	return &Worker{}
+}
+
+var subscribeToEvents = func(subscribeUrl string, subscribeForm url.Values) (resp *http.Response, err error) {
+	return http.PostForm(subscribeUrl, subscribeForm)
+}
+
+var createNewHandler = func(externalHandler *client.ExternalHandler, apiClient *client.RancherClient) error {
+	_, err := apiClient.ExternalHandler.Create(externalHandler)
+	return err
+}
+
+var removeOldHandler = func(name string, apiClient *client.RancherClient) error {
+	listOpts := client.NewListOpts()
+	listOpts.Filters["name"] = name
+	listOpts.Filters["state"] = "active"
+	handlers, err := apiClient.ExternalHandler.List(listOpts)
+	if err != nil {
+		return err
+	}
+
+	for _, handler := range handlers.Data {
+		h := &handler
+		log.Printf("Removing old handler [%v]", h.Id)
+		doneTransitioning := func() (bool, error) {
+			h, err := apiClient.ExternalHandler.ById(h.Id)
+			if err != nil {
+				return false, err
+			}
+			return h.Transitioning != "yes", nil
+		}
+
+		if _, ok := h.Actions["deactivate"]; ok {
+			h, err = apiClient.ExternalHandler.ActionDeactivate(h)
+			if err != nil {
+				return err
+			}
+
+			err = waitForTransition(doneTransitioning)
+			if err != nil {
+				return err
+			}
+		}
+
+		h, err := apiClient.ExternalHandler.ById(h.Id)
+		if err != nil {
+			return err
+		}
+		if _, ok := h.Actions["remove"]; ok {
+			h, err = apiClient.ExternalHandler.ActionRemove(h)
+			if err != nil {
+				return err
+			}
+			err = waitForTransition(doneTransitioning)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+type doneTranitioningFunc func() (bool, error)
+
+func waitForTransition(waitFunc doneTranitioningFunc) error {
+	timeoutAt := time.Now().Add(MaxWait)
+	ticker := time.NewTicker(time.Millisecond * 250)
+	defer ticker.Stop()
+	for tick := range ticker.C {
+		done, err := waitFunc()
+		if err != nil {
+			return err
+		}
+		if done {
+			return nil
+		}
+		if tick.After(timeoutAt) {
+			return fmt.Errorf("Timed out waiting for transtion.")
+		}
+	}
+	return fmt.Errorf("Timed out waiting for transtion.")
 }

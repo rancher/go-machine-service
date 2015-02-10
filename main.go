@@ -3,8 +3,8 @@ package main
 import (
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-machine-service/handlers"
-	"github.com/rancherio/go-machine-service/utils"
 	"log"
+	"os"
 )
 
 func main() {
@@ -16,9 +16,9 @@ func main() {
 		"ping":                   handlers.PingNoOp,
 	}
 
-	apiUrl := utils.GetRancherUrl(false)
-	accessKey := utils.GetRancherAccessKey()
-	secretKey := utils.GetRancherSecretKey()
+	apiUrl := os.Getenv("CATTLE_URL")
+	accessKey := os.Getenv("CATTLE_ACCESS_KEY")
+	secretKey := os.Getenv("CATTLE_SECRET_KEY")
 
 	router, err := events.NewEventRouter("goMachineService", 2000, apiUrl, accessKey, secretKey,
 		nil, eventHandlers, 10)

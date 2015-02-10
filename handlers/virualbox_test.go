@@ -44,6 +44,7 @@ func TestMachineHandlers(t *testing.T) {
 		t.Fail()
 	}
 
+	// Idempotent check. Should rerun and reply without error
 	err = ActivateMachine(event, mockApiClient)
 	if err != nil {
 		t.Log(err)
@@ -63,18 +64,19 @@ func TestMachineHandlers(t *testing.T) {
 }
 
 func setupVB() {
-	getMachine = func(id string, apiClient *client.RancherClient) (*client.MachineHost, error) {
-		machine := &client.MachineHost{
-			VirtualboxConfig: client.VirtualboxConfig{
-				DiskSize: "40000",
-				Memory:   "2048",
-			},
-			ExternalId: "ext-" + id,
-			Kind:       "machineHost",
-			Driver:     "VirtualBox",
-		}
-		machine.Id = id
+	machine := &client.MachineHost{
+		VirtualboxConfig: client.VirtualboxConfig{
+			DiskSize: "40000",
+			Memory:   "2048",
+		},
+		Kind:   "machineHost",
+		Driver: "VirtualBox",
+	}
 
+	getMachine = func(id string, apiClient *client.RancherClient) (*client.MachineHost, error) {
+		machine.Id = id
+		machine.Name = "name-" + id
+		machine.ExternalId = "ext-" + id
 		return machine, nil
 	}
 
@@ -83,4 +85,10 @@ func setupVB() {
 	}
 
 	publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error { return nil }
+
+	doMachineUpdate = func(current *client.MachineHost, machineUpdates *client.MachineHost,
+		apiClient *client.RancherClient) error {
+		machine.Data = machineUpdates.Data
+		return nil
+	}
 }

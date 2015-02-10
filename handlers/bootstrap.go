@@ -7,6 +7,7 @@ import (
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-rancher/client"
 	"log"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -168,7 +169,22 @@ var getRegistrationUrl = func(accountId string, apiClient *client.RancherClient)
 	if !ok {
 		return "", fmt.Errorf("No registration url on token [%v] for account [%v].", token.Id, accountId)
 	}
+
+	regUrl = tweakRegistrationUrl(regUrl)
 	return regUrl, nil
+}
+
+func tweakRegistrationUrl(regUrl string) string {
+	// We do this to accomodate end-to-end workflow in our local development environments.
+	// Containers running in a vm won't be able to reach an api running on "localhost"
+	// because typically that localhost is referring to the real computer, not the vm.
+	localHostReplace := os.Getenv("CATTLE_AGENT_LOCALHOST_REPLACE")
+	if localHostReplace == "" {
+		return regUrl
+	}
+
+	regUrl = strings.Replace(regUrl, "localhost", localHostReplace, 1)
+	return regUrl
 }
 
 func waitForTokenToActivate(token *client.RegistrationToken,

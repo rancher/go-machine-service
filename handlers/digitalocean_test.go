@@ -45,15 +45,15 @@ func TestDigitalOcean(t *testing.T) {
 
 func setupDO(access_token string) {
 	// TODO Replace functions during teardown.
-	machine := &client.MachineHost{
+	machine := &client.Machine{
 		DigitaloceanConfig: client.DigitaloceanConfig{
 			AccessToken: access_token,
 		},
-		Kind:   "machineHost",
+		Kind:   "machine",
 		Driver: "DigitalOcean",
 	}
 
-	getMachine = func(id string, apiClient *client.RancherClient) (*client.MachineHost, error) {
+	getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {
 		machine.Id = id
 		machine.Name = "name-" + id
 		machine.ExternalId = "ext-" + id
@@ -66,7 +66,7 @@ func setupDO(access_token string) {
 
 	publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error { return nil }
 
-	doMachineUpdate = func(current *client.MachineHost, machineUpdates *client.MachineHost,
+	doMachineUpdate = func(current *client.Machine, machineUpdates *client.Machine,
 		apiClient *client.RancherClient) error {
 		machine.Data = machineUpdates.Data
 		return nil

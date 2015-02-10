@@ -16,18 +16,18 @@ import (
 func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.Printf("Entering CreateMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
-	physHost, err := getMachine(event.ResourceId, apiClient)
+	machine, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
 		return handleByIdError(err, event, apiClient)
 	}
 
 	// Idempotency. If the resource has the property, we're done.
-	if _, ok := physHost.Data[machineDirField]; ok {
+	if _, ok := machine.Data[machineDirField]; ok {
 		reply := newReply(event)
 		return publishReply(reply, apiClient)
 	}
 
-	command, machineDir, err := buildCreateCommand(physHost)
+	command, machineDir, err := buildCreateCommand(machine)
 	if err != nil {
 		return err
 	}
@@ -45,13 +45,13 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	updates := map[string]string{machineDirField: machineDir}
-	err = updateMachineData(physHost, updates, apiClient)
+	err = updateMachineData(machine, updates, apiClient)
 	if err != nil {
 		return err
 	}
 
 	log.Printf("Done creating machine. ResourceId: %v. ExternalId: %v.",
-		event.ResourceId, physHost.ExternalId)
+		event.ResourceId, machine.ExternalId)
 
 	reply := newReply(event)
 	return publishReply(reply, apiClient)
@@ -81,13 +81,13 @@ func startReturnOutput(command *exec.Cmd) (io.Reader, error) {
 	return reader, nil
 }
 
-func buildCreateCommand(physHost *client.MachineHost) (*exec.Cmd, string, error) {
-	cmdArgs, err := buildMachineCreateCmd(physHost)
+func buildCreateCommand(machine *client.Machine) (*exec.Cmd, string, error) {
+	cmdArgs, err := buildMachineCreateCmd(machine)
 	if err != nil {
 		return nil, "", err
 	}
 
-	machineDir, err := buildMachineDir(physHost.ExternalId)
+	machineDir, err := buildMachineDir(machine.ExternalId)
 	if err != nil {
 		return nil, "", err
 	}
@@ -109,42 +109,42 @@ func buildMachineDir(uuid string) (string, error) {
 	return machineDir, err
 }
 
-func buildMachineCreateCmd(physHost *client.MachineHost) ([]string, error) {
+func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	// TODO Quick and dirty. Refactor to use reflection and maps
 	// TODO Write a separate test for this function
 	cmd := []string{"create", "-d"}
 
-	switch strings.ToLower(physHost.Driver) {
+	switch strings.ToLower(machine.Driver) {
 	case "digitalocean":
 		cmd = append(cmd, "digitalocean")
-		if physHost.DigitaloceanConfig.Image != "" {
-			cmd = append(cmd, "--digitalocean-image", physHost.DigitaloceanConfig.Image)
+		if machine.DigitaloceanConfig.Image != "" {
+			cmd = append(cmd, "--digitalocean-image", machine.DigitaloceanConfig.Image)
 		}
-		if physHost.DigitaloceanConfig.Size != "" {
-			cmd = append(cmd, "--digitalocean-size", physHost.DigitaloceanConfig.Size)
+		if machine.DigitaloceanConfig.Size != "" {
+			cmd = append(cmd, "--digitalocean-size", machine.DigitaloceanConfig.Size)
 		}
-		if physHost.DigitaloceanConfig.Region != "" {
-			cmd = append(cmd, "--digitalocean-region", physHost.DigitaloceanConfig.Region)
+		if machine.DigitaloceanConfig.Region != "" {
+			cmd = append(cmd, "--digitalocean-region", machine.DigitaloceanConfig.Region)
 		}
-		if physHost.DigitaloceanConfig.AccessToken != "" {
-			cmd = append(cmd, "--digitalocean-access-token", physHost.DigitaloceanConfig.AccessToken)
+		if machine.DigitaloceanConfig.AccessToken != "" {
+			cmd = append(cmd, "--digitalocean-access-token", machine.DigitaloceanConfig.AccessToken)
 		}
 	case "virtualbox":
 		cmd = append(cmd, "virtualbox")
-		if physHost.VirtualboxConfig.Boot2dockerUrl != "" {
-			cmd = append(cmd, "--virtualbox-boot2docker-url", physHost.VirtualboxConfig.Boot2dockerUrl)
+		if machine.VirtualboxConfig.Boot2dockerUrl != "" {
+			cmd = append(cmd, "--virtualbox-boot2docker-url", machine.VirtualboxConfig.Boot2dockerUrl)
 		}
-		if physHost.VirtualboxConfig.DiskSize != "" {
-			cmd = append(cmd, "--virtualbox-disk-size", physHost.VirtualboxConfig.DiskSize)
+		if machine.VirtualboxConfig.DiskSize != "" {
+			cmd = append(cmd, "--virtualbox-disk-size", machine.VirtualboxConfig.DiskSize)
 		}
-		if physHost.VirtualboxConfig.Memory != "" {
-			cmd = append(cmd, "--virtualbox-memory", physHost.VirtualboxConfig.Memory)
+		if machine.VirtualboxConfig.Memory != "" {
+			cmd = append(cmd, "--virtualbox-memory", machine.VirtualboxConfig.Memory)
 		}
 	default:
-		return nil, fmt.Errorf("Unrecognize Driver: %v", physHost.Driver)
+		return nil, fmt.Errorf("Unrecognize Driver: %v", machine.Driver)
 	}
 
-	cmd = append(cmd, physHost.Name)
+	cmd = append(cmd, machine.Name)
 
 	log.Printf("Cmd slice: %v", cmd)
 	return cmd, nil

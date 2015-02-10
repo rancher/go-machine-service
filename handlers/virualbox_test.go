@@ -64,16 +64,16 @@ func TestMachineHandlers(t *testing.T) {
 }
 
 func setupVB() {
-	machine := &client.MachineHost{
+	machine := &client.Machine{
 		VirtualboxConfig: client.VirtualboxConfig{
 			DiskSize: "40000",
 			Memory:   "2048",
 		},
-		Kind:   "machineHost",
+		Kind:   "machine",
 		Driver: "VirtualBox",
 	}
 
-	getMachine = func(id string, apiClient *client.RancherClient) (*client.MachineHost, error) {
+	getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {
 		machine.Id = id
 		machine.Name = "name-" + id
 		machine.ExternalId = "ext-" + id
@@ -86,7 +86,7 @@ func setupVB() {
 
 	publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error { return nil }
 
-	doMachineUpdate = func(current *client.MachineHost, machineUpdates *client.MachineHost,
+	doMachineUpdate = func(current *client.Machine, machineUpdates *client.Machine,
 		apiClient *client.RancherClient) error {
 		machine.Data = machineUpdates.Data
 		return nil

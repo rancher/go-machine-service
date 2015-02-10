@@ -11,12 +11,12 @@ import (
 func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.Printf("Entering PurgeMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
-	physHost, err := getMachine(event.ResourceId, apiClient)
+	machine, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
 		return handleByIdError(err, event, apiClient)
 	}
 
-	machineDir, err := getMachineDir(physHost)
+	machineDir, err := getMachineDir(machine)
 	if err != nil {
 		return err
 	}
@@ -28,13 +28,13 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return publishReply(reply, apiClient)
 	}
 
-	mExists, err := machineExists(machineDir, physHost.Name)
+	mExists, err := machineExists(machineDir, machine.Name)
 	if err != nil {
 		return err
 	}
 
 	if mExists {
-		err := deleteMachine(machineDir, physHost)
+		err := deleteMachine(machineDir, machine)
 		if err != nil {
 			return err
 		}
@@ -46,14 +46,14 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	log.Printf("Done purging machine. ResourceId: %v. ExternalId: %v.", event.ResourceId,
-		physHost.ExternalId)
+		machine.ExternalId)
 
 	reply := newReply(event)
 	return publishReply(reply, apiClient)
 }
 
-func deleteMachine(machineDir string, physHost *client.MachineHost) error {
-	command := buildCommand(machineDir, []string{"rm", "-f", physHost.Name})
+func deleteMachine(machineDir string, machine *client.Machine) error {
+	command := buildCommand(machineDir, []string{"rm", "-f", machine.Name})
 	err := command.Start()
 	if err != nil {
 		return err

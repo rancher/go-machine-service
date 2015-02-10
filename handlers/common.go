@@ -22,16 +22,16 @@ func PingNoOp(event *events.Event, apiClient *client.RancherClient) error {
 	return nil
 }
 
-func getMachineDir(physHost *client.MachineHost) (string, error) {
-	mDir, ok := physHost.Data[machineDirField]
+func getMachineDir(machine *client.Machine) (string, error) {
+	mDir, ok := machine.Data[machineDirField]
 	if !ok {
-		return "", fmt.Errorf("MachineDir field not available for machine [%v].", physHost.Id)
+		return "", fmt.Errorf("MachineDir field not available for machine [%v].", machine.Id)
 	}
 	machineDir := mDir.(string)
 	return machineDir, nil
 }
 
-func updateMachineData(machine *client.MachineHost, dataUpdates map[string]string,
+func updateMachineData(machine *client.Machine, dataUpdates map[string]string,
 	apiClient *client.RancherClient) error {
 	latest, err := getMachine(machine.Id, apiClient)
 	if err != nil {
@@ -44,12 +44,12 @@ func updateMachineData(machine *client.MachineHost, dataUpdates map[string]strin
 	for k, v := range dataUpdates {
 		data[k] = v
 	}
-	return doMachineUpdate(latest, &client.MachineHost{Data: data}, apiClient)
+	return doMachineUpdate(latest, &client.Machine{Data: data}, apiClient)
 }
 
-var doMachineUpdate = func(current *client.MachineHost, machineUpdates *client.MachineHost,
+var doMachineUpdate = func(current *client.Machine, machineUpdates *client.Machine,
 	apiClient *client.RancherClient) error {
-	_, err := apiClient.MachineHost.Update(current, machineUpdates)
+	_, err := apiClient.Machine.Update(current, machineUpdates)
 	if err != nil {
 		return err
 	}
@@ -61,8 +61,8 @@ var publishReply = func(reply *client.Publish, apiClient *client.RancherClient) 
 	return err
 }
 
-var getMachine = func(id string, apiClient *client.RancherClient) (*client.MachineHost, error) {
-	return apiClient.MachineHost.ById(id)
+var getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {
+	return apiClient.Machine.ById(id)
 }
 
 func handleByIdError(err error, event *events.Event, apiClient *client.RancherClient) error {
@@ -70,7 +70,7 @@ func handleByIdError(err error, event *events.Event, apiClient *client.RancherCl
 	if !ok || apiError.StatusCode != 404 {
 		return err
 	}
-	// 404 Indicates this is a physicalHost but not a machineHost. Just reply.
+	// 404 Indicates this is a physicalHost but not a machine. Just reply.
 	reply := newReply(event)
 	return publishReply(reply, apiClient)
 }

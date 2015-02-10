@@ -24,28 +24,28 @@ const (
 func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.Printf("Entering ActivateMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
 
-	physHost, err := getMachine(event.ResourceId, apiClient)
+	machine, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
 		return handleByIdError(err, event, apiClient)
 	}
 
 	// Idempotency. If the resource has the property, we're done.
-	if _, ok := physHost.Data[bootstrappedAtField]; ok {
+	if _, ok := machine.Data[bootstrappedAtField]; ok {
 		reply := newReply(event)
 		return publishReply(reply, apiClient)
 	}
 
-	registrationUrl, err := getRegistrationUrl(physHost.AccountId, apiClient)
+	registrationUrl, err := getRegistrationUrl(machine.AccountId, apiClient)
 	if err != nil {
 		return err
 	}
 
-	machineDir, err := getMachineDir(physHost)
+	machineDir, err := getMachineDir(machine)
 	if err != nil {
 		return err
 	}
 
-	dockerClient, err := GetDockerClient(machineDir, physHost.Name)
+	dockerClient, err := GetDockerClient(machineDir, machine.Name)
 	if err != nil {
 		return err
 	}
@@ -55,23 +55,23 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		return err
 	}
 
-	container, err := createContainer(registrationUrl, physHost, dockerClient)
+	container, err := createContainer(registrationUrl, machine, dockerClient)
 	if err != nil {
 		return err
 	}
-	log.Printf("Container created for resource [%v]. Container id: %+v", physHost.Id, container.ID)
+	log.Printf("Container created for resource [%v]. Container id: %+v", machine.Id, container.ID)
 
 	err = dockerClient.StartContainer(container.ID, nil)
 	if err != nil {
 		return err
 	}
 	log.Printf("Rancher-agent started. ResourceId: [%v]. ExternalId: [%v]. Container id: [%v].",
-		event.ResourceId, physHost.ExternalId, container.ID)
+		event.ResourceId, machine.ExternalId, container.ID)
 
 	t := time.Now()
 	bootstrappedAt := t.Format(time.RFC3339)
 	updates := map[string]string{bootstrappedAtField: bootstrappedAt}
-	err = updateMachineData(physHost, updates, apiClient)
+	err = updateMachineData(machine, updates, apiClient)
 	if err != nil {
 		return err
 	}
@@ -80,10 +80,10 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 	return publishReply(reply, apiClient)
 }
 
-func createContainer(registrationUrl string, physHost *client.MachineHost,
+func createContainer(registrationUrl string, machine *client.Machine,
 	dockerClient *docker.Client) (*docker.Container, error) {
 	containerCmd := []string{registrationUrl}
-	containerConfig := buildContainerConfig(containerCmd, physHost)
+	containerConfig := buildContainerConfig(containerCmd, machine)
 	hostConfig := buildHostConfig()
 
 	opts := docker.CreateContainerOptions{
@@ -103,12 +103,12 @@ func buildHostConfig() *docker.HostConfig {
 	return hostConfig
 }
 
-func buildContainerConfig(containerCmd []string, physHost *client.MachineHost) *docker.Config {
+func buildContainerConfig(containerCmd []string, machine *client.Machine) *docker.Config {
 	imgRepo, imgTag := getRancherAgentImage()
 	image := imgRepo + ":" + imgTag
 
 	volConfig := map[string]struct{}{"/var/run/docker.sock": {}}
-	envVars := []string{"CATTLE_PHYSICAL_HOST_UUID=" + physHost.ExternalId}
+	envVars := []string{"CATTLE_PHYSICAL_HOST_UUID=" + machine.ExternalId}
 	config := &docker.Config{
 		AttachStdin: true,
 		Tty:         true,

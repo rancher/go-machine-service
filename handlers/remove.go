@@ -18,7 +18,10 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 
 	machineDir, err := getMachineDir(machine)
 	if err != nil {
-		return err
+		// No machine dir, nothing to do.
+		log.Printf("Couldn't find machineDir for [%v]. Nothing to do. Error: ", event.ResourceId, err)
+		reply := newReply(event)
+		return publishReply(reply, apiClient)
 	}
 
 	// Idempotency. If this dir doesn't exist, we have nothing to do.

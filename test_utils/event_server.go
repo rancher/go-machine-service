@@ -26,7 +26,7 @@ func pushEventHandler(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	body := string(bod[:len(bod)])
+	body := string(bod[:])
 	pushToSubscribers(body)
 }
 

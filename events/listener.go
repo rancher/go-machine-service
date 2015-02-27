@@ -5,9 +5,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/rancherio/go-machine-service/locks"
 	"github.com/rancherio/go-rancher/client"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -84,7 +84,7 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 	if err != nil {
 		return err
 	}
-	log.Println("Connection established.")
+	log.Info("Connection established")
 	router.eventStreamResponse = eventStream
 	defer eventStream.Body.Close()
 
@@ -101,7 +101,7 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 		case worker := <-workers:
 			go worker.DoWork(line, handlers, router.apiClient, workers)
 		default:
-			log.Printf("No workers available dropping event.")
+			log.Debug("No workers available dropping event.")
 		}
 	}
 
@@ -124,14 +124,20 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 	event := &Event{}
 	err := json.Unmarshal(rawEvent, &event)
 	if err != nil {
-		log.Printf("Error unmarshalling event: %v", err)
+		log.WithFields(log.Fields{
+			"Err": err,
+		}).Warn("Error unmarshalling event")
 		return
 	}
 
-	log.Printf("Received event: %v", event.Name)
+	log.WithFields(log.Fields{
+		"Event Name": event.Name,
+	}).Debug("Received event")
 	unlocker := locks.Lock(event.ResourceId)
 	if unlocker == nil {
-		log.Printf("Resource [%v] locked. Dropping event.", event.ResourceId)
+		log.WithFields(log.Fields{
+			"Resource ID": event.ResourceId,
+		}).Debug("Resource locked. Dropping event")
 		return
 	}
 	defer unlocker.Unlock()
@@ -139,11 +145,15 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 	if fn, ok := eventHandlers[event.Name]; ok {
 		err = fn(event, apiClient)
 		if err != nil {
-			log.Printf("Error processing event. Event name: %v. Event id: %v Resource id: %v. Error: %v",
-				event.Name, event.Id, event.ResourceId, err)
+			log.WithFields(log.Fields{
+				"Event Name":  event.Name,
+				"Event ID":    event.Id,
+				"Resource ID": event.ResourceId,
+				"Err":         err,
+			}).Warn("Error processing event")
 		}
 	} else {
-		log.Printf("No handler registered for event %v", event.Name)
+		log.Debug("No handler registered for event %v", event.Name)
 	}
 }
 
@@ -153,6 +163,7 @@ func NewEventRouter(name string, priority int, apiUrl string, accessKey string, 
 	if apiClient == nil {
 		var err error
 		apiClient, err = client.NewRancherClient(&client.ClientOpts{
+
 			Url:       apiUrl,
 			AccessKey: accessKey,
 			SecretKey: secretKey,
@@ -206,7 +217,9 @@ var removeOldHandler = func(name string, apiClient *client.RancherClient) error 
 
 	for _, handler := range handlers.Data {
 		h := &handler
-		log.Printf("Removing old handler [%v]", h.Id)
+		log.WithFields(log.Fields{
+			"Handler ID": h.Id,
+		}).Debug("Removing old handler")
 		doneTransitioning := func() (bool, error) {
 			h, err := apiClient.ExternalHandler.ById(h.Id)
 			if err != nil {

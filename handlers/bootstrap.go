@@ -3,10 +3,10 @@ package handlers
 import (
 	"bytes"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-rancher/client"
-	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -22,7 +22,10 @@ const (
 )
 
 func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error {
-	log.Printf("Entering ActivateMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
+	log.WithFields(log.Fields{
+		"ResourceId": event.ResourceId,
+		"Event":      event,
+	}).Info("Activating Machine")
 
 	machine, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
@@ -59,14 +62,21 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 	if err != nil {
 		return err
 	}
-	log.Printf("Container created for resource [%v]. Container id: %+v", machine.Id, container.ID)
+	log.WithFields(log.Fields{
+		"MachineId":   machine.Id,
+		"ContainerId": container.ID,
+	}).Info("Container created for Machine")
 
 	err = dockerClient.StartContainer(container.ID, nil)
 	if err != nil {
 		return err
 	}
-	log.Printf("Rancher-agent started. ResourceId: [%v]. ExternalId: [%v]. Container id: [%v].",
-		event.ResourceId, machine.ExternalId, container.ID)
+
+	log.WithFields(log.Fields{
+		"ResourceId":         event.ResourceId,
+		"Machine ExternalId": machine.ExternalId,
+		"Container Id":       container.ID,
+	}).Info("Rancher-agent started")
 
 	t := time.Now()
 	bootstrappedAt := t.Format(time.RFC3339)
@@ -146,10 +156,14 @@ var getRegistrationUrl = func(accountId string, apiClient *client.RancherClient)
 
 	var token client.RegistrationToken
 	if len(tokenCollection.Data) >= 1 {
-		log.Printf("Found token for accountId [%v]", accountId)
+		log.WithFields(log.Fields{
+			"AccountId": accountId,
+		}).Debug("Found token for account")
 		token = tokenCollection.Data[0]
 	} else {
-		log.Printf("Creating token for accountId [%v]", accountId)
+		log.WithFields(log.Fields{
+			"AccountId": accountId,
+		}).Debug("Creating new token for account")
 		createToken := &client.RegistrationToken{
 			AccountId: accountId,
 		}

@@ -2,14 +2,17 @@ package handlers
 
 import (
 	"bufio"
+	log "github.com/Sirupsen/logrus"
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-rancher/client"
-	"log"
 	"os"
 )
 
 func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
-	log.Printf("Entering PurgeMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
+	log.WithFields(log.Fields{
+		"ResourceId": event.ResourceId,
+		"Event":      event,
+	}).Info("Purging Machine")
 
 	machine, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
@@ -19,7 +22,10 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	machineDir, err := getMachineDir(machine)
 	if err != nil {
 		// No machine dir, nothing to do.
-		log.Printf("Couldn't find machineDir for [%v]. Nothing to do. Error: ", event.ResourceId, err)
+		log.WithFields(log.Fields{
+			"ResourceId": event.ResourceId,
+			"Err":        err,
+		}).Warn("Unable to find machineDir.  Nothing to do")
 		reply := newReply(event)
 		return publishReply(reply, apiClient)
 	}
@@ -48,8 +54,10 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
-	log.Printf("Done purging machine. ResourceId: %v. ExternalId: %v.", event.ResourceId,
-		machine.ExternalId)
+	log.WithFields(log.Fields{
+		"ResourceId":         event.ResourceId,
+		"Machine ExternalId": machine.ExternalId,
+	}).Info("Machine purged")
 
 	reply := newReply(event)
 	return publishReply(reply, apiClient)

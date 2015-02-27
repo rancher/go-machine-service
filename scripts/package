@@ -7,9 +7,9 @@ cd $(dirname $0)/..
 set_project_vars
 
 rm -rf dist
-mkdir -p dist
+mkdir -p dist/artifacts
 
 cd build
 echo "Packaging:"
-tar cvJf ../dist/$PROJECT.tar.xz .
-echo Created dist/$PROJECT.tar.xz
+tar cvJf ../dist/artifacts/$PROJECT.tar.xz .
+echo Created dist/artifacts/$PROJECT.tar.xz

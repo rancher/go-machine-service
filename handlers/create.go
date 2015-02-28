@@ -40,7 +40,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
-	go logProgress(readerStdout, readerStderr)
+	go logProgress(event.ResourceId, readerStdout, readerStderr)
 
 	err = command.Wait()
 
@@ -63,16 +63,20 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	return publishReply(reply, apiClient)
 }
 
-func logProgress(readerStdout io.Reader, readerStderr io.Reader) {
+func logProgress(resourceId string, readerStdout io.Reader, readerStderr io.Reader) {
 	// We will just log stdout first, then stderr, ignoring all errors.
 	scanner := bufio.NewScanner(readerStdout)
 	for scanner.Scan() {
-		log.Infof("stdout: %s \n", scanner.Text())
+		log.WithFields(log.Fields{
+			"ResourceId: ": resourceId,
+		}).Infof("stdout: %s", scanner.Text())
 	}
 
 	scanner = bufio.NewScanner(readerStderr)
 	for scanner.Scan() {
-		log.Infof("stderr: %s \n", scanner.Text())
+		log.WithFields(log.Fields{
+			"ResourceId": resourceId,
+		}).Infof("stderr: %s", scanner.Text())
 	}
 }
 

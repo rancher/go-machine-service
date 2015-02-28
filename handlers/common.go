@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	machineDirEnvKey = "MACHINE_DIR="
+	machineDirEnvKey = "MACHINE_STORAGE_PATH="
 	machineDirField  = "machineDir"
 	machineCmd       = "docker-machine"
 )

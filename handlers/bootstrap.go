@@ -63,6 +63,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		return err
 	}
 	log.WithFields(log.Fields{
+		"ResourceId":  event.ResourceId,
 		"MachineId":   machine.Id,
 		"ContainerId": container.ID,
 	}).Info("Container created for Machine")

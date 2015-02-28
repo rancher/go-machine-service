@@ -131,7 +131,7 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 	}
 
 	log.WithFields(log.Fields{
-		"Event Name": event.Name,
+		"EventName": event.Name,
 	}).Debug("Received event")
 	unlocker := locks.Lock(event.ResourceId)
 	if unlocker == nil {
@@ -146,14 +146,16 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 		err = fn(event, apiClient)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"Event Name":  event.Name,
-				"Event ID":    event.Id,
-				"Resource ID": event.ResourceId,
-				"Err":         err,
+				"EventName":  event.Name,
+				"EventId":    event.Id,
+				"ResourceId": event.ResourceId,
+				"Err":        err,
 			}).Warn("Error processing event")
 		}
 	} else {
-		log.Debug("No handler registered for event %v", event.Name)
+		log.WithFields(log.Fields{
+			"EventName": event.Name,
+		}).Debug("No handler registered for event")
 	}
 }
 

@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	machineDirEnvKey = "MACHINE_DIR="
+	machineDirEnvKey = "MACHINE_STORAGE_PATH="
 	machineDirField  = "machineDir"
-	machineCmd       = "machine"
+	machineCmd       = "docker-machine"
 )
 
 var RegExMachineDirEnv = regexp.MustCompile("^" + machineDirEnvKey + ".*")

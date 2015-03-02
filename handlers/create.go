@@ -3,10 +3,10 @@ package handlers
 import (
 	"bufio"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-rancher/client"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,7 +14,10 @@ import (
 )
 
 func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
-	log.Printf("Entering CreateMachine. ResourceId: %v. Event: %v.", event.ResourceId, event)
+	log.WithFields(log.Fields{
+		"ResourceId": event.ResourceId,
+		"Event":      event,
+	}).Info("Creating Machine")
 
 	machine, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
@@ -32,14 +35,15 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
-	reader, err := startReturnOutput(command)
+	readerStdout, readerStderr, err := startReturnOutput(command)
 	if err != nil {
 		return err
 	}
 
-	go logProgress(reader)
+	go logProgress(event.ResourceId, readerStdout, readerStderr)
 
 	err = command.Wait()
+
 	if err != nil {
 		return err
 	}
@@ -50,35 +54,50 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
-	log.Printf("Done creating machine. ResourceId: %v. ExternalId: %v.",
-		event.ResourceId, machine.ExternalId)
+	log.WithFields(log.Fields{
+		"ResourceId":         event.ResourceId,
+		"Machine ExternalId": machine.ExternalId,
+	}).Info("Machine Created")
 
 	reply := newReply(event)
 	return publishReply(reply, apiClient)
 }
 
-func logProgress(r io.Reader) {
-	scanner := bufio.NewScanner(r)
+func logProgress(resourceId string, readerStdout io.Reader, readerStderr io.Reader) {
+	// We will just log stdout first, then stderr, ignoring all errors.
+	scanner := bufio.NewScanner(readerStdout)
 	for scanner.Scan() {
-		log.Printf("%s \n", scanner.Text())
+		log.WithFields(log.Fields{
+			"ResourceId: ": resourceId,
+		}).Infof("stdout: %s", scanner.Text())
 	}
-	if err := scanner.Err(); err != nil {
-		log.Printf("Error reading output: %v. Ignoring and continuing.", err)
+
+	scanner = bufio.NewScanner(readerStderr)
+	for scanner.Scan() {
+		log.WithFields(log.Fields{
+			"ResourceId": resourceId,
+		}).Infof("stderr: %s", scanner.Text())
 	}
 }
 
-func startReturnOutput(command *exec.Cmd) (io.Reader, error) {
-	reader, err := command.StdoutPipe()
+func startReturnOutput(command *exec.Cmd) (io.Reader, io.Reader, error) {
+	readerStdout, err := command.StdoutPipe()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	readerStderr, err := command.StderrPipe()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	err = command.Start()
 	if err != nil {
-		defer reader.Close()
-		return nil, err
+		defer readerStdout.Close()
+		defer readerStderr.Close()
+		return nil, nil, err
 	}
-	return reader, nil
+	return readerStdout, readerStderr, nil
 }
 
 func buildCreateCommand(machine *client.Machine) (*exec.Cmd, string, error) {
@@ -146,6 +165,6 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 
 	cmd = append(cmd, machine.Name)
 
-	log.Printf("Cmd slice: %v", cmd)
+	log.Infof("Cmd slice: %v", cmd)
 	return cmd, nil
 }

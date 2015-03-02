@@ -1,14 +1,21 @@
 package main
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-machine-service/handlers"
-	"log"
 	"os"
 )
 
 func main() {
-	log.Println("Beginning go-machine-service...")
+	// Process options
+	for _, f := range os.Args {
+		if f == "-D" || f == "--debug" || f == "-debug" {
+			log.SetLevel(log.DebugLevel)
+		}
+	}
+
+	log.Info("Starting go-machine-service...")
 	eventHandlers := map[string]events.EventHandler{
 		"physicalhost.create":    handlers.CreateMachine,
 		"physicalhost.bootstrap": handlers.ActivateMachine,
@@ -23,9 +30,11 @@ func main() {
 	router, err := events.NewEventRouter("goMachineService", 2000, apiUrl, accessKey, secretKey,
 		nil, eventHandlers, 10)
 	if err != nil {
-		log.Println("Unable to create EventRouter", err)
+		log.WithFields(log.Fields{
+			"Err": err,
+		}).Error("Unable to create EventRouter")
 	} else {
 		router.Start(nil)
 	}
-	log.Println("Leaving go-machine-service...")
+	log.Info("Exiting go-machine-service...")
 }

@@ -26,7 +26,7 @@ var endpointRegEx = regexp.MustCompile("-H=[[:alnum:]]*[[:graph:]]*")
 func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.WithFields(log.Fields{
 		"ResourceId": event.ResourceId,
-		"Event":      event,
+		"EventId":    event.Id,
 	}).Info("Activating Machine")
 
 	machine, err := getMachine(event.ResourceId, apiClient)

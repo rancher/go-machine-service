@@ -21,6 +21,8 @@ const (
 	parseMessage        = "Failed to parse config: [%v]"
 )
 
+var endpointRegEx = regexp.MustCompile("-H=[[:alnum:]]*[[:graph:]]*")
+
 func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.WithFields(log.Fields{
 		"ResourceId": event.ResourceId,
@@ -261,7 +263,6 @@ func getConnectionConfig(machineDir string, machineName string) (*tlsConnectionC
 
 func parseConnectionArgs(args string) (*tlsConnectionConfig, error) {
 	// Extract the -H (host) parameter
-	endpointRegEx := regexp.MustCompile("-H=\".*\"")
 	endpointMatches := endpointRegEx.FindAllString(args, -1)
 	if len(endpointMatches) != 1 {
 		return nil, fmt.Errorf(parseMessage, args)

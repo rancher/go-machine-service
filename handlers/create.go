@@ -16,7 +16,7 @@ import (
 func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.WithFields(log.Fields{
 		"ResourceId": event.ResourceId,
-		"Event":      event,
+		"EventId":    event.Id,
 	}).Info("Creating Machine")
 
 	machine, err := getMachine(event.ResourceId, apiClient)
@@ -55,8 +55,8 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	log.WithFields(log.Fields{
-		"ResourceId":         event.ResourceId,
-		"Machine ExternalId": machine.ExternalId,
+		"ResourceId":        event.ResourceId,
+		"MachineExternalId": machine.ExternalId,
 	}).Info("Machine Created")
 
 	reply := newReply(event)

@@ -11,7 +11,7 @@ import (
 func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.WithFields(log.Fields{
 		"ResourceId": event.ResourceId,
-		"Event":      event,
+		"EventId":    event.Id,
 	}).Info("Purging Machine")
 
 	machine, err := getMachine(event.ResourceId, apiClient)
@@ -55,9 +55,9 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	log.WithFields(log.Fields{
-		"ResourceId":         event.ResourceId,
-		"Machine ExternalId": machine.ExternalId,
-		"MachineDir":         machineDir,
+		"ResourceId":        event.ResourceId,
+		"MachineExternalId": machine.ExternalId,
+		"MachineDir":        machineDir,
 	}).Info("Machine purged")
 
 	reply := newReply(event)

@@ -10,8 +10,8 @@ import (
 
 func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.WithFields(log.Fields{
-		"ResourceId": event.ResourceId,
-		"EventId":    event.Id,
+		"resourceId": event.ResourceId,
+		"eventId":    event.Id,
 	}).Info("Purging Machine")
 
 	machine, err := getMachine(event.ResourceId, apiClient)
@@ -23,8 +23,8 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	if err != nil {
 		// No machine dir, nothing to do.
 		log.WithFields(log.Fields{
-			"ResourceId": event.ResourceId,
-			"Err":        err,
+			"resourceId": event.ResourceId,
+			"err":        err,
 		}).Warn("Unable to find machineDir.  Nothing to do")
 		reply := newReply(event)
 		return publishReply(reply, apiClient)
@@ -55,9 +55,9 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	log.WithFields(log.Fields{
-		"ResourceId":        event.ResourceId,
-		"MachineExternalId": machine.ExternalId,
-		"MachineDir":        machineDir,
+		"resourceId":        event.ResourceId,
+		"machineExternalId": machine.ExternalId,
+		"machineDir":        machineDir,
 	}).Info("Machine purged")
 
 	reply := newReply(event)

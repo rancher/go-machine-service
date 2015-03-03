@@ -25,8 +25,8 @@ var endpointRegEx = regexp.MustCompile("-H=[[:alnum:]]*[[:graph:]]*")
 
 func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.WithFields(log.Fields{
-		"ResourceId": event.ResourceId,
-		"EventId":    event.Id,
+		"resourceId": event.ResourceId,
+		"eventId":    event.Id,
 	}).Info("Activating Machine")
 
 	machine, err := getMachine(event.ResourceId, apiClient)
@@ -65,10 +65,10 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		return err
 	}
 	log.WithFields(log.Fields{
-		"ResourceId":  event.ResourceId,
-		"MachineId":   machine.Id,
-		"ContainerId": container.ID,
-	}).Info("Container created for Machine")
+		"resourceId":  event.ResourceId,
+		"machineId":   machine.Id,
+		"containerId": container.ID,
+	}).Info("Container created for machine")
 
 	err = dockerClient.StartContainer(container.ID, nil)
 	if err != nil {
@@ -76,10 +76,10 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 	}
 
 	log.WithFields(log.Fields{
-		"ResourceId":         event.ResourceId,
-		"Machine ExternalId": machine.ExternalId,
-		"Container Id":       container.ID,
-	}).Info("Rancher-agent started")
+		"resourceId":        event.ResourceId,
+		"machineExternalId": machine.ExternalId,
+		"containerId":       container.ID,
+	}).Info("Rancher-agent for machine started")
 
 	t := time.Now()
 	bootstrappedAt := t.Format(time.RFC3339)
@@ -160,12 +160,12 @@ var getRegistrationUrl = func(accountId string, apiClient *client.RancherClient)
 	var token client.RegistrationToken
 	if len(tokenCollection.Data) >= 1 {
 		log.WithFields(log.Fields{
-			"AccountId": accountId,
+			"accountId": accountId,
 		}).Debug("Found token for account")
 		token = tokenCollection.Data[0]
 	} else {
 		log.WithFields(log.Fields{
-			"AccountId": accountId,
+			"accountId": accountId,
 		}).Debug("Creating new token for account")
 		createToken := &client.RegistrationToken{
 			AccountId: accountId,

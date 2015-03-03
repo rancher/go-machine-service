@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-machine-service/handlers"
@@ -8,12 +9,7 @@ import (
 )
 
 func main() {
-	// Process options
-	for _, f := range os.Args {
-		if f == "-D" || f == "--debug" || f == "-debug" {
-			log.SetLevel(log.DebugLevel)
-		}
-	}
+	processCmdLineFlags()
 
 	log.Info("Starting go-machine-service...")
 	eventHandlers := map[string]events.EventHandler{
@@ -37,4 +33,19 @@ func main() {
 		router.Start(nil)
 	}
 	log.Info("Exiting go-machine-service...")
+}
+
+func processCmdLineFlags() {
+	// Define command line flags
+	logLevel := flag.String("loglevel", "info", "Set the default loglevel (default:info) [debug|info|warn|error]")
+
+	flag.Parse()
+
+	// Process log level.  If an invalid level is passed in, we simply default to info.
+	if parsedLogLevel, err := log.ParseLevel(*logLevel); err == nil {
+		log.WithFields(log.Fields{
+			"logLevel": *logLevel,
+		}).Info("Setting log level")
+		log.SetLevel(parsedLogLevel)
+	}
 }

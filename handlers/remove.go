@@ -24,6 +24,7 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		// No machine dir, nothing to do.
 		log.WithFields(log.Fields{
 			"resourceId": event.ResourceId,
+			"machineDir": machineDir,
 			"err":        err,
 		}).Warn("Unable to find machineDir.  Nothing to do")
 		reply := newReply(event)

@@ -15,8 +15,8 @@ import (
 
 func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.WithFields(log.Fields{
-		"ResourceId": event.ResourceId,
-		"EventId":    event.Id,
+		"resourceId": event.ResourceId,
+		"eventId":    event.Id,
 	}).Info("Creating Machine")
 
 	machine, err := getMachine(event.ResourceId, apiClient)
@@ -55,8 +55,8 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	log.WithFields(log.Fields{
-		"ResourceId":        event.ResourceId,
-		"MachineExternalId": machine.ExternalId,
+		"resourceId":        event.ResourceId,
+		"machineExternalId": machine.ExternalId,
 	}).Info("Machine Created")
 
 	reply := newReply(event)
@@ -68,14 +68,14 @@ func logProgress(resourceId string, readerStdout io.Reader, readerStderr io.Read
 	scanner := bufio.NewScanner(readerStdout)
 	for scanner.Scan() {
 		log.WithFields(log.Fields{
-			"ResourceId: ": resourceId,
+			"resourceId: ": resourceId,
 		}).Infof("stdout: %s", scanner.Text())
 	}
 
 	scanner = bufio.NewScanner(readerStderr)
 	for scanner.Scan() {
 		log.WithFields(log.Fields{
-			"ResourceId": resourceId,
+			"resourceId": resourceId,
 		}).Infof("stderr: %s", scanner.Text())
 	}
 }

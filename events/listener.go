@@ -39,6 +39,10 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 		workers <- w
 	}
 
+	log.WithFields(log.Fields{
+		"workerCount": router.workerCount,
+	}).Info("Initializing event router")
+
 	// If it exists, delete it, then create it
 	err = removeOldHandler(router.name, router.apiClient)
 	if err != nil {
@@ -101,7 +105,9 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 		case worker := <-workers:
 			go worker.DoWork(line, handlers, router.apiClient, workers)
 		default:
-			log.Debug("No workers available dropping event.")
+			log.WithFields(log.Fields{
+				"workerCount": router.workerCount,
+			}).Info("No workers available dropping event.")
 		}
 	}
 
@@ -121,22 +127,22 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 	workers chan *Worker) {
 	defer func() { workers <- w }()
 	log.WithFields(log.Fields{
-		"Event": string(rawEvent[:]),
-	}).Info("Processing event.")
+		"event": string(rawEvent[:]),
+	}).Debug("Processing event.")
 
 	event := &Event{}
 	err := json.Unmarshal(rawEvent, &event)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"Err": err,
-		}).Warn("Error unmarshalling event")
+			"err": err,
+		}).Error("Error unmarshalling event")
 		return
 	}
 
 	unlocker := locks.Lock(event.ResourceId)
 	if unlocker == nil {
 		log.WithFields(log.Fields{
-			"Resource ID": event.ResourceId,
+			"resourceId": event.ResourceId,
 		}).Debug("Resource locked. Dropping event")
 		return
 	}
@@ -146,16 +152,16 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 		err = fn(event, apiClient)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"EventName":  event.Name,
-				"EventId":    event.Id,
-				"ResourceId": event.ResourceId,
-				"Err":        err,
-			}).Warn("Error processing event")
+				"eventName":  event.Name,
+				"eventId":    event.Id,
+				"resourceId": event.ResourceId,
+				"err":        err,
+			}).Error("Error processing event")
 		}
 	} else {
 		log.WithFields(log.Fields{
-			"EventName": event.Name,
-		}).Debug("No handler registered for event")
+			"eventName": event.Name,
+		}).Warn("No event handler registered for event")
 	}
 }
 
@@ -220,7 +226,7 @@ var removeOldHandler = func(name string, apiClient *client.RancherClient) error 
 	for _, handler := range handlers.Data {
 		h := &handler
 		log.WithFields(log.Fields{
-			"Handler ID": h.Id,
+			"handlerId": h.Id,
 		}).Debug("Removing old handler")
 		doneTransitioning := func() (bool, error) {
 			h, err := apiClient.ExternalHandler.ById(h.Id)

@@ -122,7 +122,7 @@ func buildCreateCommand(machine *client.Machine) (*exec.Cmd, string, error) {
 		return nil, "", err
 	}
 
-	machineDir, err := buildMachineDir(machine.ExternalId)
+	machineDir, err := buildBaseMachineDir(machine.ExternalId)
 	if err != nil {
 		return nil, "", err
 	}
@@ -131,17 +131,26 @@ func buildCreateCommand(machine *client.Machine) (*exec.Cmd, string, error) {
 	return command, machineDir, nil
 }
 
-func buildMachineDir(uuid string) (string, error) {
+func buildBaseMachineDir(uuid string) (string, error) {
+	machineDir, err := getBaseMachineDir(uuid)
+	if err != nil {
+		return "", err
+	}
+
+	err = os.MkdirAll(machineDir, 0740)
+	if err != nil {
+		return "", err
+	}
+	return machineDir, err
+}
+
+func getBaseMachineDir(uuid string) (string, error) {
 	cattleHome := os.Getenv("CATTLE_HOME")
 	if cattleHome == "" {
 		return "", fmt.Errorf("CATTLE_HOME not set. Cant create machine. Uuid: [%v].", uuid)
 	}
 	machineDir := filepath.Join(cattleHome, "machine", uuid)
-	err := os.MkdirAll(machineDir, 0740)
-	if err != nil {
-		return "", err
-	}
-	return machineDir, err
+	return machineDir, nil
 }
 
 func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
@@ -200,20 +209,22 @@ func createExtractedConfig(event *events.Event, machine *client.Machine) (string
 	}).Info("Creating and uploading extracted machine config")
 
 	// tar.gz the $CATTLE_HOME/machine/<machine-id>/machine/<machine-name> dir
-
 	// Open the source directory and read all the files we want to tar.gz
-	baseDir := filepath.Join(os.Getenv("CATTLE_HOME"), "machine", machine.ExternalId, "machine", "machines")
-	machineDir := filepath.Join(baseDir, machine.Name)
-	dir, err := os.Open(machineDir)
+	baseDir, err := getBaseMachineDir(machine.ExternalId)
 	if err != nil {
 		return "", err
 	}
 
+	machineDir := filepath.Join(baseDir, "machine", "machines", machine.Name)
+	dir, err := os.Open(machineDir)
+	if err != nil {
+		return "", err
+	}
+	defer dir.Close()
+
 	log.WithFields(log.Fields{
 		"machineDir": machineDir,
 	}).Debug("Preparing directory to be tar.gz")
-
-	defer dir.Close()
 
 	// Be able to read the files under this dir
 	files, err := dir.Readdir(0)
@@ -229,7 +240,7 @@ func createExtractedConfig(event *events.Event, machine *client.Machine) (string
 	}
 
 	defer tarfile.Close()
-	var fileWriter io.WriteCloser = gzip.NewWriter(tarfile)
+	fileWriter := gzip.NewWriter(tarfile)
 	defer fileWriter.Close()
 
 	tarfileWriter := tar.NewWriter(fileWriter)
@@ -258,13 +269,11 @@ func createExtractedConfig(event *events.Event, machine *client.Machine) (string
 		header.ModTime = fileInfo.ModTime()
 
 		err = tarfileWriter.WriteHeader(header)
-
 		if err != nil {
 			return "", err
 		}
 
 		_, err = io.Copy(tarfileWriter, file)
-
 		if err != nil {
 			return "", err
 		}
@@ -288,9 +297,5 @@ func uploadExtractedConfig(destFile string, machine *client.Machine, apiClient *
 		"destFile":   destFile,
 	}).Info("Machine config file created and encoded.")
 
-	latest, err := getMachine(machine.Id, apiClient)
-	if err != nil {
-		return err
-	}
-	return doMachineUpdate(latest, &client.Machine{ExtractedConfig: extractedEncodedConfig}, apiClient)
+	return doMachineUpdate(machine, &client.Machine{ExtractedConfig: extractedEncodedConfig}, apiClient)
 }

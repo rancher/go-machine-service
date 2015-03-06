@@ -126,9 +126,6 @@ type Worker struct {
 func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, apiClient *client.RancherClient,
 	workers chan *Worker) {
 	defer func() { workers <- w }()
-	log.WithFields(log.Fields{
-		"event": string(rawEvent[:]),
-	}).Debug("Processing event.")
 
 	event := &Event{}
 	err := json.Unmarshal(rawEvent, &event)
@@ -137,6 +134,12 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 			"err": err,
 		}).Error("Error unmarshalling event")
 		return
+	}
+
+	if event.Name != "ping" {
+		log.WithFields(log.Fields{
+			"event": string(rawEvent[:]),
+		}).Debug("Processing event.")
 	}
 
 	unlocker := locks.Lock(event.ResourceId)

@@ -88,7 +88,9 @@ func setupVB() {
 
 	doMachineUpdate = func(current *client.Machine, machineUpdates *client.Machine,
 		apiClient *client.RancherClient) error {
-		machine.Data = machineUpdates.Data
+		if machineUpdates.Data != nil {
+			machine.Data = machineUpdates.Data
+		}
 		return nil
 	}
 }

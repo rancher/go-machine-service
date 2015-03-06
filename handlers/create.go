@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"archive/tar"
 	"bufio"
+	"compress/gzip"
+	b64 "encoding/base64"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-rancher/client"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -58,6 +62,16 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		"resourceId":        event.ResourceId,
 		"machineExternalId": machine.ExternalId,
 	}).Info("Machine Created")
+
+	destFile, err := createExtractedConfig(event, machine)
+	if err != nil {
+		return err
+	}
+
+	err = uploadExtractedConfig(destFile, machine, apiClient)
+	if err != nil {
+		return err
+	}
 
 	reply := newReply(event)
 	return publishReply(reply, apiClient)
@@ -167,4 +181,107 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 
 	log.Infof("Cmd slice: %v", cmd)
 	return cmd, nil
+}
+
+var createExtractedConfig = func(event *events.Event, machine *client.Machine) (string, error) {
+	// We will now zip, base64 encode the machine directory created, and upload this to cattle server.  This can be used to either recover
+	// the machine directory or used by Rancher users for their own local machine setup.
+	log.WithFields(log.Fields{
+		"resourceId": event.ResourceId,
+	}).Info("Creating and uploading extracted machine config")
+
+	// tar.gz the $CATTLE_HOME/machine/<machine-id>/machine/<machine-name> dir
+
+	// Open the source directory and read all the files we want to tar.gz
+	baseDir := filepath.Join(os.Getenv("CATTLE_HOME"), "machine", machine.ExternalId, "machine", "machines")
+	machineDir := filepath.Join(baseDir, machine.Name)
+	dir, err := os.Open(machineDir)
+	if err != nil {
+		return "", err
+	}
+
+	log.WithFields(log.Fields{
+		"machineDir": machineDir,
+	}).Debug("Preparing directory to be tar.gz")
+
+	defer dir.Close()
+
+	// Be able to read the files under this dir
+	files, err := dir.Readdir(0)
+	if err != nil {
+		return "", err
+	}
+
+	// create the tar.gz file
+	destFile := filepath.Join(baseDir, machine.Name+".tar.gz")
+	tarfile, err := os.Create(destFile)
+	if err != nil {
+		return "", err
+	}
+
+	defer tarfile.Close()
+	var fileWriter io.WriteCloser = gzip.NewWriter(tarfile)
+	defer fileWriter.Close()
+
+	tarfileWriter := tar.NewWriter(fileWriter)
+	defer tarfileWriter.Close()
+
+	// Read and add files into <machine-name>.tar.gz
+	for _, fileInfo := range files {
+
+		// For now, we will skip directories.  If we need to zip directories, we need to revist this code
+		if fileInfo.IsDir() {
+			continue
+		}
+
+		file, err := os.Open(filepath.Join(machineDir, fileInfo.Name()))
+		if err != nil {
+			return "", err
+		}
+
+		defer file.Close()
+
+		// prepare the tar header
+		header := new(tar.Header)
+		header.Name = filepath.Join(machine.Name, fileInfo.Name())
+		header.Size = fileInfo.Size()
+		header.Mode = int64(fileInfo.Mode())
+		header.ModTime = fileInfo.ModTime()
+
+		err = tarfileWriter.WriteHeader(header)
+
+		if err != nil {
+			return "", err
+		}
+
+		_, err = io.Copy(tarfileWriter, file)
+
+		if err != nil {
+			return "", err
+		}
+	}
+	return destFile, nil
+}
+
+func uploadExtractedConfig(destFile string, machine *client.Machine, apiClient *client.RancherClient) error {
+	extractedTarfile, err := ioutil.ReadFile(destFile)
+	if err != nil {
+		return err
+	}
+
+	extractedEncodedConfig := b64.StdEncoding.EncodeToString(extractedTarfile)
+	if err != nil {
+		return err
+	}
+
+	log.WithFields(log.Fields{
+		"resourceId": machine.Id,
+		"destFile":   destFile,
+	}).Info("Machine config file created and encoded.")
+
+	latest, err := getMachine(machine.Id, apiClient)
+	if err != nil {
+		return err
+	}
+	return doMachineUpdate(latest, &client.Machine{ExtractedConfig: extractedEncodedConfig}, apiClient)
 }

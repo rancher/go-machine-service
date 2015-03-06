@@ -4,6 +4,7 @@ import (
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-rancher/client"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -88,7 +89,15 @@ func setupVB() {
 
 	doMachineUpdate = func(current *client.Machine, machineUpdates *client.Machine,
 		apiClient *client.RancherClient) error {
-		machine.Data = machineUpdates.Data
+		if machineUpdates.Data != nil {
+			machine.Data = machineUpdates.Data
+		}
 		return nil
+	}
+
+	createExtractedConfig = func(event *events.Event, machine *client.Machine) (string, error) {
+		// return the config.json so it can be base64 encoded
+		configJson := filepath.Join(os.Getenv("CATTLE_HOME"), "machine", "ext-"+machine.Id, "machine", "machines", "name-"+machine.Id, "config.json")
+		return configJson, nil
 	}
 }

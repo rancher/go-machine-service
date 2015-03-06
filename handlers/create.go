@@ -68,7 +68,9 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
-	err = uploadExtractedConfig(destFile, machine, apiClient)
+	if destFile != "" {
+		err = uploadExtractedConfig(destFile, machine, apiClient)
+	}
 	if err != nil {
 		return err
 	}
@@ -183,7 +185,14 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	return cmd, nil
 }
 
-var createExtractedConfig = func(event *events.Event, machine *client.Machine) (string, error) {
+func createExtractedConfig(event *events.Event, machine *client.Machine) (string, error) {
+	// We are going to ignore doing anything for VirtualBox given that there is no way you can
+	// use Machine once it has been created.  Virtual is mainly a test-only use case
+	if strings.ToLower(machine.Driver) == "virtualbox" {
+		log.Debug("VirtualBox machine does not need config extracted")
+		return "", nil
+	}
+
 	// We will now zip, base64 encode the machine directory created, and upload this to cattle server.  This can be used to either recover
 	// the machine directory or used by Rancher users for their own local machine setup.
 	log.WithFields(log.Fields{

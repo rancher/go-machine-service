@@ -61,6 +61,14 @@ var publishReply = func(reply *client.Publish, apiClient *client.RancherClient) 
 	return err
 }
 
+var publishTransitioningReply = func(msg string, event *events.Event, apiClient *client.RancherClient) {
+	// Since this is only updating the msg for the state transition, we will ignore errors here
+	replyT := newReply(event)
+	replyT.Transitioning = "yes"
+	replyT.TransitioningMessage = msg
+	publishReply(replyT, apiClient)
+}
+
 var getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {
 	return apiClient.Machine.ById(id)
 }

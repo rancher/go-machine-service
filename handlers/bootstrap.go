@@ -40,6 +40,8 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		return publishReply(reply, apiClient)
 	}
 
+	publishTransitioningReply("Installing Rancher agent...", event, apiClient)
+
 	registrationUrl, err := getRegistrationUrl(machine.AccountId, apiClient)
 	if err != nil {
 		return err
@@ -60,6 +62,8 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		return err
 	}
 
+	publishTransitioningReply("Creating agent container...", event, apiClient)
+
 	container, err := createContainer(registrationUrl, machine, dockerClient)
 	if err != nil {
 		return err
@@ -69,6 +73,8 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		"machineId":   machine.Id,
 		"containerId": container.ID,
 	}).Info("Container created for machine")
+
+	publishTransitioningReply("Starting agent container...", event, apiClient)
 
 	err = dockerClient.StartContainer(container.ID, nil)
 	if err != nil {

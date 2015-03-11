@@ -18,6 +18,8 @@ import (
 	"strings"
 )
 
+var RegExDockerMsg = regexp.MustCompile("msg=.*")
+
 func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.WithFields(log.Fields{
 		"resourceId": event.ResourceId,
@@ -108,14 +110,13 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, uuid string, ev
 func filterDockerMessage(msg string, uuid string) string {
 	// Docker log messages come in the format: time=<t> level=<log-level> msg=<message>
 	// We just want to return <message> to cattle and only messages that do not contain the machine uuid
-	re := regexp.MustCompile("msg=.*")
-	msgSlice := re.FindStringSubmatch(msg)
+	msgSlice := RegExDockerMsg.FindStringSubmatch(msg)
 	msgSlice = strings.Split(msgSlice[0], "=")
 	if strings.Contains(msgSlice[1], uuid) == true {
 		return ""
 	} else {
-		return strings.Trim(strings.TrimSpace(msgSlice[1]), "\"")
-
+		return strings.Trim(msgSlice[1], "\" ")
+		//return strings.Trim(strings.TrimSpace(msgSlice[1]), "\"")
 	}
 }
 

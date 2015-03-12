@@ -42,14 +42,19 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
-	publishTransitioningReply("Contacting "+machine.Driver, event, apiClient)
+	//Setup republishing timer
+	publishChan := make(chan string, 10)
+	go republishTransitioningReply(publishChan, event, apiClient)
+
+	publishChan <- "Contacting " + machine.Driver
+	defer close(publishChan)
 
 	readerStdout, readerStderr, err := startReturnOutput(command)
 	if err != nil {
 		return err
 	}
 
-	go logProgress(readerStdout, readerStderr, machine.ExternalId, event, apiClient)
+	go logProgress(readerStdout, readerStderr, publishChan, machine.ExternalId, event)
 
 	err = command.Wait()
 
@@ -74,7 +79,8 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	if destFile != "" {
-		publishTransitioningReply("Saving machine config...", event, apiClient)
+		publishChan <- "Saving Machine Config"
+		//publishTransitioningReply("Saving machine config...", event, apiClient)
 		err = uploadExtractedConfig(destFile, machine, apiClient)
 	}
 	if err != nil {
@@ -85,7 +91,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	return publishReply(reply, apiClient)
 }
 
-func logProgress(readerStdout io.Reader, readerStderr io.Reader, uuid string, event *events.Event, apiClient *client.RancherClient) {
+func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, uuid string, event *events.Event) {
 	// We will just log stdout first, then stderr, ignoring all errors.
 	scanner := bufio.NewScanner(readerStdout)
 	for scanner.Scan() {
@@ -95,7 +101,7 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, uuid string, ev
 		}).Infof("stdout: %s", msg)
 		msg = filterDockerMessage(msg, uuid)
 		if msg != "" {
-			publishTransitioningReply(msg, event, apiClient)
+			publishChan <- msg
 		}
 	}
 

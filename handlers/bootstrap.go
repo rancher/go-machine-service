@@ -40,7 +40,12 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		return publishReply(reply, apiClient)
 	}
 
-	publishTransitioningReply("Installing Rancher agent...", event, apiClient)
+	// Setup republishing timer
+	publishChan := make(chan string, 10)
+	defer close(publishChan)
+	go republishTransitioningReply(publishChan, event, apiClient)
+
+	publishChan <- "Installing Rancher agent"
 
 	registrationUrl, err := getRegistrationUrl(machine.AccountId, apiClient)
 	if err != nil {
@@ -62,7 +67,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		return err
 	}
 
-	publishTransitioningReply("Creating agent container...", event, apiClient)
+	publishChan <- "Creating agent container"
 
 	container, err := createContainer(registrationUrl, machine, dockerClient)
 	if err != nil {
@@ -74,7 +79,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		"containerId": container.ID,
 	}).Info("Container created for machine")
 
-	publishTransitioningReply("Starting agent container...", event, apiClient)
+	publishChan <- "Starting agent container"
 
 	err = dockerClient.StartContainer(container.ID, nil)
 	if err != nil {

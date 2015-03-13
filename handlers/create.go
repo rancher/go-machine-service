@@ -14,8 +14,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+var RegExDockerMsg = regexp.MustCompile("msg=.*")
 
 func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.WithFields(log.Fields{
@@ -39,12 +42,19 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
+	//Setup republishing timer
+	publishChan := make(chan string, 10)
+	go republishTransitioningReply(publishChan, event, apiClient)
+
+	publishChan <- "Contacting " + machine.Driver
+	defer close(publishChan)
+
 	readerStdout, readerStderr, err := startReturnOutput(command)
 	if err != nil {
 		return err
 	}
 
-	go logProgress(event.ResourceId, readerStdout, readerStderr)
+	go logProgress(readerStdout, readerStderr, publishChan, machine.ExternalId, event)
 
 	err = command.Wait()
 
@@ -69,6 +79,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	if destFile != "" {
+		publishChan <- "Saving Machine Config"
 		err = uploadExtractedConfig(destFile, machine, apiClient)
 	}
 	if err != nil {
@@ -79,20 +90,37 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	return publishReply(reply, apiClient)
 }
 
-func logProgress(resourceId string, readerStdout io.Reader, readerStderr io.Reader) {
+func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, uuid string, event *events.Event) {
 	// We will just log stdout first, then stderr, ignoring all errors.
 	scanner := bufio.NewScanner(readerStdout)
 	for scanner.Scan() {
+		msg := scanner.Text()
 		log.WithFields(log.Fields{
-			"resourceId: ": resourceId,
-		}).Infof("stdout: %s", scanner.Text())
+			"resourceId: ": event.ResourceId,
+		}).Infof("stdout: %s", msg)
+		msg = filterDockerMessage(msg, uuid)
+		if msg != "" {
+			publishChan <- msg
+		}
 	}
 
 	scanner = bufio.NewScanner(readerStderr)
 	for scanner.Scan() {
 		log.WithFields(log.Fields{
-			"resourceId": resourceId,
+			"resourceId": event.ResourceId,
 		}).Infof("stderr: %s", scanner.Text())
+	}
+}
+
+func filterDockerMessage(msg string, uuid string) string {
+	// Docker log messages come in the format: time=<t> level=<log-level> msg=<message>
+	// We just want to return <message> to cattle and only messages that do not contain the machine uuid
+	msgSlice := RegExDockerMsg.FindStringSubmatch(msg)
+	msgSlice = strings.Split(msgSlice[0], "=")
+	if strings.Contains(msgSlice[1], uuid) {
+		return ""
+	} else {
+		return strings.Trim(msgSlice[1], "\" ")
 	}
 }
 

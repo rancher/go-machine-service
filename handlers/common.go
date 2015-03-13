@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"time"
 )
 
 const (
@@ -59,6 +60,43 @@ var doMachineUpdate = func(current *client.Machine, machineUpdates *client.Machi
 var publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error {
 	_, err := apiClient.Publish.Create(reply)
 	return err
+}
+
+var publishTransitioningReply = func(msg string, event *events.Event, apiClient *client.RancherClient) {
+	// Since this is only updating the msg for the state transition, we will ignore errors here
+	replyT := newReply(event)
+	replyT.Transitioning = "yes"
+	replyT.TransitioningMessage = msg
+	publishReply(replyT, apiClient)
+}
+
+func republishTransitioningReply(publishChan <-chan string, event *events.Event, apiClient *client.RancherClient) {
+	// We only do this because there is a current issue within Cattle that if a transition message
+	// has not been updated for a period of time, it can no longer be updated.  For now, to deal with this
+	// we will simply republish transitioning messages until the next one is added.
+	// Because this ticker is going to republish every X seconds, it's will most likely republish a message sooner
+	// In all liklihood, we will remove this method later.
+	defaultWaitTime := time.Second * 15
+	ticker := time.NewTicker(defaultWaitTime)
+	var lastMsg string
+	for {
+		select {
+		case msg, more := <-publishChan:
+			if !more {
+				ticker.Stop()
+				return
+			} else {
+				lastMsg = msg
+				publishTransitioningReply(lastMsg, event, apiClient)
+			}
+
+		case <-ticker.C:
+			//republish last message
+			if lastMsg != "" {
+				publishTransitioningReply(lastMsg, event, apiClient)
+			}
+		}
+	}
 }
 
 var getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {

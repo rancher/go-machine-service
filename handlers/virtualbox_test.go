@@ -86,6 +86,8 @@ func setupVB() {
 
 	publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error { return nil }
 
+	publishTransitioningReply = func(msg string, event *events.Event, apiClient *client.RancherClient) {}
+
 	doMachineUpdate = func(current *client.Machine, machineUpdates *client.Machine,
 		apiClient *client.RancherClient) error {
 		if machineUpdates.Data != nil {

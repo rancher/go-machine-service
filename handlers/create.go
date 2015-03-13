@@ -80,7 +80,6 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 
 	if destFile != "" {
 		publishChan <- "Saving Machine Config"
-		//publishTransitioningReply("Saving machine config...", event, apiClient)
 		err = uploadExtractedConfig(destFile, machine, apiClient)
 	}
 	if err != nil {
@@ -118,11 +117,10 @@ func filterDockerMessage(msg string, uuid string) string {
 	// We just want to return <message> to cattle and only messages that do not contain the machine uuid
 	msgSlice := RegExDockerMsg.FindStringSubmatch(msg)
 	msgSlice = strings.Split(msgSlice[0], "=")
-	if strings.Contains(msgSlice[1], uuid) == true {
+	if strings.Contains(msgSlice[1], uuid) {
 		return ""
 	} else {
 		return strings.Trim(msgSlice[1], "\" ")
-		//return strings.Trim(strings.TrimSpace(msgSlice[1]), "\"")
 	}
 }
 

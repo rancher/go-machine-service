@@ -85,7 +85,6 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	if err != nil {
 		return err
 	}
-
 	reply := newReply(event)
 	return publishReply(reply, apiClient)
 }

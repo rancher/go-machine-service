@@ -32,6 +32,11 @@ type EventRouter struct {
 	eventStreamResponse *http.Response
 }
 
+type ProcessConfig struct {
+	Name    string `json:"name"`
+	OnError string `json:"onError"`
+}
+
 func (router *EventRouter) Start(ready chan<- bool) (err error) {
 	workers := make(chan *Worker, router.workerCount)
 	for i := 0; i < router.workerCount; i++ {
@@ -50,10 +55,10 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 	}
 
 	externalHandler := &client.ExternalHandler{
-		Name:         router.name,
-		Uuid:         router.name,
-		Priority:     router.priority,
-		ProcessNames: make([]string, len(router.eventHandlers)),
+		Name:           router.name,
+		Uuid:           router.name,
+		Priority:       router.priority,
+		ProcessConfigs: make([]interface{}, len(router.eventHandlers)),
 	}
 
 	handlers := map[string]EventHandler{}
@@ -68,13 +73,16 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 	subscribeForm := url.Values{}
 	eventHandlerSuffix := ";handler=" + router.name
 	for event, handler := range router.eventHandlers {
-		externalHandler.ProcessNames[idx] = event
+		processConfig := ProcessConfig{
+			Name:    event,
+			OnError: "physicalhost.error",
+		}
+		externalHandler.ProcessConfigs[idx] = processConfig
 		fullEventKey := event + eventHandlerSuffix
 		subscribeForm.Add("eventNames", fullEventKey)
 		handlers[fullEventKey] = handler
 		idx++
 	}
-
 	err = createNewHandler(externalHandler, router.apiClient)
 	if err != nil {
 		return err
@@ -160,6 +168,19 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 				"resourceId": event.ResourceId,
 				"err":        err,
 			}).Error("Error processing event")
+
+			reply := &client.Publish{
+				Name:                 event.ReplyTo,
+				PreviousIds:          []string{event.Id},
+				Transitioning:        "error",
+				TransitioningMessage: err.Error(),
+			}
+			_, err := apiClient.Publish.Create(reply)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err": err,
+				}).Error("Error sending error-reply")
+			}
 		}
 	} else {
 		log.WithFields(log.Fields{

@@ -8,6 +8,12 @@ The following are the most interesting and important events that this service re
 * ```physicalhost.activate``` - Runs ```docker run rancher/agent ...``` on the host to bootstrap it into Rancher.
 * ```physicalhost.delete|purge``` - Calls ```machine delete ...```
 
+# Contact
+For bugs, questions, comments, corrections, suggestions, etc., open an issue in
+ [rancherio/rancher](//github.com/rancherio/rancher/issues) with a title starting with `[go-machine-service] `.
+
+Or just [click here](//github.com/rancherio/rancher/issues/new?title=%5Bgo-machine-service%5D%20) to create a new issue.
+
 # License
 Copyright (c) 2014-2015 [Rancher Labs, Inc.](http://rancher.com)
 

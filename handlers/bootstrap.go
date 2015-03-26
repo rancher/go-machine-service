@@ -94,13 +94,11 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 
 	t := time.Now()
 	bootstrappedAt := t.Format(time.RFC3339)
-	updates := map[string]string{bootstrappedAtField: bootstrappedAt}
-	err = updateMachineData(machine, updates, apiClient)
-	if err != nil {
-		return err
-	}
+	dataUpdates := map[string]interface{}{bootstrappedAtField: bootstrappedAt}
+	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
 
 	reply := newReply(event)
+	reply.Data = eventDataWrapper
 	return publishReply(reply, apiClient)
 }
 

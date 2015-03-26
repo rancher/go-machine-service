@@ -47,7 +47,12 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	go republishTransitioningReply(publishChan, event, apiClient)
 
 	publishChan <- "Contacting " + machine.Driver
-	defer close(publishChan)
+	alreadyClosed := false
+	defer func() {
+		if !alreadyClosed {
+			close(publishChan)
+		}
+	}()
 
 	readerStdout, readerStderr, err := startReturnOutput(command)
 	if err != nil {
@@ -62,11 +67,8 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
-	updates := map[string]string{machineDirField: machineDir}
-	err = updateMachineData(machine, updates, apiClient)
-	if err != nil {
-		return err
-	}
+	dataUpdates := map[string]interface{}{machineDirField: machineDir}
+	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
 
 	log.WithFields(log.Fields{
 		"resourceId":        event.ResourceId,
@@ -80,12 +82,19 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 
 	if destFile != "" {
 		publishChan <- "Saving Machine Config"
-		err = uploadExtractedConfig(destFile, machine, apiClient)
+		extractedConf, err := getExtractedConfig(destFile, machine, apiClient)
+		if err != nil {
+			return err
+		}
+		dataUpdates["+fields"] = map[string]string{"extractedConfig": extractedConf}
 	}
-	if err != nil {
-		return err
-	}
+
 	reply := newReply(event)
+	reply.Data = eventDataWrapper
+
+	// Explicitly close publish channel so that it doesn't conflict with final reply
+	close(publishChan)
+	alreadyClosed = true
 	return publishReply(reply, apiClient)
 }
 
@@ -308,15 +317,15 @@ func createExtractedConfig(event *events.Event, machine *client.Machine) (string
 	return destFile, nil
 }
 
-func uploadExtractedConfig(destFile string, machine *client.Machine, apiClient *client.RancherClient) error {
+func getExtractedConfig(destFile string, machine *client.Machine, apiClient *client.RancherClient) (string, error) {
 	extractedTarfile, err := ioutil.ReadFile(destFile)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	extractedEncodedConfig := b64.StdEncoding.EncodeToString(extractedTarfile)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	log.WithFields(log.Fields{
@@ -324,5 +333,5 @@ func uploadExtractedConfig(destFile string, machine *client.Machine, apiClient *
 		"destFile":   destFile,
 	}).Info("Machine config file created and encoded.")
 
-	return doMachineUpdate(machine, &client.Machine{ExtractedConfig: extractedEncodedConfig}, apiClient)
+	return extractedEncodedConfig, nil
 }

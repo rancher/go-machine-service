@@ -84,14 +84,32 @@ func setupVB() {
 		return "http://1.2.3.4/v1", nil
 	}
 
-	publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error { return nil }
+	publishReply = buildMockPublishReply(machine)
 
 	publishTransitioningReply = func(msg string, event *events.Event, apiClient *client.RancherClient) {}
+}
 
-	doMachineUpdate = func(current *client.Machine, machineUpdates *client.Machine,
-		apiClient *client.RancherClient) error {
-		if machineUpdates.Data != nil {
-			machine.Data = machineUpdates.Data
+type mockPublishReplyFunc func(reply *client.Publish, apiClient *client.RancherClient) error
+
+func buildMockPublishReply(machine *client.Machine) mockPublishReplyFunc {
+	return func(reply *client.Publish, apiClient *client.RancherClient) error {
+		if reply.Data == nil {
+			return nil
+		}
+
+		if machine.Data == nil {
+			machine.Data = map[string]interface{}{}
+		}
+
+		if data, ok := reply.Data["+data"]; ok {
+			d := data.(map[string]interface{})
+			if machineDir, mdOk := d[machineDirField]; mdOk {
+				machine.Data[machineDirField] = machineDir
+			}
+
+			if bootstrap, bootOk := d[bootstrappedAtField]; bootOk {
+				machine.Data[bootstrappedAtField] = bootstrap
+			}
 		}
 		return nil
 	}

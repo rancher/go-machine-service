@@ -32,31 +32,6 @@ func getMachineDir(machine *client.Machine) (string, error) {
 	return machineDir, nil
 }
 
-func updateMachineData(machine *client.Machine, dataUpdates map[string]string,
-	apiClient *client.RancherClient) error {
-	latest, err := getMachine(machine.Id, apiClient)
-	if err != nil {
-		return err
-	}
-	data := latest.Data
-	if data == nil {
-		data = map[string]interface{}{}
-	}
-	for k, v := range dataUpdates {
-		data[k] = v
-	}
-	return doMachineUpdate(latest, &client.Machine{Data: data}, apiClient)
-}
-
-var doMachineUpdate = func(current *client.Machine, machineUpdates *client.Machine,
-	apiClient *client.RancherClient) error {
-	_, err := apiClient.Machine.Update(current, machineUpdates)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 var publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error {
 	_, err := apiClient.Publish.Create(reply)
 	return err

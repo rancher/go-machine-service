@@ -53,8 +53,8 @@
 		},
 		{
 			"ImportPath": "github.com/rancherio/go-rancher/client",
-			"Comment": "v0.1.0-3-gf3a791f",
-			"Rev": "f3a791f882f53f98cde825d1c5409194d46acee9"
+			"Comment": "v0.1.0-5-ge133b53",
+			"Rev": "e133b53df51fc78250b865c44599ff5e43de23ea"
 		}
 	]
 }

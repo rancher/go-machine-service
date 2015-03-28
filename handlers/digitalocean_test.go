@@ -64,15 +64,6 @@ func setupDO(access_token string) {
 		return "http://1.2.3.4/v1", nil
 	}
 
-	publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error { return nil }
-
+	publishReply = buildMockPublishReply(machine)
 	publishTransitioningReply = func(msg string, event *events.Event, apiClient *client.RancherClient) {}
-
-	doMachineUpdate = func(current *client.Machine, machineUpdates *client.Machine,
-		apiClient *client.RancherClient) error {
-		if machineUpdates.Data != nil {
-			machine.Data = machineUpdates.Data
-		}
-		return nil
-	}
 }

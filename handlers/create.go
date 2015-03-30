@@ -59,12 +59,17 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
-	go logProgress(readerStdout, readerStderr, publishChan, machine.ExternalId, event)
+	errString := ""
+	go logProgress(readerStdout, readerStderr, publishChan, machine.ExternalId, event, &errString)
 
 	err = command.Wait()
 
 	if err != nil {
-		return err
+		if errString == "" {
+			return err
+		} else {
+			return fmt.Errorf(errString)
+		}
 	}
 
 	dataUpdates := map[string]interface{}{machineDirField: machineDir}
@@ -98,7 +103,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	return publishReply(reply, apiClient)
 }
 
-func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, uuid string, event *events.Event) {
+func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, uuid string, event *events.Event, errString *string) {
 	// We will just log stdout first, then stderr, ignoring all errors.
 	scanner := bufio.NewScanner(readerStdout)
 	for scanner.Scan() {
@@ -106,7 +111,7 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 		log.WithFields(log.Fields{
 			"resourceId: ": event.ResourceId,
 		}).Infof("stdout: %s", msg)
-		msg = filterDockerMessage(msg, uuid)
+		msg = filterDockerMessage(msg, uuid, errString)
 		if msg != "" {
 			publishChan <- msg
 		}
@@ -120,16 +125,21 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 	}
 }
 
-func filterDockerMessage(msg string, uuid string) string {
+func filterDockerMessage(msg string, uuid string, errString *string) string {
 	// Docker log messages come in the format: time=<t> level=<log-level> msg=<message>
 	// We just want to return <message> to cattle and only messages that do not contain the machine uuid
-	msgSlice := RegExDockerMsg.FindStringSubmatch(msg)
-	msgSlice = strings.Split(msgSlice[0], "=")
-	if strings.Contains(msgSlice[1], uuid) {
+	if strings.Contains(msg, uuid) {
 		return ""
-	} else {
-		return strings.Trim(msgSlice[1], "\" ")
 	}
+
+	dMsg := strings.Trim(strings.Split(RegExDockerMsg.FindString(msg), "=")[1], "\" ")
+	if strings.Contains(msg, "level=\"info\"") {
+		return dMsg
+	} else if strings.Contains(msg, "level=\"error\"") {
+		*errString = dMsg
+		return ""
+	}
+	return ""
 }
 
 func startReturnOutput(command *exec.Cmd) (io.Reader, io.Reader, error) {
@@ -208,6 +218,44 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 		}
 		if machine.DigitaloceanConfig.AccessToken != "" {
 			cmd = append(cmd, "--digitalocean-access-token", machine.DigitaloceanConfig.AccessToken)
+		}
+	case "amazonec2":
+		cmd = append(cmd, "amazonec2")
+		if machine.Amazonec2Config.AccessKey != "" {
+			cmd = append(cmd, "--amazonec2-access-key", machine.Amazonec2Config.AccessKey)
+		}
+		if machine.Amazonec2Config.SecretKey != "" {
+			cmd = append(cmd, "--amazonec2-secret-key", machine.Amazonec2Config.SecretKey)
+		}
+		if machine.Amazonec2Config.VpcId != "" {
+			cmd = append(cmd, "--amazonec2-vpc-id", machine.Amazonec2Config.VpcId)
+		}
+		if machine.Amazonec2Config.Ami != "" {
+			cmd = append(cmd, "--amazonec2-ami", machine.Amazonec2Config.Ami)
+		}
+		if machine.Amazonec2Config.SessionToken != "" {
+			cmd = append(cmd, "--amazonec2-session-token", machine.Amazonec2Config.SessionToken)
+		}
+		if machine.Amazonec2Config.Region != "" {
+			cmd = append(cmd, "--amazonec2-region", machine.Amazonec2Config.Region)
+		}
+		if machine.Amazonec2Config.Zone != "" {
+			cmd = append(cmd, "--amazonec2-zone", machine.Amazonec2Config.Zone)
+		}
+		if machine.Amazonec2Config.SubnetId != "" {
+			cmd = append(cmd, "--amazonec2-subnet-id", machine.Amazonec2Config.SubnetId)
+		}
+		if machine.Amazonec2Config.SecurityGroup != "" {
+			cmd = append(cmd, "--amazonec2-security-group", machine.Amazonec2Config.SecurityGroup)
+		}
+		if machine.Amazonec2Config.InstanceType != "" {
+			cmd = append(cmd, "--amazonec2-instance-type", machine.Amazonec2Config.InstanceType)
+		}
+		if machine.Amazonec2Config.RootSize != "" {
+			cmd = append(cmd, "--amazonec2-root-size", machine.Amazonec2Config.RootSize)
+		}
+		if machine.Amazonec2Config.IamInstanceProfile != "" {
+			cmd = append(cmd, "--amazonec2-iam-instance-profile", machine.Amazonec2Config.AccessKey)
 		}
 	case "virtualbox":
 		cmd = append(cmd, "virtualbox")

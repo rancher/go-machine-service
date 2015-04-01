@@ -60,7 +60,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	errString := ""
-	go logProgress(readerStdout, readerStderr, publishChan, machine.ExternalId, event, &errString)
+	go logProgress(readerStdout, readerStderr, publishChan, machine, event, &errString)
 
 	err = command.Wait()
 
@@ -103,7 +103,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	return publishReply(reply, apiClient)
 }
 
-func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, uuid string, event *events.Event, errString *string) {
+func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, machine *client.Machine, event *events.Event, errString *string) {
 	// We will just log stdout first, then stderr, ignoring all errors.
 	scanner := bufio.NewScanner(readerStdout)
 	for scanner.Scan() {
@@ -111,12 +111,11 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 		log.WithFields(log.Fields{
 			"resourceId: ": event.ResourceId,
 		}).Infof("stdout: %s", msg)
-		msg = filterDockerMessage(msg, uuid, errString)
+		msg = filterDockerMessage(msg, machine, errString)
 		if msg != "" {
 			publishChan <- msg
 		}
 	}
-
 	scanner = bufio.NewScanner(readerStderr)
 	for scanner.Scan() {
 		log.WithFields(log.Fields{
@@ -125,18 +124,24 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 	}
 }
 
-func filterDockerMessage(msg string, uuid string, errString *string) string {
+func filterDockerMessage(msg string, machine *client.Machine, errString *string) string {
 	// Docker log messages come in the format: time=<t> level=<log-level> msg=<message>
 	// We just want to return <message> to cattle and only messages that do not contain the machine uuid
-	if strings.Contains(msg, uuid) {
+	if strings.Contains(msg, machine.ExternalId) || strings.Contains(msg, machine.Name) {
 		return ""
 	}
 
-	dMsg := strings.Trim(strings.Split(RegExDockerMsg.FindString(msg), "=")[1], "\" ")
+	// The minimum string should be greater than 7 characters msg="."
+	match := RegExDockerMsg.FindString(msg)
+	if len(match) < 7 || !strings.HasPrefix(match, "msg=\"") {
+		return ""
+	}
+
+	match = (match[5 : len(strings.TrimSpace(match))-1])
 	if strings.Contains(msg, "level=\"info\"") {
-		return dMsg
+		return match
 	} else if strings.Contains(msg, "level=\"error\"") {
-		*errString = dMsg
+		*errString = match
 		return ""
 	}
 	return ""
@@ -219,6 +224,15 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 		if machine.DigitaloceanConfig.AccessToken != "" {
 			cmd = append(cmd, "--digitalocean-access-token", machine.DigitaloceanConfig.AccessToken)
 		}
+		if machine.DigitaloceanConfig.Ipv6 {
+			cmd = append(cmd, "--digitalocean-ipv6", "true")
+		}
+		if machine.DigitaloceanConfig.PrivateNetworking {
+			cmd = append(cmd, "--digitalocean-private-networking", "true")
+		}
+		if machine.DigitaloceanConfig.Backups {
+			cmd = append(cmd, "--digitalocean-backups", "true")
+		}
 	case "amazonec2":
 		cmd = append(cmd, "amazonec2")
 		if machine.Amazonec2Config.AccessKey != "" {
@@ -292,14 +306,14 @@ func createExtractedConfig(event *events.Event, machine *client.Machine) (string
 		"resourceId": event.ResourceId,
 	}).Info("Creating and uploading extracted machine config")
 
-	// tar.gz the $CATTLE_HOME/machine/<machine-id>/machine/<machine-name> dir
+	// tar.gz the $CATTLE_HOME/machine/<machine-id>/machines/<machine-name> dir (v0.2.0)
 	// Open the source directory and read all the files we want to tar.gz
 	baseDir, err := getBaseMachineDir(machine.ExternalId)
 	if err != nil {
 		return "", err
 	}
 
-	machineDir := filepath.Join(baseDir, "machine", "machines", machine.Name)
+	machineDir := filepath.Join(baseDir, "machines", machine.Name)
 	dir, err := os.Open(machineDir)
 	if err != nil {
 		return "", err

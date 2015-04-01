@@ -291,7 +291,7 @@ func parseConnectionArgs(args string) (*tlsConnectionConfig, error) {
 		kv := strings.Split(arg, "=")
 		if len(kv) == 2 {
 			key := strings.TrimSpace(kv[0])
-			val := strings.TrimSpace(kv[1])
+			val := strings.Trim(kv[1], "\" ")
 			switch key {
 			case "tlscacert":
 				config.caCert = val

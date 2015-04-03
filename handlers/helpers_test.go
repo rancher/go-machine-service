@@ -8,7 +8,8 @@ import (
 
 // Test the filterDockerMessage to make sure are filtering the right messages
 func TestFilterDockerMessages(t *testing.T) {
-	errString := ""
+	errChan := make(chan string, 2)
+	defer close(errChan)
 	machine := &client.Machine{
 		ExternalId: "uuid-1",
 		Name:       "machine-1",
@@ -16,44 +17,35 @@ func TestFilterDockerMessages(t *testing.T) {
 	prefix := "time=\"2015-04-01T13:47:25-07:00\" level=\"info\" "
 
 	testString := prefix + "msg=\"Message\" "
-	checkField("Test1", "Message", filterDockerMessage(testString, machine, &errString), t)
-	checkField("Test1:errString", "", errString, t)
+	checkField("Test1", "Message", filterDockerMessage(testString, machine, errChan), t)
 
 	testString = prefix + "msg=\"Message with externalId=uuid-1\" "
-	checkField("Test2", "", filterDockerMessage(testString, machine, &errString), t)
-	checkField("Test2:errString", "", errString, t)
+	checkField("Test2", "", filterDockerMessage(testString, machine, errChan), t)
 
 	testString = prefix + "msg=\"Message with name=machine-1\" "
-	checkField("Test3", "", filterDockerMessage(testString, machine, &errString), t)
-	checkField("Test3:errString", "", errString, t)
+	checkField("Test3", "", filterDockerMessage(testString, machine, errChan), t)
 
 	testString = prefix + "msg=\"Message with random characters: =\"=\"\" "
-	checkField("Test4", "Message with random characters: =\"=\"", filterDockerMessage(testString, machine, &errString), t)
-	checkField("Test4:errString", "", errString, t)
+	checkField("Test4", "Message with random characters: =\"=\"", filterDockerMessage(testString, machine, errChan), t)
 
 	testString = prefix + "msg="
-	checkField("Test5", "", filterDockerMessage(testString, machine, &errString), t)
-	checkField("Test5:errString", "", errString, t)
+	checkField("Test5", "", filterDockerMessage(testString, machine, errChan), t)
 
 	testString = prefix + "Really weird message"
-	checkField("Test6", "", filterDockerMessage(testString, machine, &errString), t)
-	checkField("Test6:errString", "", errString, t)
-
-	//error level check
-	testString = "time=\"2015-04-01T13:47:25-07:00\" level=\"error\" msg=\"error message\" "
-	checkField("Test7", "", filterDockerMessage(testString, machine, &errString), t)
-	checkField("Test7:errString", "error message", errString, t)
+	checkField("Test6", "", filterDockerMessage(testString, machine, errChan), t)
 
 	// warning level check
-	errString = ""
 	testString = "time=\"2015-04-01T13:47:25-07:00\" level=\"warning\" msg=\"error message\" "
-	checkField("Test8", "", filterDockerMessage(testString, machine, &errString), t)
-	checkField("Test8:errString", "", errString, t)
+	checkField("Test7", "", filterDockerMessage(testString, machine, errChan), t)
 
-	// panic level check
+	// fatal level check
 	testString = "time=\"2015-04-01T13:47:25-07:00\" level=\"fatal\" msg=\"error message\" "
-	checkField("Test9", "", filterDockerMessage(testString, machine, &errString), t)
-	checkField("Test9:errString", "", errString, t)
+	checkField("Test8", "", filterDockerMessage(testString, machine, errChan), t)
+
+	//error level check
+	testString = "time=\"2015-04-01T13:47:25-07:00\" level=\"error\" msg=\"Error creating machine: error message\" "
+	checkField("Test9", "", filterDockerMessage(testString, machine, errChan), t)
+	checkField("Test9:errString", "error message", <-errChan, t)
 }
 
 // Tests the simplest case of successfully receiving, routing, and handling

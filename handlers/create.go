@@ -16,6 +16,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
+)
+
+const (
+	levelInfo            = "level=\"info\""
+	levelError           = "level=\"error\""
+	errorCreatingMachine = "Error creating machine: "
 )
 
 var RegExDockerMsg = regexp.MustCompile("msg=.*")
@@ -59,17 +66,21 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
-	errString := ""
-	go logProgress(readerStdout, readerStderr, publishChan, machine, event, &errString)
+	errChan := make(chan string, 1)
+	go logProgress(readerStdout, readerStderr, publishChan, machine, event, errChan)
 
 	err = command.Wait()
 
 	if err != nil {
-		if errString == "" {
-			return err
-		} else {
-			return fmt.Errorf(errString)
+		select {
+		case errString := <-errChan:
+			if errString != "" {
+				return fmt.Errorf(errString)
+			}
+		case <-time.After(10 * time.Second):
+			log.Error("Waited 10 seconds to break after command.Wait().  Please review logProgress.")
 		}
+		return err
 	}
 
 	dataUpdates := map[string]interface{}{machineDirField: machineDir}
@@ -103,15 +114,16 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	return publishReply(reply, apiClient)
 }
 
-func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, machine *client.Machine, event *events.Event, errString *string) {
+func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, machine *client.Machine, event *events.Event, errChan chan<- string) {
 	// We will just log stdout first, then stderr, ignoring all errors.
+	defer close(errChan)
 	scanner := bufio.NewScanner(readerStdout)
 	for scanner.Scan() {
 		msg := scanner.Text()
 		log.WithFields(log.Fields{
 			"resourceId: ": event.ResourceId,
 		}).Infof("stdout: %s", msg)
-		msg = filterDockerMessage(msg, machine, errString)
+		msg = filterDockerMessage(msg, machine, errChan)
 		if msg != "" {
 			publishChan <- msg
 		}
@@ -124,13 +136,8 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 	}
 }
 
-func filterDockerMessage(msg string, machine *client.Machine, errString *string) string {
+func filterDockerMessage(msg string, machine *client.Machine, errChan chan<- string) string {
 	// Docker log messages come in the format: time=<t> level=<log-level> msg=<message>
-	// We just want to return <message> to cattle and only messages that do not contain the machine uuid
-	if strings.Contains(msg, machine.ExternalId) || strings.Contains(msg, machine.Name) {
-		return ""
-	}
-
 	// The minimum string should be greater than 7 characters msg="."
 	match := RegExDockerMsg.FindString(msg)
 	if len(match) < 7 || !strings.HasPrefix(match, "msg=\"") {
@@ -138,10 +145,14 @@ func filterDockerMessage(msg string, machine *client.Machine, errString *string)
 	}
 
 	match = (match[5 : len(strings.TrimSpace(match))-1])
-	if strings.Contains(msg, "level=\"info\"") {
+	if strings.Contains(msg, levelInfo) {
+		// We just want to return <message> to cattle and only messages that do not contain the machine uuid or namee
+		if strings.Contains(msg, machine.ExternalId) || strings.Contains(msg, machine.Name) {
+			return ""
+		}
 		return match
-	} else if strings.Contains(msg, "level=\"error\"") {
-		*errString = match
+	} else if strings.Contains(msg, levelError) {
+		errChan <- strings.Replace(match, errorCreatingMachine, "", 1)
 		return ""
 	}
 	return ""

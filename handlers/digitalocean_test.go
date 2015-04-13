@@ -47,7 +47,13 @@ func setupDO(access_token string) {
 	// TODO Replace functions during teardown.
 	machine := &client.Machine{
 		DigitaloceanConfig: client.DigitaloceanConfig{
-			AccessToken: access_token,
+			AccessToken:       access_token,
+			Region:            "sfo1",
+			Size:              "1gb",
+			Image:             "ubuntu-14-04-x64",
+			Ipv6:              true,
+			Backups:           true,
+			PrivateNetworking: true,
 		},
 		Kind:   "machine",
 		Driver: "DigitalOcean",

@@ -236,13 +236,13 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 			cmd = append(cmd, "--digitalocean-access-token", machine.DigitaloceanConfig.AccessToken)
 		}
 		if machine.DigitaloceanConfig.Ipv6 {
-			cmd = append(cmd, "--digitalocean-ipv6", "true")
+			cmd = append(cmd, "--digitalocean-ipv6")
 		}
 		if machine.DigitaloceanConfig.PrivateNetworking {
-			cmd = append(cmd, "--digitalocean-private-networking", "true")
+			cmd = append(cmd, "--digitalocean-private-networking")
 		}
 		if machine.DigitaloceanConfig.Backups {
-			cmd = append(cmd, "--digitalocean-backups", "true")
+			cmd = append(cmd, "--digitalocean-backups")
 		}
 	case "amazonec2":
 		cmd = append(cmd, "amazonec2")

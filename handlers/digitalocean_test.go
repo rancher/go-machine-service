@@ -52,7 +52,7 @@ func setupDO(access_token string) {
 			Size:              "1gb",
 			Image:             "ubuntu-14-04-x64",
 			Ipv6:              true,
-			Backups:           true,
+			Backups:           false,
 			PrivateNetworking: true,
 		},
 		Kind:   "machine",

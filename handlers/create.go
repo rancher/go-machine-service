@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -25,7 +26,8 @@ const (
 	errorCreatingMachine = "Error creating machine: "
 )
 
-var RegExDockerMsg = regexp.MustCompile("msg=.*")
+var regExDockerMsg = regexp.MustCompile("msg=.*")
+var regExHyphen = regexp.MustCompile("([a-z])([A-Z])")
 
 func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	log.WithFields(log.Fields{
@@ -139,7 +141,7 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 func filterDockerMessage(msg string, machine *client.Machine, errChan chan<- string) string {
 	// Docker log messages come in the format: time=<t> level=<log-level> msg=<message>
 	// The minimum string should be greater than 7 characters msg="."
-	match := RegExDockerMsg.FindString(msg)
+	match := regExDockerMsg.FindString(msg)
 	if len(match) < 7 || !strings.HasPrefix(match, "msg=\"") {
 		return ""
 	}
@@ -171,6 +173,7 @@ func startReturnOutput(command *exec.Cmd) (io.Reader, io.Reader, error) {
 
 	err = command.Start()
 	if err != nil {
+
 		defer readerStdout.Close()
 		defer readerStderr.Close()
 		return nil, nil, err
@@ -216,89 +219,46 @@ func getBaseMachineDir(uuid string) (string, error) {
 }
 
 func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
-	// TODO Quick and dirty. Refactor to use reflection and maps
-	// TODO Write a separate test for this function
-	cmd := []string{"create", "-d"}
+	sDriver := strings.ToLower(machine.Driver)
+	cmd := []string{"create", "-d", sDriver}
 
-	switch strings.ToLower(machine.Driver) {
-	case "digitalocean":
-		cmd = append(cmd, "digitalocean")
-		if machine.DigitaloceanConfig.Image != "" {
-			cmd = append(cmd, "--digitalocean-image", machine.DigitaloceanConfig.Image)
+	valueOfMachine := reflect.ValueOf(machine).Elem()
+
+	// Grab the reflected Value of XyzConfig (i.e. DigitaloceanConfig) based on the machine driver
+	driverConfig := valueOfMachine.FieldByName(strings.ToUpper(sDriver[:1]) + sDriver[1:] + "Config")
+	typeOfDriverConfig := driverConfig.Type()
+
+	for i := 0; i < driverConfig.NumField(); i++ {
+		// We are ignoring the Resource Field as we don't need it.
+		nameConfigField := typeOfDriverConfig.Field(i).Name
+		if nameConfigField == "Resource" {
+			continue
 		}
-		if machine.DigitaloceanConfig.Size != "" {
-			cmd = append(cmd, "--digitalocean-size", machine.DigitaloceanConfig.Size)
+
+		f := driverConfig.Field(i)
+
+		// This converts all field name of ParameterName to --<driver name>-parameter-name
+		// i.e. AccessToken parameter for DigitalOcean driver becomes --digitalocean-access-token
+		dmField := "--" + sDriver + "-" + strings.ToLower(regExHyphen.ReplaceAllString(nameConfigField, "${1}-${2}"))
+
+		// For now, we only support bool and string.  Will add more as required.
+		switch f.Interface().(type) {
+		case bool:
+			// dm only accepts field or field=true if value=true
+			if f.Bool() {
+				cmd = append(cmd, dmField)
+			}
+		case string:
+			if f.String() != "" {
+				cmd = append(cmd, dmField, f.String())
+			}
+		default:
+			return nil, fmt.Errorf("Unsupported type: %v", f.Type())
 		}
-		if machine.DigitaloceanConfig.Region != "" {
-			cmd = append(cmd, "--digitalocean-region", machine.DigitaloceanConfig.Region)
-		}
-		if machine.DigitaloceanConfig.AccessToken != "" {
-			cmd = append(cmd, "--digitalocean-access-token", machine.DigitaloceanConfig.AccessToken)
-		}
-		if machine.DigitaloceanConfig.Ipv6 {
-			cmd = append(cmd, "--digitalocean-ipv6")
-		}
-		if machine.DigitaloceanConfig.PrivateNetworking {
-			cmd = append(cmd, "--digitalocean-private-networking")
-		}
-		if machine.DigitaloceanConfig.Backups {
-			cmd = append(cmd, "--digitalocean-backups")
-		}
-	case "amazonec2":
-		cmd = append(cmd, "amazonec2")
-		if machine.Amazonec2Config.AccessKey != "" {
-			cmd = append(cmd, "--amazonec2-access-key", machine.Amazonec2Config.AccessKey)
-		}
-		if machine.Amazonec2Config.SecretKey != "" {
-			cmd = append(cmd, "--amazonec2-secret-key", machine.Amazonec2Config.SecretKey)
-		}
-		if machine.Amazonec2Config.VpcId != "" {
-			cmd = append(cmd, "--amazonec2-vpc-id", machine.Amazonec2Config.VpcId)
-		}
-		if machine.Amazonec2Config.Ami != "" {
-			cmd = append(cmd, "--amazonec2-ami", machine.Amazonec2Config.Ami)
-		}
-		if machine.Amazonec2Config.SessionToken != "" {
-			cmd = append(cmd, "--amazonec2-session-token", machine.Amazonec2Config.SessionToken)
-		}
-		if machine.Amazonec2Config.Region != "" {
-			cmd = append(cmd, "--amazonec2-region", machine.Amazonec2Config.Region)
-		}
-		if machine.Amazonec2Config.Zone != "" {
-			cmd = append(cmd, "--amazonec2-zone", machine.Amazonec2Config.Zone)
-		}
-		if machine.Amazonec2Config.SubnetId != "" {
-			cmd = append(cmd, "--amazonec2-subnet-id", machine.Amazonec2Config.SubnetId)
-		}
-		if machine.Amazonec2Config.SecurityGroup != "" {
-			cmd = append(cmd, "--amazonec2-security-group", machine.Amazonec2Config.SecurityGroup)
-		}
-		if machine.Amazonec2Config.InstanceType != "" {
-			cmd = append(cmd, "--amazonec2-instance-type", machine.Amazonec2Config.InstanceType)
-		}
-		if machine.Amazonec2Config.RootSize != "" {
-			cmd = append(cmd, "--amazonec2-root-size", machine.Amazonec2Config.RootSize)
-		}
-		if machine.Amazonec2Config.IamInstanceProfile != "" {
-			cmd = append(cmd, "--amazonec2-iam-instance-profile", machine.Amazonec2Config.AccessKey)
-		}
-	case "virtualbox":
-		cmd = append(cmd, "virtualbox")
-		if machine.VirtualboxConfig.Boot2dockerUrl != "" {
-			cmd = append(cmd, "--virtualbox-boot2docker-url", machine.VirtualboxConfig.Boot2dockerUrl)
-		}
-		if machine.VirtualboxConfig.DiskSize != "" {
-			cmd = append(cmd, "--virtualbox-disk-size", machine.VirtualboxConfig.DiskSize)
-		}
-		if machine.VirtualboxConfig.Memory != "" {
-			cmd = append(cmd, "--virtualbox-memory", machine.VirtualboxConfig.Memory)
-		}
-	default:
-		return nil, fmt.Errorf("Unrecognize Driver: %v", machine.Driver)
+
 	}
 
 	cmd = append(cmd, machine.Name)
-
 	log.Infof("Cmd slice: %v", cmd)
 	return cmd, nil
 }

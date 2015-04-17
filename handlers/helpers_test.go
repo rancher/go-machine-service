@@ -84,6 +84,78 @@ func TestParseConnectionArgs(t *testing.T) {
 
 }
 
+// Test the generic build create command function
+func TestBuildMachineCreateCmd(t *testing.T) {
+
+	// Tests: false boolean param, true boolean param, missing boolean param, and string params
+	testCmd := []string{
+		"create",
+		"-d",
+		"digitalocean",
+		"--digitalocean-access-token",
+		"abc",
+		"--digitalocean-image",
+		"ubuntu-14-04-x64",
+		"--digitalocean-ipv6",
+		"--digitalocean-region",
+		"sfo1",
+		"--digitalocean-size",
+		"1gb",
+		"testDO"}
+	machine := &client.Machine{
+		DigitaloceanConfig: client.DigitaloceanConfig{
+			AccessToken: "abc",
+			Region:      "sfo1",
+			Size:        "1gb",
+			Image:       "ubuntu-14-04-x64",
+			Ipv6:        true,
+			Backups:     false,
+		},
+		Kind:   "machine",
+		Driver: "DigitalOcean",
+		Name:   "testDO",
+	}
+	checkCommands(testCmd, machine, t)
+
+	// Test for no params
+	testCmd = []string{
+		"create",
+		"-d",
+		"virtualbox",
+		"testVB"}
+	machine = &client.Machine{
+		VirtualboxConfig: client.VirtualboxConfig{},
+		Kind:             "machine",
+		Driver:           "VirtualBox",
+		Name:             "testVB",
+	}
+	checkCommands(testCmd, machine, t)
+}
+
+func strsEquals(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func checkCommands(testCmd []string, machine *client.Machine, t *testing.T) {
+	cmd, err := buildMachineCreateCmd(machine)
+	if err != nil {
+		t.Fatalf("Error building command", err)
+	}
+
+	if !strsEquals(cmd, testCmd) {
+		t.Logf("Mismatch commands.  Expected: [%v], Actual: [%v]", testCmd, cmd)
+		t.FailNow()
+	}
+}
+
 func testParse(testArgs, ca, cert, key, endpoint string, t *testing.T) {
 	config, err := parseConnectionArgs(testArgs)
 	if err != nil {

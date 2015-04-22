@@ -13,13 +13,13 @@ func TestAmazonec2(t *testing.T) {
 	accessKey := os.Getenv("EC2_ACCESS_KEY")
 	secretKey := os.Getenv("EC2_SECRET_KEY")
 	vpcId := os.Getenv("EC2_VPC_ID")
-	subnetId := os.Getenv("EC2_SUBNET_ID")
+	zone := os.Getenv("EC2_ZONE")
 
-	if accessKey == "" || secretKey == "" || vpcId == "" || subnetId == "" {
+	if accessKey == "" || secretKey == "" || vpcId == "" {
 		t.Log("Skipping Amazon EC2 Test.")
 		return
 	}
-	setup(accessKey, secretKey, vpcId, subnetId)
+	setup(accessKey, secretKey, vpcId, zone)
 
 	resourceId := "EC2-" + strconv.FormatInt(time.Now().Unix(), 10)
 	event := &events.Event{
@@ -47,14 +47,14 @@ func TestAmazonec2(t *testing.T) {
 	}
 }
 
-func setup(accessKey string, secretKey string, vpcId string, subnetId string) {
+func setup(accessKey string, secretKey string, vpcId string, zone string) {
 	// TODO Replace functions during teardown.
 	machine := &client.Machine{
 		Amazonec2Config: client.Amazonec2Config{
 			AccessKey: accessKey,
 			SecretKey: secretKey,
 			VpcId:     vpcId,
-			SubnetId:  subnetId,
+			Zone:      zone,
 		},
 		Kind:   "machine",
 		Driver: "Amazonec2",

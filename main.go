@@ -30,7 +30,12 @@ func main() {
 			"Err": err,
 		}).Error("Unable to create EventRouter")
 	} else {
-		router.Start(nil)
+		err := router.Start(nil)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"Err": err,
+			}).Error("Unable to start EventRouter")
+		}
 	}
 	log.Info("Exiting go-machine-service...")
 }

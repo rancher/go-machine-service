@@ -47,7 +47,7 @@ func TestPacket(t *testing.T) {
 func setupPacket(apiKey, projectId string) {
 	// TODO Replace functions during teardown.
 	machine := &client.Machine{
-		PacketConfig: client.PacketConfig{
+		PacketConfig: &client.PacketConfig{
 			ApiKey:    apiKey,
 			ProjectId: projectId,
 		},

@@ -50,7 +50,7 @@ func TestAmazonec2(t *testing.T) {
 func setup(accessKey string, secretKey string, vpcId string, zone string) {
 	// TODO Replace functions during teardown.
 	machine := &client.Machine{
-		Amazonec2Config: &client.Amazonec2Config{
+		Amazonec2Config: client.Amazonec2Config{
 			AccessKey: accessKey,
 			SecretKey: secretKey,
 			VpcId:     vpcId,

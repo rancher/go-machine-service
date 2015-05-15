@@ -9,16 +9,17 @@ import (
 	"time"
 )
 
-func TestPacket(t *testing.T) {
-	apiKey := os.Getenv("PACKET_API_KEY")
-	projectId := os.Getenv("PACKET_PROJECT_ID")
-	if apiKey == "" || projectId == "" {
-		t.Log("Skipping packet test.")
+func TestRackspace(t *testing.T) {
+	username := os.Getenv("RACKSPACE_USERNAME")
+	region := os.Getenv("RACKSPACE_REGION")
+	apiKey := os.Getenv("RACKSPACE_APIKEY")
+	if username == "" || region == "" || apiKey == "" {
+		t.Log("Skipping RACKSPACE test.")
 		return
 	}
-	setupPacket(apiKey, projectId)
+	setupRackspace(username, region, apiKey)
 
-	resourceId := "PA-" + strconv.FormatInt(time.Now().Unix(), 10)
+	resourceId := "RK-" + strconv.FormatInt(time.Now().Unix(), 10)
 	event := &events.Event{
 		ResourceId: resourceId,
 		Id:         "event-id",
@@ -44,15 +45,22 @@ func TestPacket(t *testing.T) {
 	}
 }
 
-func setupPacket(apiKey, projectId string) {
+func setupRackspace(username, region, apiKey string) {
 	// TODO Replace functions during teardown.
 	machine := &client.Machine{
-		PacketConfig: &client.PacketConfig{
-			ApiKey:    apiKey,
-			ProjectId: projectId,
+		RackspaceConfig: &client.RackspaceConfig{
+			Username:      username,
+			Region:        region,
+			ApiKey:        apiKey,
+			EndpointType:  "publicURL",
+			ImageId:       "598a4282-f14b-4e50-af4c-b3e52749d9f9",
+			FlavorId:      "general1-1",
+			SshUser:       "root",
+			SshPort:       "22",
+			DockerInstall: "true",
 		},
 		Kind:   "machine",
-		Driver: "Packet",
+		Driver: "Rackspace",
 	}
 
 	getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {

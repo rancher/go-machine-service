@@ -225,7 +225,7 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	valueOfMachine := reflect.ValueOf(machine).Elem()
 
 	// Grab the reflected Value of XyzConfig (i.e. DigitaloceanConfig) based on the machine driver
-	driverConfig := valueOfMachine.FieldByName(strings.ToUpper(sDriver[:1]) + sDriver[1:] + "Config")
+	driverConfig := valueOfMachine.FieldByName(strings.ToUpper(sDriver[:1]) + sDriver[1:] + "Config").Elem()
 	typeOfDriverConfig := driverConfig.Type()
 
 	for i := 0; i < driverConfig.NumField(); i++ {

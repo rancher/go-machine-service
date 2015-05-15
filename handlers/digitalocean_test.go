@@ -46,7 +46,7 @@ func TestDigitalOcean(t *testing.T) {
 func setupDO(access_token string) {
 	// TODO Replace functions during teardown.
 	machine := &client.Machine{
-		DigitaloceanConfig: client.DigitaloceanConfig{
+		DigitaloceanConfig: &client.DigitaloceanConfig{
 			AccessToken:       access_token,
 			Region:            "sfo1",
 			Size:              "1gb",

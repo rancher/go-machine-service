@@ -103,7 +103,7 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		"1gb",
 		"testDO"}
 	machine := &client.Machine{
-		DigitaloceanConfig: client.DigitaloceanConfig{
+		DigitaloceanConfig: &client.DigitaloceanConfig{
 			AccessToken: "abc",
 			Region:      "sfo1",
 			Size:        "1gb",
@@ -124,7 +124,7 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		"virtualbox",
 		"testVB"}
 	machine = &client.Machine{
-		VirtualboxConfig: client.VirtualboxConfig{},
+		VirtualboxConfig: &client.VirtualboxConfig{},
 		Kind:             "machine",
 		Driver:           "VirtualBox",
 		Name:             "testVB",

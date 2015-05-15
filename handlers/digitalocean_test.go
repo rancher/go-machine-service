@@ -66,8 +66,8 @@ func setupDO(access_token string) {
 		return machine, nil
 	}
 
-	getRegistrationUrl = func(accountId string, apiClient *client.RancherClient) (string, error) {
-		return "http://1.2.3.4/v1", nil
+	getRegistrationUrlAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
+		return "http://1.2.3.4/v1", "rancher/agent", "v0.7.6", nil
 	}
 
 	publishReply = buildMockPublishReply(machine)

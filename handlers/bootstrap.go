@@ -47,7 +47,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 
 	publishChan <- "Installing Rancher agent"
 
-	registrationUrl, err := getRegistrationUrl(machine.AccountId, apiClient)
+	registrationUrl, imageRepo, imageTag, err := getRegistrationUrlAndImage(machine.AccountId, apiClient)
 	if err != nil {
 		return err
 	}
@@ -62,14 +62,14 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		return err
 	}
 
-	err = pullImage(dockerClient)
+	err = pullImage(dockerClient, imageRepo, imageTag)
 	if err != nil {
 		return err
 	}
 
 	publishChan <- "Creating agent container"
 
-	container, err := createContainer(registrationUrl, machine, dockerClient)
+	container, err := createContainer(registrationUrl, machine, dockerClient, imageRepo, imageTag)
 	if err != nil {
 		return err
 	}
@@ -103,9 +103,9 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 }
 
 func createContainer(registrationUrl string, machine *client.Machine,
-	dockerClient *docker.Client) (*docker.Container, error) {
+	dockerClient *docker.Client, imageRepo, imageTag string) (*docker.Container, error) {
 	containerCmd := []string{registrationUrl}
-	containerConfig := buildContainerConfig(containerCmd, machine)
+	containerConfig := buildContainerConfig(containerCmd, machine, imageRepo, imageTag)
 	hostConfig := buildHostConfig()
 
 	opts := docker.CreateContainerOptions{
@@ -125,8 +125,7 @@ func buildHostConfig() *docker.HostConfig {
 	return hostConfig
 }
 
-func buildContainerConfig(containerCmd []string, machine *client.Machine) *docker.Config {
-	imgRepo, imgTag := getRancherAgentImage()
+func buildContainerConfig(containerCmd []string, machine *client.Machine, imgRepo, imgTag string) *docker.Config {
 	image := imgRepo + ":" + imgTag
 
 	volConfig := map[string]struct{}{"/var/run/docker.sock": {}}
@@ -142,14 +141,13 @@ func buildContainerConfig(containerCmd []string, machine *client.Machine) *docke
 	return config
 }
 
-func pullImage(dockerClient *docker.Client) error {
-	imgRepo, imgTag := getRancherAgentImage()
+func pullImage(dockerClient *docker.Client, imageRepo, imageTag string) error {
 	imageOptions := docker.PullImageOptions{
-		Repository: imgRepo,
-		Tag:        imgTag,
+		Repository: imageRepo,
+		Tag:        imageTag,
 	}
 	imageAuth := docker.AuthConfiguration{}
-	log.Printf("Pulling %v:%v image.", imgRepo, imgTag)
+	log.Printf("Pulling %v:%v image.", imageRepo, imageTag)
 	err := dockerClient.PullImage(imageOptions, imageAuth)
 	if err != nil {
 		return err
@@ -157,13 +155,13 @@ func pullImage(dockerClient *docker.Client) error {
 	return nil
 }
 
-var getRegistrationUrl = func(accountId string, apiClient *client.RancherClient) (string, error) {
+var getRegistrationUrlAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
 	listOpts := client.NewListOpts()
 	listOpts.Filters["accountId"] = accountId
 	listOpts.Filters["state"] = "active"
 	tokenCollection, err := apiClient.RegistrationToken.List(listOpts)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
 
 	var token client.RegistrationToken
@@ -182,22 +180,27 @@ var getRegistrationUrl = func(accountId string, apiClient *client.RancherClient)
 
 		createToken, err = apiClient.RegistrationToken.Create(createToken)
 		if err != nil {
-			return "", err
+			return "", "", "", err
 		}
 		createToken, err = waitForTokenToActivate(createToken, apiClient)
 		if err != nil {
-			return "", err
+			return "", "", "", err
 		}
 		token = *createToken
 	}
 
 	regUrl, ok := token.Links["registrationUrl"]
 	if !ok {
-		return "", fmt.Errorf("No registration url on token [%v] for account [%v].", token.Id, accountId)
+		return "", "", "", fmt.Errorf("No registration url on token [%v] for account [%v].", token.Id, accountId)
+	}
+
+	imageParts := strings.Split(token.Image, ":")
+	if len(imageParts) != 2 {
+		return "", "", "", fmt.Errorf("Invalid Image format in token [%v] for account [%v]", token.Id, accountId)
 	}
 
 	regUrl = tweakRegistrationUrl(regUrl)
-	return regUrl, nil
+	return regUrl, imageParts[0], imageParts[1], nil
 }
 
 func tweakRegistrationUrl(regUrl string) string {
@@ -304,8 +307,4 @@ func parseConnectionArgs(args string) (*tlsConnectionConfig, error) {
 	}
 
 	return config, nil
-}
-
-func getRancherAgentImage() (string, string) {
-	return "rancher/agent", "latest"
 }

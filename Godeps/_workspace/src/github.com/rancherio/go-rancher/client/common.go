@@ -5,21 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 )
 
 const (
 	SELF       = "self"
 	COLLECTION = "collection"
-)
-
-var (
-	debug = false
 )
 
 type ClientOpts struct {
@@ -199,10 +193,6 @@ func (rancherClient *RancherBaseClient) doGet(url string, opts *ListOpts, respOb
 		return err
 	}
 
-	if debug {
-		fmt.Println("GET " + url)
-	}
-
 	client := rancherClient.newHttpClient()
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -227,10 +217,6 @@ func (rancherClient *RancherBaseClient) doGet(url string, opts *ListOpts, respOb
 		return err
 	}
 
-	if debug {
-		fmt.Println("Response <= " + string(byteContent))
-	}
-
 	return json.Unmarshal(byteContent, respObject)
 }
 
@@ -252,19 +238,10 @@ func (rancherClient *RancherBaseClient) doList(schemaType string, opts *ListOpts
 	return rancherClient.doGet(collectionUrl, opts, respObject)
 }
 
-func (rancherClient *RancherBaseClient) Post(url string, createObj interface{}, respObject interface{}) error {
-	return rancherClient.doModify("POST", url, createObj, respObject)
-}
-
 func (rancherClient *RancherBaseClient) doModify(method string, url string, createObj interface{}, respObject interface{}) error {
 	bodyContent, err := json.Marshal(createObj)
 	if err != nil {
 		return err
-	}
-
-	if debug {
-		fmt.Println(method + " " + url)
-		fmt.Println("Request => " + string(bodyContent))
 	}
 
 	client := rancherClient.newHttpClient()
@@ -294,12 +271,8 @@ func (rancherClient *RancherBaseClient) doModify(method string, url string, crea
 	}
 
 	if len(byteContent) > 0 {
-		if debug {
-			fmt.Println("Response <= " + string(byteContent))
-		}
 		return json.Unmarshal(byteContent, respObject)
 	}
-
 	return nil
 }
 
@@ -392,17 +365,9 @@ func (rancherClient *RancherBaseClient) doResourceDelete(schemaType string, exis
 	return rancherClient.doDelete(selfUrl)
 }
 
-func (rancherClient *RancherBaseClient) Reload(existing *Resource, output interface{}) error {
-	selfUrl, ok := existing.Links[SELF]
-	if !ok {
-		return errors.New(fmt.Sprintf("Failed to find self URL of [%v]", existing))
-	}
-
-	return rancherClient.doGet(selfUrl, NewListOpts(), output)
-}
-
-func (rancherClient *RancherBaseClient) doAction(schemaType string, action string,
-	existing *Resource, inputObject, respObject interface{}) error {
+func (rancherClient *RancherBaseClient) doEmptyAction(schemaType string, action string,
+	existing *Resource, respObject interface{}) error {
+	// TODO Actions with inputs currently not supported.
 
 	if existing == nil {
 		return errors.New("Existing object is nil")
@@ -413,26 +378,18 @@ func (rancherClient *RancherBaseClient) doAction(schemaType string, action strin
 		return errors.New(fmt.Sprintf("Action [%v] not available on [%v]", action, existing))
 	}
 
-	_, ok = rancherClient.Types[schemaType]
+	schema, ok := rancherClient.Types[schemaType]
 	if !ok {
 		return errors.New("Unknown schema type [" + schemaType + "]")
 	}
 
-	var input io.Reader
-
-	if inputObject != nil {
-		bodyContent, err := json.Marshal(inputObject)
-		if err != nil {
-			return err
-		}
-		if debug {
-			fmt.Println("Request => " + string(bodyContent))
-		}
-		input = bytes.NewBuffer(bodyContent)
+	if schema.ResourceActions[action].Input != "" {
+		return fmt.Errorf("Actions with inputs or outputs not yet support. Input: [%v] Output: [%v].",
+			schema.ResourceActions[action].Input)
 	}
 
 	client := rancherClient.newHttpClient()
-	req, err := http.NewRequest("POST", actionUrl, input)
+	req, err := http.NewRequest("POST", actionUrl, nil)
 	if err != nil {
 		return err
 	}
@@ -457,16 +414,5 @@ func (rancherClient *RancherBaseClient) doAction(schemaType string, action strin
 		return err
 	}
 
-	if debug {
-		fmt.Println("Response <= " + string(byteContent))
-	}
-
 	return json.Unmarshal(byteContent, respObject)
-}
-
-func init() {
-	debug = os.Getenv("RANCHER_CLIENT_DEBUG") == "true"
-	if debug {
-		fmt.Println("Rancher client debug on")
-	}
 }

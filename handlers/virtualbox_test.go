@@ -65,7 +65,7 @@ func TestMachineHandlers(t *testing.T) {
 
 func setupVB() {
 	machine := &client.Machine{
-		VirtualboxConfig: &client.VirtualboxConfig{
+		VirtualboxConfig: client.VirtualboxConfig{
 			DiskSize: "40000",
 			Memory:   "2048",
 		},

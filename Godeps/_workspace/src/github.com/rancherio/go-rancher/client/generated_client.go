@@ -19,8 +19,6 @@ type RancherClient struct {
     AddRemoveLoadBalancerListenerInput AddRemoveLoadBalancerListenerInputOperations
     AddRemoveLoadBalancerTargetInput AddRemoveLoadBalancerTargetInputOperations
     AddRemoveServiceLinkInput AddRemoveServiceLinkInputOperations
-    AddLabelInput AddLabelInputOperations
-    RemoveLabelInput RemoveLabelInputOperations
     ApiKey ApiKeyOperations
     Cluster ClusterOperations
     ComposeConfigInput ComposeConfigInputOperations
@@ -58,7 +56,6 @@ type RancherClient struct {
     Instance InstanceOperations
     InstanceLink InstanceLinkOperations
     IpAddress IpAddressOperations
-    Label LabelOperations
     LoadBalancer LoadBalancerOperations
     LoadBalancerConfig LoadBalancerConfigOperations
     LoadBalancerConfigListenerMap LoadBalancerConfigListenerMapOperations
@@ -74,7 +71,6 @@ type RancherClient struct {
     ProjectMember ProjectMemberOperations
     Service ServiceOperations
     Setting SettingOperations
-    Snapshot SnapshotOperations
     StoragePool StoragePoolOperations
     Task TaskOperations
     TaskInstance TaskInstanceOperations
@@ -94,7 +90,6 @@ type RancherClient struct {
     VirtualboxConfig VirtualboxConfigOperations
     DigitaloceanConfig DigitaloceanConfigOperations
     Amazonec2Config Amazonec2ConfigOperations
-    RackspaceConfig RackspaceConfigOperations
     PacketConfig PacketConfigOperations
     Machine MachineOperations
     Register RegisterOperations
@@ -125,8 +120,6 @@ func constructClient() *RancherClient {
     client.AddRemoveLoadBalancerListenerInput = newAddRemoveLoadBalancerListenerInputClient(client)
     client.AddRemoveLoadBalancerTargetInput = newAddRemoveLoadBalancerTargetInputClient(client)
     client.AddRemoveServiceLinkInput = newAddRemoveServiceLinkInputClient(client)
-    client.AddLabelInput = newAddLabelInputClient(client)
-    client.RemoveLabelInput = newRemoveLabelInputClient(client)
     client.ApiKey = newApiKeyClient(client)
     client.Cluster = newClusterClient(client)
     client.ComposeConfigInput = newComposeConfigInputClient(client)
@@ -164,7 +157,6 @@ func constructClient() *RancherClient {
     client.Instance = newInstanceClient(client)
     client.InstanceLink = newInstanceLinkClient(client)
     client.IpAddress = newIpAddressClient(client)
-    client.Label = newLabelClient(client)
     client.LoadBalancer = newLoadBalancerClient(client)
     client.LoadBalancerConfig = newLoadBalancerConfigClient(client)
     client.LoadBalancerConfigListenerMap = newLoadBalancerConfigListenerMapClient(client)
@@ -180,7 +172,6 @@ func constructClient() *RancherClient {
     client.ProjectMember = newProjectMemberClient(client)
     client.Service = newServiceClient(client)
     client.Setting = newSettingClient(client)
-    client.Snapshot = newSnapshotClient(client)
     client.StoragePool = newStoragePoolClient(client)
     client.Task = newTaskClient(client)
     client.TaskInstance = newTaskInstanceClient(client)
@@ -200,7 +191,6 @@ func constructClient() *RancherClient {
     client.VirtualboxConfig = newVirtualboxConfigClient(client)
     client.DigitaloceanConfig = newDigitaloceanConfigClient(client)
     client.Amazonec2Config = newAmazonec2ConfigClient(client)
-    client.RackspaceConfig = newRackspaceConfigClient(client)
     client.PacketConfig = newPacketConfigClient(client)
     client.Machine = newMachineClient(client)
     client.Register = newRegisterClient(client)

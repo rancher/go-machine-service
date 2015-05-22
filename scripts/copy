@@ -1,0 +1,55 @@
+#!/bin/bash
+
+set -e
+
+if [[ -z "$CATTLE_HOME" ]]; then
+    echo "err: CATTLE_HOME is not set"
+    exit 1
+fi
+
+BASEDIR=$(dirname $0)
+GENERATED_DIR=`pwd`/$BASEDIR/../generator/generated
+
+if [[ ! -e $GENERATED_DIR ]]; then
+    echo "err: Please run scripts/generate first"
+    exit 1
+fi
+
+files=($GENERATED_DIR/*)
+
+if [[ ${#files[@]} -eq 0 ]]; then
+    echo "err: Please run scripts/generate first"
+    exit 1
+fi
+
+
+copy_driver_descriptor() {
+     for file in $(ls -1 $GENERATED_DIR | grep 'Config.json'); do
+         cp $GENERATED_DIR/$file $CATTLE_HOME/code/implementation/docker/machine/src/main/resources/schema/base/
+     done
+}
+
+copy_spring_xml_file() {
+    cp $GENERATED_DIR/spring-docker-machine-api-context.xml $CATTLE_HOME/code/implementation/docker/machine/src/main/resources/META-INF/cattle/docker-machine-api/
+}
+
+copy_auth_files() {
+    if [[ ! -e $CATTLE_HOME/code/implementation/docker/machine/src/main/resources/schema/user/user-auth.json.d/machine-generated.json ]]; then
+        touch $CATTLE_HOME/code/implementation/docker/machine/src/main/resources/schema/user/user-auth.json.d/machine-generated.json
+    fi
+
+    if [[ ! -e $CATTLE_HOME/code/implementation/docker/machine/src/main/resources/schema/project/project-auth.json.d/machine-generated.json ]]; then
+        touch $CATTLE_HOME/code/implementation/docker/machine/src/main/resources/schema/project/project-auth.json.d/machine-generated.json
+    fi
+    cp $GENERATED_DIR/user-auth.json $CATTLE_HOME/code/implementation/docker/machine/src/main/resources/schema/user/user-auth.json.d/machine-generated.json
+    cp $GENERATED_DIR/project-auth.json $CATTLE_HOME/code/implementation/docker/machine/src/main/resources/schema/project/project-auth.json.d/machine-generated.json
+}
+
+copy_machine_file() {
+    cp $GENERATED_DIR/machine-generated.json $CATTLE_HOME/code/implementation/docker/machine/src/main/resources/schema/base/machine.json.d/
+}
+
+copy_driver_descriptor
+copy_spring_xml_file
+copy_auth_files
+copy_machine_file

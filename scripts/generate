@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e
+
+BASEDIR=$(dirname $0)
+
+if [[ -z "$IN_DOCKER" ]]; then
+    docker run -v `pwd`/$BASEDIR/..:/go/src/github.com/rancherio/go-machine-service/ -e "IN_DOCKER=true" --entrypoint /go/src/github.com/rancherio/go-machine-service/scripts/generate ranger/go-machine-generator  
+else
+    cd /go/src/github.com/rancherio/go-machine-service/generator
+    if [[ -e generated/* ]]; then
+        rm -r generated/*
+    fi
+    go run generator.go
+fi

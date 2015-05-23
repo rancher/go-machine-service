@@ -1,0 +1,42 @@
+#! /bin/bash
+
+set -e
+
+BASEDIR=$(dirname $0)
+GENERATED_DIR=`pwd`/$BASEDIR/../generator/generated
+
+$BASEDIR/generate
+
+if [ ! -e "$GENERATED_DIR" ]; then
+    echo "scripts/generate failed. Cannot find $GENERATED_DIR"
+    exit 1
+fi
+
+STATUS=0
+ERR_MSG="generator did not generate all the expected files."
+
+for f in 'amazonec2' 'digitalocean' 'exoscale' 'packet' 'rackspace' 'softlayer' 'virtualbox' 'vmwarevcloudair' 'vmwarevsphere'
+    do
+        if [[ ! -f "$GENERATED_DIR/$f""Config.json" ]]; then
+            echo "$ERR_MSG Missing file $GENERATED_DIR/$f""Config.json"
+            STATUS=1
+        fi
+done
+
+
+if [[ ! -f "$GENERATED_DIR/spring-docker-machine-api-context.xml" ]]; then
+    echo "$ERR_MSG Missing file $GENERATED_DIR/spring-docker-machine-api-context.xml"
+    STATUS=1
+fi
+
+if [[ ! -f "$GENERATED_DIR/project-auth.json" ]]; then
+    echo "$ERR_MSG Missing file $GENERATED_DIR/project-auth.json"
+    STATUS=1
+fi
+
+if [[ ! -f "$GENERATED_DIR/user-auth.json" ]];then
+    echo "$ERR_MSG Missing file $GENERATED_DIR/user-auth.json"
+    STATUS=1
+fi
+
+exit $STATUS

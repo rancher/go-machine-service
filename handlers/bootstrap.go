@@ -130,6 +130,17 @@ func buildContainerConfig(containerCmd []string, machine *client.Machine, imgRep
 
 	volConfig := map[string]struct{}{"/var/run/docker.sock": {}}
 	envVars := []string{"CATTLE_PHYSICAL_HOST_UUID=" + machine.ExternalId}
+	for key, value := range machine.Labels {
+		label := ""
+		switch value.(type) {
+		case string:
+			label = value.(string)
+		default:
+			continue
+		}
+		labelPair := key + "=" + label
+		envVars = append(envVars, labelPair)
+	}
 	config := &docker.Config{
 		AttachStdin: true,
 		Tty:         true,

@@ -8,6 +8,8 @@ cd $(dirname $0)/..
 . ./scripts/common_functions
 set_project_vars
 
+GITCOMMIT=`git rev-parse --short HEAD`
+
 if [ -L ${PACKAGE} ]; then
     rm ${PACKAGE}
 fi
@@ -19,4 +21,4 @@ fi
 
 rm -rf build
 mkdir -p build
-go build -o build/${PROJECT}
+go build -o build/${PROJECT} -ldflags "-X main.GITCOMMIT $GITCOMMIT"

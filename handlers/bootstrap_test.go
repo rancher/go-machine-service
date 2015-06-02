@@ -13,12 +13,13 @@ func TestBuildContainerConfig(t *testing.T) {
 	labels := make(map[string]interface{})
 
 	labels["abc"] = "def"
+	labels["foo"] = "bar"
 
 	machine.Labels = labels
 	config := buildContainerConfig([]string{}, machine, "rancher/agent", "0.7.8")
 
 	for _, elem := range config.Env {
-		if elem == "abc=def" {
+		if elem == "CATTLE_HOST_LABELS=abc=def&foo=bar" {
 			return
 		}
 	}

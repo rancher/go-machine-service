@@ -2,16 +2,24 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-machine-service/handlers"
-	"os"
+)
+
+var (
+	GITCOMMIT = "HEAD"
 )
 
 func main() {
 	processCmdLineFlags()
 
-	log.Info("Starting go-machine-service...")
+	log.WithFields(log.Fields{
+		"gitcommit": GITCOMMIT,
+	}).Info("Starting go-machine-service...")
 	eventHandlers := map[string]events.EventHandler{
 		"physicalhost.create":    handlers.CreateMachine,
 		"physicalhost.bootstrap": handlers.ActivateMachine,
@@ -43,8 +51,14 @@ func main() {
 func processCmdLineFlags() {
 	// Define command line flags
 	logLevel := flag.String("loglevel", "info", "Set the default loglevel (default:info) [debug|info|warn|error]")
+	version := flag.Bool("v", false, "read the version of the go-machine-service")
 
 	flag.Parse()
+
+	if *version {
+		fmt.Printf("go-machine-service\t gitcommit=%s\n", GITCOMMIT)
+		os.Exit(0)
+	}
 
 	// Process log level.  If an invalid level is passed in, we simply default to info.
 	if parsedLogLevel, err := log.ParseLevel(*logLevel); err == nil {

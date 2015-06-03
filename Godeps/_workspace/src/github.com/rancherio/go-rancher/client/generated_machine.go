@@ -7,63 +7,65 @@ const (
 type Machine struct {
 	Resource
     
-    AccountId string `json:"accountId,omitempty"`
+    AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
     
-    Amazonec2Config *Amazonec2Config `json:"amazonec2Config,omitempty"`
+    Amazonec2Config *Amazonec2Config `json:"amazonec2Config,omitempty" yaml:"amazonec2config,omitempty"`
     
-    AuthCertificateAuthority string `json:"authCertificateAuthority,omitempty"`
+    AuthCertificateAuthority string `json:"authCertificateAuthority,omitempty" yaml:"auth_certificate_authority,omitempty"`
     
-    AuthKey string `json:"authKey,omitempty"`
+    AuthKey string `json:"authKey,omitempty" yaml:"auth_key,omitempty"`
     
-    Created string `json:"created,omitempty"`
+    AzureConfig *AzureConfig `json:"azureConfig,omitempty" yaml:"azure_config,omitempty"`
     
-    Data map[string]interface{} `json:"data,omitempty"`
+    Created string `json:"created,omitempty" yaml:"created,omitempty"`
     
-    Description string `json:"description,omitempty"`
+    Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
     
-    DigitaloceanConfig *DigitaloceanConfig `json:"digitaloceanConfig,omitempty"`
+    Description string `json:"description,omitempty" yaml:"description,omitempty"`
     
-    Driver string `json:"driver,omitempty"`
+    DigitaloceanConfig *DigitaloceanConfig `json:"digitaloceanConfig,omitempty" yaml:"digitalocean_config,omitempty"`
     
-    ExoscaleConfig *ExoscaleConfig `json:"exoscaleConfig,omitempty"`
+    Driver string `json:"driver,omitempty" yaml:"driver,omitempty"`
     
-    ExternalId string `json:"externalId,omitempty"`
+    ExoscaleConfig *ExoscaleConfig `json:"exoscaleConfig,omitempty" yaml:"exoscale_config,omitempty"`
     
-    ExtractedConfig string `json:"extractedConfig,omitempty"`
+    ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
     
-    Kind string `json:"kind,omitempty"`
+    ExtractedConfig string `json:"extractedConfig,omitempty" yaml:"extracted_config,omitempty"`
     
-    Labels map[string]interface{} `json:"labels,omitempty"`
+    Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
     
-    Name string `json:"name,omitempty"`
+    Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
     
-    OpenstackConfig *OpenstackConfig `json:"openstackConfig,omitempty"`
+    Name string `json:"name,omitempty" yaml:"name,omitempty"`
     
-    PacketConfig *PacketConfig `json:"packetConfig,omitempty"`
+    OpenstackConfig *OpenstackConfig `json:"openstackConfig,omitempty" yaml:"openstack_config,omitempty"`
     
-    RackspaceConfig *RackspaceConfig `json:"rackspaceConfig,omitempty"`
+    PacketConfig *PacketConfig `json:"packetConfig,omitempty" yaml:"packet_config,omitempty"`
     
-    RemoveTime string `json:"removeTime,omitempty"`
+    RackspaceConfig *RackspaceConfig `json:"rackspaceConfig,omitempty" yaml:"rackspace_config,omitempty"`
     
-    Removed string `json:"removed,omitempty"`
+    RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
     
-    SoftlayerConfig *SoftlayerConfig `json:"softlayerConfig,omitempty"`
+    Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
     
-    State string `json:"state,omitempty"`
+    SoftlayerConfig *SoftlayerConfig `json:"softlayerConfig,omitempty" yaml:"softlayer_config,omitempty"`
     
-    Transitioning string `json:"transitioning,omitempty"`
+    State string `json:"state,omitempty" yaml:"state,omitempty"`
     
-    TransitioningMessage string `json:"transitioningMessage,omitempty"`
+    Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
     
-    TransitioningProgress int `json:"transitioningProgress,omitempty"`
+    TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
     
-    Uuid string `json:"uuid,omitempty"`
+    TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
     
-    VirtualboxConfig *VirtualboxConfig `json:"virtualboxConfig,omitempty"`
+    Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
     
-    VmwarevcloudairConfig *VmwarevcloudairConfig `json:"vmwarevcloudairConfig,omitempty"`
+    VirtualboxConfig *VirtualboxConfig `json:"virtualboxConfig,omitempty" yaml:"virtualbox_config,omitempty"`
     
-    VmwarevsphereConfig *VmwarevsphereConfig `json:"vmwarevsphereConfig,omitempty"`
+    VmwarevcloudairConfig *VmwarevcloudairConfig `json:"vmwarevcloudairConfig,omitempty" yaml:"vmwarevcloudair_config,omitempty"`
+    
+    VmwarevsphereConfig *VmwarevsphereConfig `json:"vmwarevsphereConfig,omitempty" yaml:"vmwarevsphere_config,omitempty"`
     
 }
 

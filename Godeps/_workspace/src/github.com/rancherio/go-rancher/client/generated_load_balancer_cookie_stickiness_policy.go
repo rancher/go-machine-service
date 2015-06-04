@@ -6,21 +6,20 @@ const (
 
 type LoadBalancerCookieStickinessPolicy struct {
 	Resource
-    
-    Cookie string `json:"cookie,omitempty" yaml:"cookie,omitempty"`
-    
-    Domain string `json:"domain,omitempty" yaml:"domain,omitempty"`
-    
-    Indirect bool `json:"indirect,omitempty" yaml:"indirect,omitempty"`
-    
-    Mode string `json:"mode,omitempty" yaml:"mode,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    Nocache bool `json:"nocache,omitempty" yaml:"nocache,omitempty"`
-    
-    Postonly bool `json:"postonly,omitempty" yaml:"postonly,omitempty"`
-    
+
+	Cookie string `json:"cookie,omitempty" yaml:"cookie,omitempty"`
+
+	Domain string `json:"domain,omitempty" yaml:"domain,omitempty"`
+
+	Indirect bool `json:"indirect,omitempty" yaml:"indirect,omitempty"`
+
+	Mode string `json:"mode,omitempty" yaml:"mode,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	Nocache bool `json:"nocache,omitempty" yaml:"nocache,omitempty"`
+
+	Postonly bool `json:"postonly,omitempty" yaml:"postonly,omitempty"`
 }
 
 type LoadBalancerCookieStickinessPolicyCollection struct {

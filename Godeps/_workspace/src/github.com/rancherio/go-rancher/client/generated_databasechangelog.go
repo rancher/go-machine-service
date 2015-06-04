@@ -6,27 +6,26 @@ const (
 
 type Databasechangelog struct {
 	Resource
-    
-    Author string `json:"author,omitempty" yaml:"author,omitempty"`
-    
-    Comments string `json:"comments,omitempty" yaml:"comments,omitempty"`
-    
-    Dateexecuted string `json:"dateexecuted,omitempty" yaml:"dateexecuted,omitempty"`
-    
-    Description string `json:"description,omitempty" yaml:"description,omitempty"`
-    
-    Exectype string `json:"exectype,omitempty" yaml:"exectype,omitempty"`
-    
-    Filename string `json:"filename,omitempty" yaml:"filename,omitempty"`
-    
-    Liquibase string `json:"liquibase,omitempty" yaml:"liquibase,omitempty"`
-    
-    Md5sum string `json:"md5sum,omitempty" yaml:"md5sum,omitempty"`
-    
-    Orderexecuted int64 `json:"orderexecuted,omitempty" yaml:"orderexecuted,omitempty"`
-    
-    Tag string `json:"tag,omitempty" yaml:"tag,omitempty"`
-    
+
+	Author string `json:"author,omitempty" yaml:"author,omitempty"`
+
+	Comments string `json:"comments,omitempty" yaml:"comments,omitempty"`
+
+	Dateexecuted string `json:"dateexecuted,omitempty" yaml:"dateexecuted,omitempty"`
+
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+
+	Exectype string `json:"exectype,omitempty" yaml:"exectype,omitempty"`
+
+	Filename string `json:"filename,omitempty" yaml:"filename,omitempty"`
+
+	Liquibase string `json:"liquibase,omitempty" yaml:"liquibase,omitempty"`
+
+	Md5sum string `json:"md5sum,omitempty" yaml:"md5sum,omitempty"`
+
+	Orderexecuted int64 `json:"orderexecuted,omitempty" yaml:"orderexecuted,omitempty"`
+
+	Tag string `json:"tag,omitempty" yaml:"tag,omitempty"`
 }
 
 type DatabasechangelogCollection struct {

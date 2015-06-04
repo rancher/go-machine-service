@@ -6,11 +6,10 @@ const (
 
 type SetLoadBalancerTargetsInput struct {
 	Resource
-    
-    InstanceIds []string `json:"instanceIds,omitempty" yaml:"instance_ids,omitempty"`
-    
-    IpAddresses []string `json:"ipAddresses,omitempty" yaml:"ip_addresses,omitempty"`
-    
+
+	InstanceIds []string `json:"instanceIds,omitempty" yaml:"instance_ids,omitempty"`
+
+	IpAddresses []string `json:"ipAddresses,omitempty" yaml:"ip_addresses,omitempty"`
 }
 
 type SetLoadBalancerTargetsInputCollection struct {

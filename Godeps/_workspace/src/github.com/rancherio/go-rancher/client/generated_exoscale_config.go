@@ -6,23 +6,22 @@ const (
 
 type ExoscaleConfig struct {
 	Resource
-    
-    ApiKey string `json:"apiKey,omitempty" yaml:"api_key,omitempty"`
-    
-    ApiSecretKey string `json:"apiSecretKey,omitempty" yaml:"api_secret_key,omitempty"`
-    
-    AvailabilityZone string `json:"availabilityZone,omitempty" yaml:"availability_zone,omitempty"`
-    
-    DiskSize string `json:"diskSize,omitempty" yaml:"disk_size,omitempty"`
-    
-    Image string `json:"image,omitempty" yaml:"image,omitempty"`
-    
-    InstanceProfile string `json:"instanceProfile,omitempty" yaml:"instance_profile,omitempty"`
-    
-    SecurityGroup string `json:"securityGroup,omitempty" yaml:"security_group,omitempty"`
-    
-    Url string `json:"url,omitempty" yaml:"url,omitempty"`
-    
+
+	ApiKey string `json:"apiKey,omitempty" yaml:"api_key,omitempty"`
+
+	ApiSecretKey string `json:"apiSecretKey,omitempty" yaml:"api_secret_key,omitempty"`
+
+	AvailabilityZone string `json:"availabilityZone,omitempty" yaml:"availability_zone,omitempty"`
+
+	DiskSize string `json:"diskSize,omitempty" yaml:"disk_size,omitempty"`
+
+	Image string `json:"image,omitempty" yaml:"image,omitempty"`
+
+	InstanceProfile string `json:"instanceProfile,omitempty" yaml:"instance_profile,omitempty"`
+
+	SecurityGroup string `json:"securityGroup,omitempty" yaml:"security_group,omitempty"`
+
+	Url string `json:"url,omitempty" yaml:"url,omitempty"`
 }
 
 type ExoscaleConfigCollection struct {

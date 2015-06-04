@@ -6,11 +6,10 @@ const (
 
 type ConfigItem struct {
 	Resource
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    SourceVersion string `json:"sourceVersion,omitempty" yaml:"source_version,omitempty"`
-    
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	SourceVersion string `json:"sourceVersion,omitempty" yaml:"source_version,omitempty"`
 }
 
 type ConfigItemCollection struct {

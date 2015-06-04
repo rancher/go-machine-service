@@ -6,21 +6,20 @@ const (
 
 type ProcessDefinition struct {
 	Resource
-    
-    ExtensionBased bool `json:"extensionBased,omitempty" yaml:"extension_based,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    PostProcessListeners interface{} `json:"postProcessListeners,omitempty" yaml:"post_process_listeners,omitempty"`
-    
-    PreProcessListeners interface{} `json:"preProcessListeners,omitempty" yaml:"pre_process_listeners,omitempty"`
-    
-    ProcessHandlers interface{} `json:"processHandlers,omitempty" yaml:"process_handlers,omitempty"`
-    
-    ResourceType string `json:"resourceType,omitempty" yaml:"resource_type,omitempty"`
-    
-    StateTransitions []interface{} `json:"stateTransitions,omitempty" yaml:"state_transitions,omitempty"`
-    
+
+	ExtensionBased bool `json:"extensionBased,omitempty" yaml:"extension_based,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	PostProcessListeners interface{} `json:"postProcessListeners,omitempty" yaml:"post_process_listeners,omitempty"`
+
+	PreProcessListeners interface{} `json:"preProcessListeners,omitempty" yaml:"pre_process_listeners,omitempty"`
+
+	ProcessHandlers interface{} `json:"processHandlers,omitempty" yaml:"process_handlers,omitempty"`
+
+	ResourceType string `json:"resourceType,omitempty" yaml:"resource_type,omitempty"`
+
+	StateTransitions []interface{} `json:"stateTransitions,omitempty" yaml:"state_transitions,omitempty"`
 }
 
 type ProcessDefinitionCollection struct {

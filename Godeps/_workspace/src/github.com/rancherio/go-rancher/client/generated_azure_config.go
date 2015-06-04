@@ -6,27 +6,26 @@ const (
 
 type AzureConfig struct {
 	Resource
-    
-    DockerPort string `json:"dockerPort,omitempty" yaml:"docker_port,omitempty"`
-    
-    Image string `json:"image,omitempty" yaml:"image,omitempty"`
-    
-    Location string `json:"location,omitempty" yaml:"location,omitempty"`
-    
-    Password string `json:"password,omitempty" yaml:"password,omitempty"`
-    
-    PublishSettingsFile string `json:"publishSettingsFile,omitempty" yaml:"publish_settings_file,omitempty"`
-    
-    Size string `json:"size,omitempty" yaml:"size,omitempty"`
-    
-    SshPort string `json:"sshPort,omitempty" yaml:"ssh_port,omitempty"`
-    
-    SubscriptionCert string `json:"subscriptionCert,omitempty" yaml:"subscription_cert,omitempty"`
-    
-    SubscriptionId string `json:"subscriptionId,omitempty" yaml:"subscription_id,omitempty"`
-    
-    Username string `json:"username,omitempty" yaml:"username,omitempty"`
-    
+
+	DockerPort string `json:"dockerPort,omitempty" yaml:"docker_port,omitempty"`
+
+	Image string `json:"image,omitempty" yaml:"image,omitempty"`
+
+	Location string `json:"location,omitempty" yaml:"location,omitempty"`
+
+	Password string `json:"password,omitempty" yaml:"password,omitempty"`
+
+	PublishSettingsFile string `json:"publishSettingsFile,omitempty" yaml:"publish_settings_file,omitempty"`
+
+	Size string `json:"size,omitempty" yaml:"size,omitempty"`
+
+	SshPort string `json:"sshPort,omitempty" yaml:"ssh_port,omitempty"`
+
+	SubscriptionCert string `json:"subscriptionCert,omitempty" yaml:"subscription_cert,omitempty"`
+
+	SubscriptionId string `json:"subscriptionId,omitempty" yaml:"subscription_id,omitempty"`
+
+	Username string `json:"username,omitempty" yaml:"username,omitempty"`
 }
 
 type AzureConfigCollection struct {

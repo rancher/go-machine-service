@@ -6,19 +6,18 @@ const (
 
 type PacketConfig struct {
 	Resource
-    
-    ApiKey string `json:"apiKey,omitempty" yaml:"api_key,omitempty"`
-    
-    BillingCycle string `json:"billingCycle,omitempty" yaml:"billing_cycle,omitempty"`
-    
-    FacilityCode string `json:"facilityCode,omitempty" yaml:"facility_code,omitempty"`
-    
-    Os string `json:"os,omitempty" yaml:"os,omitempty"`
-    
-    Plan string `json:"plan,omitempty" yaml:"plan,omitempty"`
-    
-    ProjectId string `json:"projectId,omitempty" yaml:"project_id,omitempty"`
-    
+
+	ApiKey string `json:"apiKey,omitempty" yaml:"api_key,omitempty"`
+
+	BillingCycle string `json:"billingCycle,omitempty" yaml:"billing_cycle,omitempty"`
+
+	FacilityCode string `json:"facilityCode,omitempty" yaml:"facility_code,omitempty"`
+
+	Os string `json:"os,omitempty" yaml:"os,omitempty"`
+
+	Plan string `json:"plan,omitempty" yaml:"plan,omitempty"`
+
+	ProjectId string `json:"projectId,omitempty" yaml:"project_id,omitempty"`
 }
 
 type PacketConfigCollection struct {

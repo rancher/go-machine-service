@@ -6,11 +6,10 @@ const (
 
 type ContainerLogs struct {
 	Resource
-    
-    Follow bool `json:"follow,omitempty" yaml:"follow,omitempty"`
-    
-    Lines int64 `json:"lines,omitempty" yaml:"lines,omitempty"`
-    
+
+	Follow bool `json:"follow,omitempty" yaml:"follow,omitempty"`
+
+	Lines int64 `json:"lines,omitempty" yaml:"lines,omitempty"`
 }
 
 type ContainerLogsCollection struct {

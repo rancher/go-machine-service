@@ -6,9 +6,8 @@ const (
 
 type AddRemoveLoadBalancerListenerInput struct {
 	Resource
-    
-    LoadBalancerListenerId string `json:"loadBalancerListenerId,omitempty" yaml:"load_balancer_listener_id,omitempty"`
-    
+
+	LoadBalancerListenerId string `json:"loadBalancerListenerId,omitempty" yaml:"load_balancer_listener_id,omitempty"`
 }
 
 type AddRemoveLoadBalancerListenerInputCollection struct {

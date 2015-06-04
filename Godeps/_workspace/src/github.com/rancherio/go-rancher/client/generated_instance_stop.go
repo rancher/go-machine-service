@@ -6,13 +6,12 @@ const (
 
 type InstanceStop struct {
 	Resource
-    
-    DeallocateFromHost bool `json:"deallocateFromHost,omitempty" yaml:"deallocate_from_host,omitempty"`
-    
-    Remove bool `json:"remove,omitempty" yaml:"remove,omitempty"`
-    
-    Timeout int64 `json:"timeout,omitempty" yaml:"timeout,omitempty"`
-    
+
+	DeallocateFromHost bool `json:"deallocateFromHost,omitempty" yaml:"deallocate_from_host,omitempty"`
+
+	Remove bool `json:"remove,omitempty" yaml:"remove,omitempty"`
+
+	Timeout int64 `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
 type InstanceStopCollection struct {

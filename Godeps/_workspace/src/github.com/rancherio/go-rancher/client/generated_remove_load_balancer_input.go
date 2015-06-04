@@ -6,9 +6,8 @@ const (
 
 type RemoveLoadBalancerInput struct {
 	Resource
-    
-    LoadBalancerId string `json:"loadBalancerId,omitempty" yaml:"load_balancer_id,omitempty"`
-    
+
+	LoadBalancerId string `json:"loadBalancerId,omitempty" yaml:"load_balancer_id,omitempty"`
 }
 
 type RemoveLoadBalancerInputCollection struct {

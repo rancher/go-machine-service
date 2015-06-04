@@ -6,33 +6,32 @@ const (
 
 type Environment struct {
 	Resource
-    
-    AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
-    
-    Created string `json:"created,omitempty" yaml:"created,omitempty"`
-    
-    Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
-    
-    Description string `json:"description,omitempty" yaml:"description,omitempty"`
-    
-    Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
-    
-    Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
-    
-    State string `json:"state,omitempty" yaml:"state,omitempty"`
-    
-    Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
-    
-    TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
-    
-    TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
-    
-    Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
-    
+
+	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
+
+	Created string `json:"created,omitempty" yaml:"created,omitempty"`
+
+	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
+
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
+
+	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
+
+	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+
+	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
+
+	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
+
+	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 }
 
 type EnvironmentCollection struct {
@@ -50,18 +49,14 @@ type EnvironmentOperations interface {
 	Update(existing *Environment, updates interface{}) (*Environment, error)
 	ById(id string) (*Environment, error)
 	Delete(container *Environment) error
-    
-    ActionCreate (*Environment) (*Environment, error)
-    
-    
-    ActionExportconfig (*Environment, *ComposeConfigInput) (*ComposeConfig, error)
-    
-    
-    ActionRemove (*Environment) (*Environment, error)
-    
-    
-    ActionUpdate (*Environment) (*Environment, error)
-    
+
+	ActionCreate(*Environment) (*Environment, error)
+
+	ActionExportconfig(*Environment, *ComposeConfigInput) (*ComposeConfig, error)
+
+	ActionRemove(*Environment) (*Environment, error)
+
+	ActionUpdate(*Environment) (*Environment, error)
 }
 
 func newEnvironmentClient(rancherClient *RancherClient) *EnvironmentClient {
@@ -97,39 +92,39 @@ func (c *EnvironmentClient) ById(id string) (*Environment, error) {
 func (c *EnvironmentClient) Delete(container *Environment) error {
 	return c.rancherClient.doResourceDelete(ENVIRONMENT_TYPE, &container.Resource)
 }
-    
-func (c *EnvironmentClient) ActionCreate (resource *Environment) (*Environment, error) {
-    
+
+func (c *EnvironmentClient) ActionCreate(resource *Environment) (*Environment, error) {
+
 	resp := &Environment{}
-    
+
 	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "create", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *EnvironmentClient) ActionExportconfig (resource *Environment, input *ComposeConfigInput) (*ComposeConfig, error) {
-    
+
+func (c *EnvironmentClient) ActionExportconfig(resource *Environment, input *ComposeConfigInput) (*ComposeConfig, error) {
+
 	resp := &ComposeConfig{}
-    
+
 	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "exportconfig", &resource.Resource, input, resp)
-    
+
 	return resp, err
 }
-    
-func (c *EnvironmentClient) ActionRemove (resource *Environment) (*Environment, error) {
-    
+
+func (c *EnvironmentClient) ActionRemove(resource *Environment) (*Environment, error) {
+
 	resp := &Environment{}
-    
+
 	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "remove", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *EnvironmentClient) ActionUpdate (resource *Environment) (*Environment, error) {
-    
+
+func (c *EnvironmentClient) ActionUpdate(resource *Environment) (*Environment, error) {
+
 	resp := &Environment{}
-    
+
 	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "update", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }

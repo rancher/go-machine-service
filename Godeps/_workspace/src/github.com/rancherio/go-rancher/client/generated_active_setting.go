@@ -6,17 +6,16 @@ const (
 
 type ActiveSetting struct {
 	Resource
-    
-    ActiveValue interface{} `json:"activeValue,omitempty" yaml:"active_value,omitempty"`
-    
-    InDb bool `json:"inDb,omitempty" yaml:"in_db,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    Source string `json:"source,omitempty" yaml:"source,omitempty"`
-    
-    Value string `json:"value,omitempty" yaml:"value,omitempty"`
-    
+
+	ActiveValue interface{} `json:"activeValue,omitempty" yaml:"active_value,omitempty"`
+
+	InDb bool `json:"inDb,omitempty" yaml:"in_db,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	Source string `json:"source,omitempty" yaml:"source,omitempty"`
+
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 type ActiveSettingCollection struct {

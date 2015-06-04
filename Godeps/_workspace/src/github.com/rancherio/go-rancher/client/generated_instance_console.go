@@ -6,13 +6,12 @@ const (
 
 type InstanceConsole struct {
 	Resource
-    
-    Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
-    
-    Password string `json:"password,omitempty" yaml:"password,omitempty"`
-    
-    Url string `json:"url,omitempty" yaml:"url,omitempty"`
-    
+
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+
+	Password string `json:"password,omitempty" yaml:"password,omitempty"`
+
+	Url string `json:"url,omitempty" yaml:"url,omitempty"`
 }
 
 type InstanceConsoleCollection struct {

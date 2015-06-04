@@ -57,7 +57,7 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 	externalHandler := &client.ExternalHandler{
 		Name:           router.name,
 		Uuid:           router.name,
-		Priority:       router.priority,
+		Priority:       int64(router.priority),
 		ProcessConfigs: make([]interface{}, len(router.eventHandlers)),
 	}
 

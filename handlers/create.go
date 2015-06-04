@@ -8,6 +8,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancherio/go-machine-service/events"
+	"github.com/rancherio/go-machine-service/handlers/providers"
 	"github.com/rancherio/go-rancher/client"
 	"io"
 	"io/ioutil"
@@ -46,7 +47,18 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return publishReply(reply, apiClient)
 	}
 
-	command, machineDir, err := buildCreateCommand(machine)
+	machineDir, err := buildBaseMachineDir(machine.ExternalId)
+	if err != nil {
+		return handleByIdError(err, event, apiClient)
+	}
+
+	if providerHandler := providers.GetProviderHandler(machine.Driver); providerHandler != nil {
+		if err := providerHandler(machine, machineDir); err != nil {
+			return handleByIdError(err, event, apiClient)
+		}
+	}
+
+	command, err := buildCreateCommand(machine, machineDir)
 	if err != nil {
 		return err
 	}
@@ -181,19 +193,14 @@ func startReturnOutput(command *exec.Cmd) (io.Reader, io.Reader, error) {
 	return readerStdout, readerStderr, nil
 }
 
-func buildCreateCommand(machine *client.Machine) (*exec.Cmd, string, error) {
+func buildCreateCommand(machine *client.Machine, machineDir string) (*exec.Cmd, error) {
 	cmdArgs, err := buildMachineCreateCmd(machine)
 	if err != nil {
-		return nil, "", err
-	}
-
-	machineDir, err := buildBaseMachineDir(machine.ExternalId)
-	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	command := buildCommand(machineDir, cmdArgs)
-	return command, machineDir, nil
+	return command, nil
 }
 
 func buildBaseMachineDir(uuid string) (string, error) {

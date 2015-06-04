@@ -8,7 +8,7 @@ cd $(dirname $0)/..
 
 set_project_vars
 
-go test ./...
+go test -timeout 99999s ./...
 
 result=$(find . -name "*.go" | grep -v ./Godeps | xargs gofmt -s -l)
 if [ -n "$result" ]; then

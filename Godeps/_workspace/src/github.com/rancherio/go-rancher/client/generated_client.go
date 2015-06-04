@@ -75,6 +75,7 @@ type RancherClient struct {
     ProcessInstance ProcessInstanceOperations
     ProjectMember ProjectMemberOperations
     Service ServiceOperations
+    ServiceEvent ServiceEventOperations
     ServiceExposeMap ServiceExposeMapOperations
     Setting SettingOperations
     Snapshot SnapshotOperations
@@ -95,6 +96,7 @@ type RancherClient struct {
     Githubconfig GithubconfigOperations
     StatsAccess StatsAccessOperations
     Amazonec2Config Amazonec2ConfigOperations
+    AzureConfig AzureConfigOperations
     DigitaloceanConfig DigitaloceanConfigOperations
     ExoscaleConfig ExoscaleConfigOperations
     OpenstackConfig OpenstackConfigOperations
@@ -189,6 +191,7 @@ func constructClient() *RancherClient {
     client.ProcessInstance = newProcessInstanceClient(client)
     client.ProjectMember = newProjectMemberClient(client)
     client.Service = newServiceClient(client)
+    client.ServiceEvent = newServiceEventClient(client)
     client.ServiceExposeMap = newServiceExposeMapClient(client)
     client.Setting = newSettingClient(client)
     client.Snapshot = newSnapshotClient(client)
@@ -209,6 +212,7 @@ func constructClient() *RancherClient {
     client.Githubconfig = newGithubconfigClient(client)
     client.StatsAccess = newStatsAccessClient(client)
     client.Amazonec2Config = newAmazonec2ConfigClient(client)
+    client.AzureConfig = newAzureConfigClient(client)
     client.DigitaloceanConfig = newDigitaloceanConfigClient(client)
     client.ExoscaleConfig = newExoscaleConfigClient(client)
     client.OpenstackConfig = newOpenstackConfigClient(client)

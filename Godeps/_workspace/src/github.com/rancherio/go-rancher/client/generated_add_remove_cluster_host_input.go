@@ -6,9 +6,8 @@ const (
 
 type AddRemoveClusterHostInput struct {
 	Resource
-    
-    HostId string `json:"hostId,omitempty" yaml:"host_id,omitempty"`
-    
+
+	HostId string `json:"hostId,omitempty" yaml:"host_id,omitempty"`
 }
 
 type AddRemoveClusterHostInputCollection struct {

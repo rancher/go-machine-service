@@ -6,41 +6,40 @@ const (
 
 type RegistrationToken struct {
 	Resource
-    
-    AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
-    
-    Command string `json:"command,omitempty" yaml:"command,omitempty"`
-    
-    Created string `json:"created,omitempty" yaml:"created,omitempty"`
-    
-    Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
-    
-    Description string `json:"description,omitempty" yaml:"description,omitempty"`
-    
-    Image string `json:"image,omitempty" yaml:"image,omitempty"`
-    
-    Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    RegistrationUrl string `json:"registrationUrl,omitempty" yaml:"registration_url,omitempty"`
-    
-    RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
-    
-    Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
-    
-    State string `json:"state,omitempty" yaml:"state,omitempty"`
-    
-    Token string `json:"token,omitempty" yaml:"token,omitempty"`
-    
-    Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
-    
-    TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
-    
-    TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
-    
-    Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
-    
+
+	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
+
+	Command string `json:"command,omitempty" yaml:"command,omitempty"`
+
+	Created string `json:"created,omitempty" yaml:"created,omitempty"`
+
+	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
+
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+
+	Image string `json:"image,omitempty" yaml:"image,omitempty"`
+
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	RegistrationUrl string `json:"registrationUrl,omitempty" yaml:"registration_url,omitempty"`
+
+	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
+
+	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
+
+	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	Token string `json:"token,omitempty" yaml:"token,omitempty"`
+
+	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+
+	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
+
+	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
+
+	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 }
 
 type RegistrationTokenCollection struct {
@@ -58,27 +57,20 @@ type RegistrationTokenOperations interface {
 	Update(existing *RegistrationToken, updates interface{}) (*RegistrationToken, error)
 	ById(id string) (*RegistrationToken, error)
 	Delete(container *RegistrationToken) error
-    
-    ActionActivate (*RegistrationToken) (*Credential, error)
-    
-    
-    ActionCreate (*RegistrationToken) (*Credential, error)
-    
-    
-    ActionDeactivate (*RegistrationToken) (*Credential, error)
-    
-    
-    ActionPurge (*RegistrationToken) (*Credential, error)
-    
-    
-    ActionRemove (*RegistrationToken) (*Credential, error)
-    
-    
-    ActionRestore (*RegistrationToken) (*Credential, error)
-    
-    
-    ActionUpdate (*RegistrationToken) (*Credential, error)
-    
+
+	ActionActivate(*RegistrationToken) (*Credential, error)
+
+	ActionCreate(*RegistrationToken) (*Credential, error)
+
+	ActionDeactivate(*RegistrationToken) (*Credential, error)
+
+	ActionPurge(*RegistrationToken) (*Credential, error)
+
+	ActionRemove(*RegistrationToken) (*Credential, error)
+
+	ActionRestore(*RegistrationToken) (*Credential, error)
+
+	ActionUpdate(*RegistrationToken) (*Credential, error)
 }
 
 func newRegistrationTokenClient(rancherClient *RancherClient) *RegistrationTokenClient {
@@ -114,66 +106,66 @@ func (c *RegistrationTokenClient) ById(id string) (*RegistrationToken, error) {
 func (c *RegistrationTokenClient) Delete(container *RegistrationToken) error {
 	return c.rancherClient.doResourceDelete(REGISTRATION_TOKEN_TYPE, &container.Resource)
 }
-    
-func (c *RegistrationTokenClient) ActionActivate (resource *RegistrationToken) (*Credential, error) {
-    
+
+func (c *RegistrationTokenClient) ActionActivate(resource *RegistrationToken) (*Credential, error) {
+
 	resp := &Credential{}
-    
+
 	err := c.rancherClient.doAction(REGISTRATION_TOKEN_TYPE, "activate", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *RegistrationTokenClient) ActionCreate (resource *RegistrationToken) (*Credential, error) {
-    
+
+func (c *RegistrationTokenClient) ActionCreate(resource *RegistrationToken) (*Credential, error) {
+
 	resp := &Credential{}
-    
+
 	err := c.rancherClient.doAction(REGISTRATION_TOKEN_TYPE, "create", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *RegistrationTokenClient) ActionDeactivate (resource *RegistrationToken) (*Credential, error) {
-    
+
+func (c *RegistrationTokenClient) ActionDeactivate(resource *RegistrationToken) (*Credential, error) {
+
 	resp := &Credential{}
-    
+
 	err := c.rancherClient.doAction(REGISTRATION_TOKEN_TYPE, "deactivate", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *RegistrationTokenClient) ActionPurge (resource *RegistrationToken) (*Credential, error) {
-    
+
+func (c *RegistrationTokenClient) ActionPurge(resource *RegistrationToken) (*Credential, error) {
+
 	resp := &Credential{}
-    
+
 	err := c.rancherClient.doAction(REGISTRATION_TOKEN_TYPE, "purge", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *RegistrationTokenClient) ActionRemove (resource *RegistrationToken) (*Credential, error) {
-    
+
+func (c *RegistrationTokenClient) ActionRemove(resource *RegistrationToken) (*Credential, error) {
+
 	resp := &Credential{}
-    
+
 	err := c.rancherClient.doAction(REGISTRATION_TOKEN_TYPE, "remove", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *RegistrationTokenClient) ActionRestore (resource *RegistrationToken) (*Credential, error) {
-    
+
+func (c *RegistrationTokenClient) ActionRestore(resource *RegistrationToken) (*Credential, error) {
+
 	resp := &Credential{}
-    
+
 	err := c.rancherClient.doAction(REGISTRATION_TOKEN_TYPE, "restore", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *RegistrationTokenClient) ActionUpdate (resource *RegistrationToken) (*Credential, error) {
-    
+
+func (c *RegistrationTokenClient) ActionUpdate(resource *RegistrationToken) (*Credential, error) {
+
 	resp := &Credential{}
-    
+
 	err := c.rancherClient.doAction(REGISTRATION_TOKEN_TYPE, "update", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }

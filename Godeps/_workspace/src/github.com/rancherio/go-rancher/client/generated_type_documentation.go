@@ -6,9 +6,8 @@ const (
 
 type TypeDocumentation struct {
 	Resource
-    
-    Description string `json:"description,omitempty" yaml:"description,omitempty"`
-    
+
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
 type TypeDocumentationCollection struct {

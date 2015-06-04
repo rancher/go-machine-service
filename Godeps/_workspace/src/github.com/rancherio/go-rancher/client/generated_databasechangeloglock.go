@@ -6,13 +6,12 @@ const (
 
 type Databasechangeloglock struct {
 	Resource
-    
-    Locked bool `json:"locked,omitempty" yaml:"locked,omitempty"`
-    
-    Lockedby string `json:"lockedby,omitempty" yaml:"lockedby,omitempty"`
-    
-    Lockgranted string `json:"lockgranted,omitempty" yaml:"lockgranted,omitempty"`
-    
+
+	Locked bool `json:"locked,omitempty" yaml:"locked,omitempty"`
+
+	Lockedby string `json:"lockedby,omitempty" yaml:"lockedby,omitempty"`
+
+	Lockgranted string `json:"lockgranted,omitempty" yaml:"lockgranted,omitempty"`
 }
 
 type DatabasechangeloglockCollection struct {

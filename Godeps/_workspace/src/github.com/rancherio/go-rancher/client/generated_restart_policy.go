@@ -6,11 +6,10 @@ const (
 
 type RestartPolicy struct {
 	Resource
-    
-    MaximumRetryCount int64 `json:"maximumRetryCount,omitempty" yaml:"maximum_retry_count,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
+
+	MaximumRetryCount int64 `json:"maximumRetryCount,omitempty" yaml:"maximum_retry_count,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
 
 type RestartPolicyCollection struct {

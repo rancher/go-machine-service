@@ -6,37 +6,36 @@ const (
 
 type Snapshot struct {
 	Resource
-    
-    AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
-    
-    Created string `json:"created,omitempty" yaml:"created,omitempty"`
-    
-    Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
-    
-    Description string `json:"description,omitempty" yaml:"description,omitempty"`
-    
-    Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
-    
-    ManagedVolumeUUID string `json:"managedVolumeUUID,omitempty" yaml:"managed_volume_uuid,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
-    
-    Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
-    
-    State string `json:"state,omitempty" yaml:"state,omitempty"`
-    
-    Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
-    
-    TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
-    
-    TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
-    
-    Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
-    
-    VolumeId string `json:"volumeId,omitempty" yaml:"volume_id,omitempty"`
-    
+
+	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
+
+	Created string `json:"created,omitempty" yaml:"created,omitempty"`
+
+	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
+
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+
+	ManagedVolumeUUID string `json:"managedVolumeUUID,omitempty" yaml:"managed_volume_uuid,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
+
+	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
+
+	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+
+	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
+
+	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
+
+	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+
+	VolumeId string `json:"volumeId,omitempty" yaml:"volume_id,omitempty"`
 }
 
 type SnapshotCollection struct {
@@ -54,15 +53,12 @@ type SnapshotOperations interface {
 	Update(existing *Snapshot, updates interface{}) (*Snapshot, error)
 	ById(id string) (*Snapshot, error)
 	Delete(container *Snapshot) error
-    
-    ActionBackup (*Snapshot) (*Snapshot, error)
-    
-    
-    ActionCreate (*Snapshot) (*Snapshot, error)
-    
-    
-    ActionRemove (*Snapshot) (*Snapshot, error)
-    
+
+	ActionBackup(*Snapshot) (*Snapshot, error)
+
+	ActionCreate(*Snapshot) (*Snapshot, error)
+
+	ActionRemove(*Snapshot) (*Snapshot, error)
 }
 
 func newSnapshotClient(rancherClient *RancherClient) *SnapshotClient {
@@ -98,30 +94,30 @@ func (c *SnapshotClient) ById(id string) (*Snapshot, error) {
 func (c *SnapshotClient) Delete(container *Snapshot) error {
 	return c.rancherClient.doResourceDelete(SNAPSHOT_TYPE, &container.Resource)
 }
-    
-func (c *SnapshotClient) ActionBackup (resource *Snapshot) (*Snapshot, error) {
-    
+
+func (c *SnapshotClient) ActionBackup(resource *Snapshot) (*Snapshot, error) {
+
 	resp := &Snapshot{}
-    
+
 	err := c.rancherClient.doAction(SNAPSHOT_TYPE, "backup", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *SnapshotClient) ActionCreate (resource *Snapshot) (*Snapshot, error) {
-    
+
+func (c *SnapshotClient) ActionCreate(resource *Snapshot) (*Snapshot, error) {
+
 	resp := &Snapshot{}
-    
+
 	err := c.rancherClient.doAction(SNAPSHOT_TYPE, "create", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *SnapshotClient) ActionRemove (resource *Snapshot) (*Snapshot, error) {
-    
+
+func (c *SnapshotClient) ActionRemove(resource *Snapshot) (*Snapshot, error) {
+
 	resp := &Snapshot{}
-    
+
 	err := c.rancherClient.doAction(SNAPSHOT_TYPE, "remove", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }

@@ -6,45 +6,44 @@ const (
 
 type Host struct {
 	Resource
-    
-    AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
-    
-    AgentId string `json:"agentId,omitempty" yaml:"agent_id,omitempty"`
-    
-    ApiProxy string `json:"apiProxy,omitempty" yaml:"api_proxy,omitempty"`
-    
-    ComputeTotal int64 `json:"computeTotal,omitempty" yaml:"compute_total,omitempty"`
-    
-    Created string `json:"created,omitempty" yaml:"created,omitempty"`
-    
-    Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
-    
-    Description string `json:"description,omitempty" yaml:"description,omitempty"`
-    
-    Info interface{} `json:"info,omitempty" yaml:"info,omitempty"`
-    
-    Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
-    
-    Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    PhysicalHostId string `json:"physicalHostId,omitempty" yaml:"physical_host_id,omitempty"`
-    
-    RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
-    
-    Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
-    
-    State string `json:"state,omitempty" yaml:"state,omitempty"`
-    
-    Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
-    
-    TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
-    
-    TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
-    
-    Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
-    
+
+	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
+
+	AgentId string `json:"agentId,omitempty" yaml:"agent_id,omitempty"`
+
+	ApiProxy string `json:"apiProxy,omitempty" yaml:"api_proxy,omitempty"`
+
+	ComputeTotal int64 `json:"computeTotal,omitempty" yaml:"compute_total,omitempty"`
+
+	Created string `json:"created,omitempty" yaml:"created,omitempty"`
+
+	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
+
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+
+	Info interface{} `json:"info,omitempty" yaml:"info,omitempty"`
+
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+
+	Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	PhysicalHostId string `json:"physicalHostId,omitempty" yaml:"physical_host_id,omitempty"`
+
+	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
+
+	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
+
+	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+
+	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
+
+	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
+
+	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 }
 
 type HostCollection struct {
@@ -62,27 +61,20 @@ type HostOperations interface {
 	Update(existing *Host, updates interface{}) (*Host, error)
 	ById(id string) (*Host, error)
 	Delete(container *Host) error
-    
-    ActionActivate (*Host) (*Host, error)
-    
-    
-    ActionCreate (*Host) (*Host, error)
-    
-    
-    ActionDeactivate (*Host) (*Host, error)
-    
-    
-    ActionPurge (*Host) (*Host, error)
-    
-    
-    ActionRemove (*Host) (*Host, error)
-    
-    
-    ActionRestore (*Host) (*Host, error)
-    
-    
-    ActionUpdate (*Host) (*Host, error)
-    
+
+	ActionActivate(*Host) (*Host, error)
+
+	ActionCreate(*Host) (*Host, error)
+
+	ActionDeactivate(*Host) (*Host, error)
+
+	ActionPurge(*Host) (*Host, error)
+
+	ActionRemove(*Host) (*Host, error)
+
+	ActionRestore(*Host) (*Host, error)
+
+	ActionUpdate(*Host) (*Host, error)
 }
 
 func newHostClient(rancherClient *RancherClient) *HostClient {
@@ -118,66 +110,66 @@ func (c *HostClient) ById(id string) (*Host, error) {
 func (c *HostClient) Delete(container *Host) error {
 	return c.rancherClient.doResourceDelete(HOST_TYPE, &container.Resource)
 }
-    
-func (c *HostClient) ActionActivate (resource *Host) (*Host, error) {
-    
+
+func (c *HostClient) ActionActivate(resource *Host) (*Host, error) {
+
 	resp := &Host{}
-    
+
 	err := c.rancherClient.doAction(HOST_TYPE, "activate", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *HostClient) ActionCreate (resource *Host) (*Host, error) {
-    
+
+func (c *HostClient) ActionCreate(resource *Host) (*Host, error) {
+
 	resp := &Host{}
-    
+
 	err := c.rancherClient.doAction(HOST_TYPE, "create", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *HostClient) ActionDeactivate (resource *Host) (*Host, error) {
-    
+
+func (c *HostClient) ActionDeactivate(resource *Host) (*Host, error) {
+
 	resp := &Host{}
-    
+
 	err := c.rancherClient.doAction(HOST_TYPE, "deactivate", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *HostClient) ActionPurge (resource *Host) (*Host, error) {
-    
+
+func (c *HostClient) ActionPurge(resource *Host) (*Host, error) {
+
 	resp := &Host{}
-    
+
 	err := c.rancherClient.doAction(HOST_TYPE, "purge", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *HostClient) ActionRemove (resource *Host) (*Host, error) {
-    
+
+func (c *HostClient) ActionRemove(resource *Host) (*Host, error) {
+
 	resp := &Host{}
-    
+
 	err := c.rancherClient.doAction(HOST_TYPE, "remove", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *HostClient) ActionRestore (resource *Host) (*Host, error) {
-    
+
+func (c *HostClient) ActionRestore(resource *Host) (*Host, error) {
+
 	resp := &Host{}
-    
+
 	err := c.rancherClient.doAction(HOST_TYPE, "restore", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *HostClient) ActionUpdate (resource *Host) (*Host, error) {
-    
+
+func (c *HostClient) ActionUpdate(resource *Host) (*Host, error) {
+
 	resp := &Host{}
-    
+
 	err := c.rancherClient.doAction(HOST_TYPE, "update", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }

@@ -6,41 +6,40 @@ const (
 
 type Service struct {
 	Resource
-    
-    AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
-    
-    Created string `json:"created,omitempty" yaml:"created,omitempty"`
-    
-    Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
-    
-    DataVolumesFromService []string `json:"dataVolumesFromService,omitempty" yaml:"data_volumes_from_service,omitempty"`
-    
-    Description string `json:"description,omitempty" yaml:"description,omitempty"`
-    
-    EnvironmentId string `json:"environmentId,omitempty" yaml:"environment_id,omitempty"`
-    
-    Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
-    
-    LaunchConfig Container `json:"launchConfig,omitempty" yaml:"launch_config,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
-    
-    Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
-    
-    Scale int64 `json:"scale,omitempty" yaml:"scale,omitempty"`
-    
-    State string `json:"state,omitempty" yaml:"state,omitempty"`
-    
-    Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
-    
-    TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
-    
-    TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
-    
-    Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
-    
+
+	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
+
+	Created string `json:"created,omitempty" yaml:"created,omitempty"`
+
+	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
+
+	DataVolumesFromService []string `json:"dataVolumesFromService,omitempty" yaml:"data_volumes_from_service,omitempty"`
+
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+
+	EnvironmentId string `json:"environmentId,omitempty" yaml:"environment_id,omitempty"`
+
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+
+	LaunchConfig Container `json:"launchConfig,omitempty" yaml:"launch_config,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
+
+	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
+
+	Scale int64 `json:"scale,omitempty" yaml:"scale,omitempty"`
+
+	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+
+	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
+
+	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
+
+	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 }
 
 type ServiceCollection struct {
@@ -58,30 +57,22 @@ type ServiceOperations interface {
 	Update(existing *Service, updates interface{}) (*Service, error)
 	ById(id string) (*Service, error)
 	Delete(container *Service) error
-    
-    ActionActivate (*Service) (*Service, error)
-    
-    
-    ActionAddservicelink (*Service, *AddRemoveServiceLinkInput) (*Service, error)
-    
-    
-    ActionCreate (*Service) (*Service, error)
-    
-    
-    ActionDeactivate (*Service) (*Service, error)
-    
-    
-    ActionRemove (*Service) (*Service, error)
-    
-    
-    ActionRemoveservicelink (*Service, *AddRemoveServiceLinkInput) (*Service, error)
-    
-    
-    ActionSetservicelinks (*Service, *SetServiceLinksInput) (*Service, error)
-    
-    
-    ActionUpdate (*Service) (*Service, error)
-    
+
+	ActionActivate(*Service) (*Service, error)
+
+	ActionAddservicelink(*Service, *AddRemoveServiceLinkInput) (*Service, error)
+
+	ActionCreate(*Service) (*Service, error)
+
+	ActionDeactivate(*Service) (*Service, error)
+
+	ActionRemove(*Service) (*Service, error)
+
+	ActionRemoveservicelink(*Service, *AddRemoveServiceLinkInput) (*Service, error)
+
+	ActionSetservicelinks(*Service, *SetServiceLinksInput) (*Service, error)
+
+	ActionUpdate(*Service) (*Service, error)
 }
 
 func newServiceClient(rancherClient *RancherClient) *ServiceClient {
@@ -117,75 +108,75 @@ func (c *ServiceClient) ById(id string) (*Service, error) {
 func (c *ServiceClient) Delete(container *Service) error {
 	return c.rancherClient.doResourceDelete(SERVICE_TYPE, &container.Resource)
 }
-    
-func (c *ServiceClient) ActionActivate (resource *Service) (*Service, error) {
-    
+
+func (c *ServiceClient) ActionActivate(resource *Service) (*Service, error) {
+
 	resp := &Service{}
-    
+
 	err := c.rancherClient.doAction(SERVICE_TYPE, "activate", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *ServiceClient) ActionAddservicelink (resource *Service, input *AddRemoveServiceLinkInput) (*Service, error) {
-    
+
+func (c *ServiceClient) ActionAddservicelink(resource *Service, input *AddRemoveServiceLinkInput) (*Service, error) {
+
 	resp := &Service{}
-    
+
 	err := c.rancherClient.doAction(SERVICE_TYPE, "addservicelink", &resource.Resource, input, resp)
-    
+
 	return resp, err
 }
-    
-func (c *ServiceClient) ActionCreate (resource *Service) (*Service, error) {
-    
+
+func (c *ServiceClient) ActionCreate(resource *Service) (*Service, error) {
+
 	resp := &Service{}
-    
+
 	err := c.rancherClient.doAction(SERVICE_TYPE, "create", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *ServiceClient) ActionDeactivate (resource *Service) (*Service, error) {
-    
+
+func (c *ServiceClient) ActionDeactivate(resource *Service) (*Service, error) {
+
 	resp := &Service{}
-    
+
 	err := c.rancherClient.doAction(SERVICE_TYPE, "deactivate", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *ServiceClient) ActionRemove (resource *Service) (*Service, error) {
-    
+
+func (c *ServiceClient) ActionRemove(resource *Service) (*Service, error) {
+
 	resp := &Service{}
-    
+
 	err := c.rancherClient.doAction(SERVICE_TYPE, "remove", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *ServiceClient) ActionRemoveservicelink (resource *Service, input *AddRemoveServiceLinkInput) (*Service, error) {
-    
+
+func (c *ServiceClient) ActionRemoveservicelink(resource *Service, input *AddRemoveServiceLinkInput) (*Service, error) {
+
 	resp := &Service{}
-    
+
 	err := c.rancherClient.doAction(SERVICE_TYPE, "removeservicelink", &resource.Resource, input, resp)
-    
+
 	return resp, err
 }
-    
-func (c *ServiceClient) ActionSetservicelinks (resource *Service, input *SetServiceLinksInput) (*Service, error) {
-    
+
+func (c *ServiceClient) ActionSetservicelinks(resource *Service, input *SetServiceLinksInput) (*Service, error) {
+
 	resp := &Service{}
-    
+
 	err := c.rancherClient.doAction(SERVICE_TYPE, "setservicelinks", &resource.Resource, input, resp)
-    
+
 	return resp, err
 }
-    
-func (c *ServiceClient) ActionUpdate (resource *Service) (*Service, error) {
-    
+
+func (c *ServiceClient) ActionUpdate(resource *Service) (*Service, error) {
+
 	resp := &Service{}
-    
+
 	err := c.rancherClient.doAction(SERVICE_TYPE, "update", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }

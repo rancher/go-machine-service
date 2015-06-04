@@ -6,41 +6,40 @@ const (
 
 type Mount struct {
 	Resource
-    
-    AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
-    
-    Created string `json:"created,omitempty" yaml:"created,omitempty"`
-    
-    Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
-    
-    Description string `json:"description,omitempty" yaml:"description,omitempty"`
-    
-    InstanceId string `json:"instanceId,omitempty" yaml:"instance_id,omitempty"`
-    
-    Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    Path string `json:"path,omitempty" yaml:"path,omitempty"`
-    
-    Permissions string `json:"permissions,omitempty" yaml:"permissions,omitempty"`
-    
-    RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
-    
-    Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
-    
-    State string `json:"state,omitempty" yaml:"state,omitempty"`
-    
-    Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
-    
-    TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
-    
-    TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
-    
-    Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
-    
-    VolumeId string `json:"volumeId,omitempty" yaml:"volume_id,omitempty"`
-    
+
+	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
+
+	Created string `json:"created,omitempty" yaml:"created,omitempty"`
+
+	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
+
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+
+	InstanceId string `json:"instanceId,omitempty" yaml:"instance_id,omitempty"`
+
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	Path string `json:"path,omitempty" yaml:"path,omitempty"`
+
+	Permissions string `json:"permissions,omitempty" yaml:"permissions,omitempty"`
+
+	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
+
+	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
+
+	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+
+	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
+
+	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
+
+	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+
+	VolumeId string `json:"volumeId,omitempty" yaml:"volume_id,omitempty"`
 }
 
 type MountCollection struct {
@@ -58,27 +57,20 @@ type MountOperations interface {
 	Update(existing *Mount, updates interface{}) (*Mount, error)
 	ById(id string) (*Mount, error)
 	Delete(container *Mount) error
-    
-    ActionActivate (*Mount) (*Mount, error)
-    
-    
-    ActionCreate (*Mount) (*Mount, error)
-    
-    
-    ActionDeactivate (*Mount) (*Mount, error)
-    
-    
-    ActionPurge (*Mount) (*Mount, error)
-    
-    
-    ActionRemove (*Mount) (*Mount, error)
-    
-    
-    ActionRestore (*Mount) (*Mount, error)
-    
-    
-    ActionUpdate (*Mount) (*Mount, error)
-    
+
+	ActionActivate(*Mount) (*Mount, error)
+
+	ActionCreate(*Mount) (*Mount, error)
+
+	ActionDeactivate(*Mount) (*Mount, error)
+
+	ActionPurge(*Mount) (*Mount, error)
+
+	ActionRemove(*Mount) (*Mount, error)
+
+	ActionRestore(*Mount) (*Mount, error)
+
+	ActionUpdate(*Mount) (*Mount, error)
 }
 
 func newMountClient(rancherClient *RancherClient) *MountClient {
@@ -114,66 +106,66 @@ func (c *MountClient) ById(id string) (*Mount, error) {
 func (c *MountClient) Delete(container *Mount) error {
 	return c.rancherClient.doResourceDelete(MOUNT_TYPE, &container.Resource)
 }
-    
-func (c *MountClient) ActionActivate (resource *Mount) (*Mount, error) {
-    
+
+func (c *MountClient) ActionActivate(resource *Mount) (*Mount, error) {
+
 	resp := &Mount{}
-    
+
 	err := c.rancherClient.doAction(MOUNT_TYPE, "activate", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *MountClient) ActionCreate (resource *Mount) (*Mount, error) {
-    
+
+func (c *MountClient) ActionCreate(resource *Mount) (*Mount, error) {
+
 	resp := &Mount{}
-    
+
 	err := c.rancherClient.doAction(MOUNT_TYPE, "create", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *MountClient) ActionDeactivate (resource *Mount) (*Mount, error) {
-    
+
+func (c *MountClient) ActionDeactivate(resource *Mount) (*Mount, error) {
+
 	resp := &Mount{}
-    
+
 	err := c.rancherClient.doAction(MOUNT_TYPE, "deactivate", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *MountClient) ActionPurge (resource *Mount) (*Mount, error) {
-    
+
+func (c *MountClient) ActionPurge(resource *Mount) (*Mount, error) {
+
 	resp := &Mount{}
-    
+
 	err := c.rancherClient.doAction(MOUNT_TYPE, "purge", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *MountClient) ActionRemove (resource *Mount) (*Mount, error) {
-    
+
+func (c *MountClient) ActionRemove(resource *Mount) (*Mount, error) {
+
 	resp := &Mount{}
-    
+
 	err := c.rancherClient.doAction(MOUNT_TYPE, "remove", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *MountClient) ActionRestore (resource *Mount) (*Mount, error) {
-    
+
+func (c *MountClient) ActionRestore(resource *Mount) (*Mount, error) {
+
 	resp := &Mount{}
-    
+
 	err := c.rancherClient.doAction(MOUNT_TYPE, "restore", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *MountClient) ActionUpdate (resource *Mount) (*Mount, error) {
-    
+
+func (c *MountClient) ActionUpdate(resource *Mount) (*Mount, error) {
+
 	resp := &Mount{}
-    
+
 	err := c.rancherClient.doAction(MOUNT_TYPE, "update", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }

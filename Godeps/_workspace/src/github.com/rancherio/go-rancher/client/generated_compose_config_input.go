@@ -6,9 +6,8 @@ const (
 
 type ComposeConfigInput struct {
 	Resource
-    
-    ServiceIds []string `json:"serviceIds,omitempty" yaml:"service_ids,omitempty"`
-    
+
+	ServiceIds []string `json:"serviceIds,omitempty" yaml:"service_ids,omitempty"`
 }
 
 type ComposeConfigInputCollection struct {

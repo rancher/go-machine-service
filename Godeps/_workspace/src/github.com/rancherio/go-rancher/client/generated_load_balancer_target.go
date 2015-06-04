@@ -6,39 +6,38 @@ const (
 
 type LoadBalancerTarget struct {
 	Resource
-    
-    AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
-    
-    Created string `json:"created,omitempty" yaml:"created,omitempty"`
-    
-    Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
-    
-    Description string `json:"description,omitempty" yaml:"description,omitempty"`
-    
-    InstanceId string `json:"instanceId,omitempty" yaml:"instance_id,omitempty"`
-    
-    IpAddress string `json:"ipAddress,omitempty" yaml:"ip_address,omitempty"`
-    
-    Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
-    
-    LoadBalancerId string `json:"loadBalancerId,omitempty" yaml:"load_balancer_id,omitempty"`
-    
-    Name string `json:"name,omitempty" yaml:"name,omitempty"`
-    
-    RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
-    
-    Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
-    
-    State string `json:"state,omitempty" yaml:"state,omitempty"`
-    
-    Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
-    
-    TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
-    
-    TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
-    
-    Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
-    
+
+	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
+
+	Created string `json:"created,omitempty" yaml:"created,omitempty"`
+
+	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
+
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+
+	InstanceId string `json:"instanceId,omitempty" yaml:"instance_id,omitempty"`
+
+	IpAddress string `json:"ipAddress,omitempty" yaml:"ip_address,omitempty"`
+
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
+
+	LoadBalancerId string `json:"loadBalancerId,omitempty" yaml:"load_balancer_id,omitempty"`
+
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
+
+	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
+
+	State string `json:"state,omitempty" yaml:"state,omitempty"`
+
+	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+
+	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
+
+	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
+
+	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 }
 
 type LoadBalancerTargetCollection struct {
@@ -56,12 +55,10 @@ type LoadBalancerTargetOperations interface {
 	Update(existing *LoadBalancerTarget, updates interface{}) (*LoadBalancerTarget, error)
 	ById(id string) (*LoadBalancerTarget, error)
 	Delete(container *LoadBalancerTarget) error
-    
-    ActionCreate (*LoadBalancerTarget) (*LoadBalancerTarget, error)
-    
-    
-    ActionRemove (*LoadBalancerTarget) (*LoadBalancerTarget, error)
-    
+
+	ActionCreate(*LoadBalancerTarget) (*LoadBalancerTarget, error)
+
+	ActionRemove(*LoadBalancerTarget) (*LoadBalancerTarget, error)
 }
 
 func newLoadBalancerTargetClient(rancherClient *RancherClient) *LoadBalancerTargetClient {
@@ -97,21 +94,21 @@ func (c *LoadBalancerTargetClient) ById(id string) (*LoadBalancerTarget, error) 
 func (c *LoadBalancerTargetClient) Delete(container *LoadBalancerTarget) error {
 	return c.rancherClient.doResourceDelete(LOAD_BALANCER_TARGET_TYPE, &container.Resource)
 }
-    
-func (c *LoadBalancerTargetClient) ActionCreate (resource *LoadBalancerTarget) (*LoadBalancerTarget, error) {
-    
+
+func (c *LoadBalancerTargetClient) ActionCreate(resource *LoadBalancerTarget) (*LoadBalancerTarget, error) {
+
 	resp := &LoadBalancerTarget{}
-    
+
 	err := c.rancherClient.doAction(LOAD_BALANCER_TARGET_TYPE, "create", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }
-    
-func (c *LoadBalancerTargetClient) ActionRemove (resource *LoadBalancerTarget) (*LoadBalancerTarget, error) {
-    
+
+func (c *LoadBalancerTargetClient) ActionRemove(resource *LoadBalancerTarget) (*LoadBalancerTarget, error) {
+
 	resp := &LoadBalancerTarget{}
-    
+
 	err := c.rancherClient.doAction(LOAD_BALANCER_TARGET_TYPE, "remove", &resource.Resource, nil, resp)
-    
+
 	return resp, err
 }

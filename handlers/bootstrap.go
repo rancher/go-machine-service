@@ -7,7 +7,9 @@ import (
 	"github.com/fsouza/go-dockerclient"
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-rancher/client"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -19,6 +21,7 @@ const (
 	maxWait             = time.Duration(time.Second * 10)
 	bootstrappedAtField = "bootstrappedAt"
 	parseMessage        = "Failed to parse config: [%v]"
+	BOOTSTRAPPED_FILE   = "bootstrapped"
 )
 
 var endpointRegEx = regexp.MustCompile("-H=[[:alnum:]]*[[:graph:]]*")
@@ -34,9 +37,30 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 		return handleByIdError(err, event, apiClient)
 	}
 
-	// Idempotency. If the resource has the property, we're done.
-	if _, ok := machine.Data[bootstrappedAtField]; ok {
+	machineDir, err := getMachineDir(machine)
+	if err != nil {
+		return handleByIdError(err, event, apiClient)
+	}
+
+	dataUpdates := map[string]interface{}{}
+	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
+
+	bootstrappedFilePath := filepath.Join(machineDir, "machines", machine.Name, BOOTSTRAPPED_FILE)
+
+	// Idempotency. If the resource has the bootstrapped file, then it has been bootstrapped.
+	if _, err := os.Stat(bootstrappedFilePath); !os.IsNotExist(err) {
+		if data, err := ioutil.ReadFile(bootstrappedFilePath); err != nil {
+			return handleByIdError(err, event, apiClient)
+		} else {
+			dataUpdates[bootstrappedAtField] = string(data)
+		}
+		extractedConfig, extractionErr := getIdempotentExtractedConfig(machine, machineDir, apiClient)
+		if extractionErr != nil {
+			return handleByIdError(extractionErr, event, apiClient)
+		}
+		dataUpdates["+fields"] = map[string]interface{}{"extractedConfig": extractedConfig}
 		reply := newReply(event)
+		reply.Data = eventDataWrapper
 		return publishReply(reply, apiClient)
 	}
 
@@ -48,11 +72,6 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 	publishChan <- "Installing Rancher agent"
 
 	registrationUrl, imageRepo, imageTag, err := getRegistrationUrlAndImage(machine.AccountId, apiClient)
-	if err != nil {
-		return err
-	}
-
-	machineDir, err := getMachineDir(machine)
 	if err != nil {
 		return err
 	}
@@ -94,8 +113,27 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 
 	t := time.Now()
 	bootstrappedAt := t.Format(time.RFC3339)
-	dataUpdates := map[string]interface{}{bootstrappedAtField: bootstrappedAt}
-	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
+	if f, err := os.OpenFile(bootstrappedFilePath, os.O_CREATE|os.O_WRONLY, 0644); err != nil {
+		return err
+	} else {
+		f.WriteString(bootstrappedAt)
+		f.Close()
+	}
+	dataUpdates[bootstrappedAtField] = bootstrappedAt
+
+	destFile, err := createExtractedConfig(event, machine)
+	if err != nil {
+		return err
+	}
+
+	if destFile != "" {
+		publishChan <- "Saving Machine Config"
+		extractedConf, err := getExtractedConfig(destFile, machine, apiClient)
+		if err != nil {
+			return err
+		}
+		dataUpdates["+fields"] = map[string]string{"extractedConfig": extractedConf}
+	}
 
 	reply := newReply(event)
 	reply.Data = eventDataWrapper

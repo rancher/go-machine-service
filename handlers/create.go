@@ -152,36 +152,26 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 		log.WithFields(log.Fields{
 			"resourceId: ": event.ResourceId,
 		}).Infof("stdout: %s", msg)
+	}
+	scanner = bufio.NewScanner(readerStderr)
+	for scanner.Scan() {
+		msg := scanner.Text()
+		log.WithFields(log.Fields{
+			"resourceId": event.ResourceId,
+		}).Infof("stderr: %s", msg)
 		msg = filterDockerMessage(msg, machine, errChan)
 		if msg != "" {
 			publishChan <- msg
 		}
 	}
-	scanner = bufio.NewScanner(readerStderr)
-	for scanner.Scan() {
-		log.WithFields(log.Fields{
-			"resourceId": event.ResourceId,
-		}).Infof("stderr: %s", scanner.Text())
-	}
 }
 
 func filterDockerMessage(msg string, machine *client.Machine, errChan chan<- string) string {
-	// Docker log messages come in the format: time=<t> level=<log-level> msg=<message>
-	// The minimum string should be greater than 7 characters msg="."
-	match := regExDockerMsg.FindString(msg)
-	if len(match) < 7 || !strings.HasPrefix(match, "msg=\"") {
+	if strings.Contains(msg, machine.ExternalId) || strings.Contains(msg, machine.Name) {
 		return ""
 	}
-
-	match = (match[5 : len(strings.TrimSpace(match))-1])
-	if strings.Contains(msg, levelInfo) {
-		// We just want to return <message> to cattle and only messages that do not contain the machine uuid or namee
-		if strings.Contains(msg, machine.ExternalId) || strings.Contains(msg, machine.Name) {
-			return ""
-		}
-		return match
-	} else if strings.Contains(msg, levelError) {
-		errChan <- strings.Replace(match, errorCreatingMachine, "", 1)
+	if strings.Contains(msg, errorCreatingMachine) {
+		errChan <- strings.Replace(msg, errorCreatingMachine, "", 1)
 		return ""
 	}
 	return ""

@@ -1,17 +1,13 @@
 package handlers
 
 import (
-	"archive/tar"
 	"bufio"
-	"compress/gzip"
-	b64 "encoding/base64"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancherio/go-machine-service/events"
 	"github.com/rancherio/go-machine-service/handlers/providers"
 	"github.com/rancherio/go-rancher/client"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,6 +21,7 @@ const (
 	levelInfo            = "level=\"info\""
 	levelError           = "level=\"error\""
 	errorCreatingMachine = "Error creating machine: "
+	CREATED_FILE         = "created"
 )
 
 var regExDockerMsg = regexp.MustCompile("msg=.*")
@@ -50,6 +47,21 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	machineDir, err := buildBaseMachineDir(machine.ExternalId)
 	if err != nil {
 		return handleByIdError(err, event, apiClient)
+	}
+
+	dataUpdates := map[string]interface{}{machineDirField: machineDir}
+	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
+
+	//Idempotency, if the same request is sent, without the machineDir & extractedConfig Field, we need to handle that
+	if _, err := os.Stat(filepath.Join(machineDir, "machines", machine.Name, CREATED_FILE)); !os.IsNotExist(err) {
+		extractedConfig, extractionErr := getIdempotentExtractedConfig(machine, machineDir, apiClient)
+		if extractionErr != nil {
+			return handleByIdError(extractionErr, event, apiClient)
+		}
+		dataUpdates["+fields"] = map[string]interface{}{"extractedConfig": extractedConfig}
+		reply := newReply(event)
+		reply.Data = eventDataWrapper
+		return publishReply(reply, apiClient)
 	}
 
 	if providerHandler := providers.GetProviderHandler(machine.Driver); providerHandler != nil {
@@ -97,13 +109,16 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
-	dataUpdates := map[string]interface{}{machineDirField: machineDir}
-	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
-
 	log.WithFields(log.Fields{
 		"resourceId":        event.ResourceId,
 		"machineExternalId": machine.ExternalId,
 	}).Info("Machine Created")
+
+	if f, err := os.Create(filepath.Join(machineDir, "machines", machine.Name, CREATED_FILE)); err != nil {
+		return err
+	} else {
+		f.Close()
+	}
 
 	destFile, err := createExtractedConfig(event, machine)
 	if err != nil {
@@ -137,36 +152,26 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 		log.WithFields(log.Fields{
 			"resourceId: ": event.ResourceId,
 		}).Infof("stdout: %s", msg)
+	}
+	scanner = bufio.NewScanner(readerStderr)
+	for scanner.Scan() {
+		msg := scanner.Text()
+		log.WithFields(log.Fields{
+			"resourceId": event.ResourceId,
+		}).Infof("stderr: %s", msg)
 		msg = filterDockerMessage(msg, machine, errChan)
 		if msg != "" {
 			publishChan <- msg
 		}
 	}
-	scanner = bufio.NewScanner(readerStderr)
-	for scanner.Scan() {
-		log.WithFields(log.Fields{
-			"resourceId": event.ResourceId,
-		}).Infof("stderr: %s", scanner.Text())
-	}
 }
 
 func filterDockerMessage(msg string, machine *client.Machine, errChan chan<- string) string {
-	// Docker log messages come in the format: time=<t> level=<log-level> msg=<message>
-	// The minimum string should be greater than 7 characters msg="."
-	match := regExDockerMsg.FindString(msg)
-	if len(match) < 7 || !strings.HasPrefix(match, "msg=\"") {
+	if strings.Contains(msg, machine.ExternalId) || strings.Contains(msg, machine.Name) {
 		return ""
 	}
-
-	match = (match[5 : len(strings.TrimSpace(match))-1])
-	if strings.Contains(msg, levelInfo) {
-		// We just want to return <message> to cattle and only messages that do not contain the machine uuid or namee
-		if strings.Contains(msg, machine.ExternalId) || strings.Contains(msg, machine.Name) {
-			return ""
-		}
-		return match
-	} else if strings.Contains(msg, levelError) {
-		errChan <- strings.Replace(match, errorCreatingMachine, "", 1)
+	if strings.Contains(msg, errorCreatingMachine) {
+		errChan <- strings.Replace(msg, errorCreatingMachine, "", 1)
 		return ""
 	}
 	return ""
@@ -201,28 +206,6 @@ func buildCreateCommand(machine *client.Machine, machineDir string) (*exec.Cmd, 
 
 	command := buildCommand(machineDir, cmdArgs)
 	return command, nil
-}
-
-func buildBaseMachineDir(uuid string) (string, error) {
-	machineDir, err := getBaseMachineDir(uuid)
-	if err != nil {
-		return "", err
-	}
-
-	err = os.MkdirAll(machineDir, 0740)
-	if err != nil {
-		return "", err
-	}
-	return machineDir, err
-}
-
-func getBaseMachineDir(uuid string) (string, error) {
-	cattleHome := os.Getenv("CATTLE_HOME")
-	if cattleHome == "" {
-		return "", fmt.Errorf("CATTLE_HOME not set. Cant create machine. Uuid: [%v].", uuid)
-	}
-	machineDir := filepath.Join(cattleHome, "machine", uuid)
-	return machineDir, nil
 }
 
 func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
@@ -268,110 +251,4 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	cmd = append(cmd, machine.Name)
 	log.Infof("Cmd slice: %v", cmd)
 	return cmd, nil
-}
-
-func createExtractedConfig(event *events.Event, machine *client.Machine) (string, error) {
-	// We are going to ignore doing anything for VirtualBox given that there is no way you can
-	// use Machine once it has been created.  Virtual is mainly a test-only use case
-	if strings.ToLower(machine.Driver) == "virtualbox" {
-		log.Debug("VirtualBox machine does not need config extracted")
-		return "", nil
-	}
-
-	// We will now zip, base64 encode the machine directory created, and upload this to cattle server.  This can be used to either recover
-	// the machine directory or used by Rancher users for their own local machine setup.
-	log.WithFields(log.Fields{
-		"resourceId": event.ResourceId,
-	}).Info("Creating and uploading extracted machine config")
-
-	// tar.gz the $CATTLE_HOME/machine/<machine-id>/machines/<machine-name> dir (v0.2.0)
-	// Open the source directory and read all the files we want to tar.gz
-	baseDir, err := getBaseMachineDir(machine.ExternalId)
-	if err != nil {
-		return "", err
-	}
-
-	machineDir := filepath.Join(baseDir, "machines", machine.Name)
-	dir, err := os.Open(machineDir)
-	if err != nil {
-		return "", err
-	}
-	defer dir.Close()
-
-	log.WithFields(log.Fields{
-		"machineDir": machineDir,
-	}).Debug("Preparing directory to be tar.gz")
-
-	// Be able to read the files under this dir
-	files, err := dir.Readdir(0)
-	if err != nil {
-		return "", err
-	}
-
-	// create the tar.gz file
-	destFile := filepath.Join(baseDir, machine.Name+".tar.gz")
-	tarfile, err := os.Create(destFile)
-	if err != nil {
-		return "", err
-	}
-
-	defer tarfile.Close()
-	fileWriter := gzip.NewWriter(tarfile)
-	defer fileWriter.Close()
-
-	tarfileWriter := tar.NewWriter(fileWriter)
-	defer tarfileWriter.Close()
-
-	// Read and add files into <machine-name>.tar.gz
-	for _, fileInfo := range files {
-
-		// For now, we will skip directories.  If we need to zip directories, we need to revist this code
-		if fileInfo.IsDir() {
-			continue
-		}
-
-		file, err := os.Open(filepath.Join(machineDir, fileInfo.Name()))
-		if err != nil {
-			return "", err
-		}
-
-		defer file.Close()
-
-		// prepare the tar header
-		header := new(tar.Header)
-		header.Name = filepath.Join(machine.Name, fileInfo.Name())
-		header.Size = fileInfo.Size()
-		header.Mode = int64(fileInfo.Mode())
-		header.ModTime = fileInfo.ModTime()
-
-		err = tarfileWriter.WriteHeader(header)
-		if err != nil {
-			return "", err
-		}
-
-		_, err = io.Copy(tarfileWriter, file)
-		if err != nil {
-			return "", err
-		}
-	}
-	return destFile, nil
-}
-
-func getExtractedConfig(destFile string, machine *client.Machine, apiClient *client.RancherClient) (string, error) {
-	extractedTarfile, err := ioutil.ReadFile(destFile)
-	if err != nil {
-		return "", err
-	}
-
-	extractedEncodedConfig := b64.StdEncoding.EncodeToString(extractedTarfile)
-	if err != nil {
-		return "", err
-	}
-
-	log.WithFields(log.Fields{
-		"resourceId": machine.Id,
-		"destFile":   destFile,
-	}).Info("Machine config file created and encoded.")
-
-	return extractedEncodedConfig, nil
 }

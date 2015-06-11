@@ -14,38 +14,19 @@ func TestFilterDockerMessages(t *testing.T) {
 		ExternalId: "uuid-1",
 		Name:       "machine-1",
 	}
-	prefix := "time=\"2015-04-01T13:47:25-07:00\" level=\"info\" "
 
-	testString := prefix + "msg=\"Message\" "
-	checkField("Test1", "Message", filterDockerMessage(testString, machine, errChan), t)
+	testString := "Error creating machine: Message"
+	filterDockerMessage(testString, machine, errChan)
+	checkField("Test1", "Message", <-errChan, t)
 
-	testString = prefix + "msg=\"Message with externalId=uuid-1\" "
+	testString = "Message with externalId=uuid-1"
 	checkField("Test2", "", filterDockerMessage(testString, machine, errChan), t)
 
-	testString = prefix + "msg=\"Message with name=machine-1\" "
+	testString = "Message with name=machine-1"
 	checkField("Test3", "", filterDockerMessage(testString, machine, errChan), t)
 
-	testString = prefix + "msg=\"Message with random characters: =\"=\"\" "
+	testString = "Message with random characters: =\"=\""
 	checkField("Test4", "Message with random characters: =\"=\"", filterDockerMessage(testString, machine, errChan), t)
-
-	testString = prefix + "msg="
-	checkField("Test5", "", filterDockerMessage(testString, machine, errChan), t)
-
-	testString = prefix + "Really weird message"
-	checkField("Test6", "", filterDockerMessage(testString, machine, errChan), t)
-
-	// warning level check
-	testString = "time=\"2015-04-01T13:47:25-07:00\" level=\"warning\" msg=\"error message\" "
-	checkField("Test7", "", filterDockerMessage(testString, machine, errChan), t)
-
-	// fatal level check
-	testString = "time=\"2015-04-01T13:47:25-07:00\" level=\"fatal\" msg=\"error message\" "
-	checkField("Test8", "", filterDockerMessage(testString, machine, errChan), t)
-
-	//error level check
-	testString = "time=\"2015-04-01T13:47:25-07:00\" level=\"error\" msg=\"Error creating machine: error message\" "
-	checkField("Test9", "", filterDockerMessage(testString, machine, errChan), t)
-	checkField("Test9:errString", "error message", <-errChan, t)
 }
 
 // Tests the simplest case of successfully receiving, routing, and handling

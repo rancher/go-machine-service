@@ -64,10 +64,10 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return publishReply(reply, apiClient)
 	}
 
-	if providerHandler := providers.GetProviderHandler(machine.Driver); providerHandler != nil {
-		if err := providerHandler(machine, machineDir); err != nil {
-			return handleByIdError(err, event, apiClient)
-		}
+	providerHandler := providers.GetProviderHandler(machine.Driver)
+
+	if err := providerHandler.HandleCreate(machine, machineDir); err != nil {
+		return handleByIdError(err, event, apiClient)
 	}
 
 	command, err := buildCreateCommand(machine, machineDir)
@@ -93,7 +93,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	errChan := make(chan string, 1)
-	go logProgress(readerStdout, readerStderr, publishChan, machine, event, errChan)
+	go logProgress(readerStdout, readerStderr, publishChan, machine, event, errChan, providerHandler)
 
 	err = command.Wait()
 
@@ -143,7 +143,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	return publishReply(reply, apiClient)
 }
 
-func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, machine *client.Machine, event *events.Event, errChan chan<- string) {
+func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, machine *client.Machine, event *events.Event, errChan chan<- string, providerHandler providers.Provider) {
 	// We will just log stdout first, then stderr, ignoring all errors.
 	defer close(errChan)
 	scanner := bufio.NewScanner(readerStdout)
@@ -152,7 +152,7 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 		log.WithFields(log.Fields{
 			"resourceId: ": event.ResourceId,
 		}).Infof("stdout: %s", msg)
-		transitionMsg := filterDockerMessage(msg, machine, errChan)
+		transitionMsg := filterDockerMessage(msg, machine, errChan, providerHandler)
 		if transitionMsg != "" {
 			publishChan <- transitionMsg
 		}
@@ -163,13 +163,13 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 		log.WithFields(log.Fields{
 			"resourceId": event.ResourceId,
 		}).Infof("stderr: %s", msg)
-		filterDockerMessage(msg, machine, errChan)
+		filterDockerMessage(msg, machine, errChan, providerHandler)
 	}
 }
 
-func filterDockerMessage(msg string, machine *client.Machine, errChan chan<- string) string {
+func filterDockerMessage(msg string, machine *client.Machine, errChan chan<- string, providerHandler providers.Provider) string {
 	if strings.Contains(msg, errorCreatingMachine) {
-		errChan <- strings.Replace(msg, errorCreatingMachine, "", 1)
+		errChan <- providerHandler.HandleError(strings.Replace(msg, errorCreatingMachine, "", 1))
 		return ""
 	}
 	if strings.Contains(msg, machine.ExternalId) || strings.Contains(msg, machine.Name) {

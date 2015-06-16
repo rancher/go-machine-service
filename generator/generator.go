@@ -51,6 +51,10 @@ func generate() error {
 	if err != nil {
 		return fmt.Errorf("error generating field jsons err=%v", err)
 	}
+	err = helpers.GenerateDocJsons(resourceData) // generate doc information for each driver
+	if err != nil {
+		return fmt.Errorf("error generating doc jsons err=%v", err)
+	}
 	err = helpers.GenerateMachineJson(resourceData) // generate schema/base/machine.json.d/machine-generated.json
 	if err != nil {
 		return fmt.Errorf("error generating machine json err=%v", err)
@@ -70,17 +74,23 @@ func loadBlacklist() []string {
 func fetchData() (*helpers.ResourceData, error) {
 	blacklist := loadBlacklist()
 	resourceMap := make(map[string]helpers.ResourceFields)
+	documentationMap := make(map[string][]helpers.DocumentationFields)
 	for _, driver := range drivers.GetDriverNames() {
 		resourceFieldStruct := make(helpers.ResourceFields)
 		resourceFieldMap := make(helpers.ResourceFieldConfigs)
 		resourceFieldStruct["resourceFields"] = resourceFieldMap
 		resourceMap[driver] = resourceFieldStruct
+		documentationFieldStruct := new(helpers.DocumentationFields)
+		documentationFieldMap := make(helpers.DocumentationFieldConfigs)
+		documentationFieldStruct.ResourceFields = documentationFieldMap
+		documentationFieldStruct.Id = driver + "Config"
+		documentationMap[driver] = []helpers.DocumentationFields{*documentationFieldStruct}
 		createFlags, err := drivers.GetCreateFlagsForDriver(driver)
 		if err != nil {
 			return nil, fmt.Errorf("error getting create flags for driver=%s, err=%v", driver, err)
 		}
 		for _, flagStruct := range createFlags {
-			var flagName, flagType string
+			var flagName, flagType, description string
 			var err error
 			switch flagStruct.(type) {
 			case cli.StringFlag:
@@ -90,6 +100,7 @@ func fetchData() (*helpers.ResourceData, error) {
 					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
 				}
 				flagType = "string"
+				description = flag.Usage
 			case cli.IntFlag:
 				flag := flagStruct.(cli.IntFlag)
 				flagName, err = getRancherName(flag.Name)
@@ -97,6 +108,7 @@ func fetchData() (*helpers.ResourceData, error) {
 					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
 				}
 				flagType = "string"
+				description = flag.Usage
 			case cli.BoolFlag:
 				flag := flagStruct.(cli.BoolFlag)
 				flagName, err = getRancherName(flag.Name)
@@ -104,6 +116,7 @@ func fetchData() (*helpers.ResourceData, error) {
 					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
 				}
 				flagType = "boolean"
+				description = flag.Usage
 			case cli.BoolTFlag:
 				flag := flagStruct.(cli.BoolTFlag)
 				flagName, err = getRancherName(flag.Name)
@@ -111,13 +124,15 @@ func fetchData() (*helpers.ResourceData, error) {
 					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
 				}
 				flagType = "boolean"
+				description = flag.Usage
 			default:
 				return nil, fmt.Errorf("unknown type of flag %v, for driver=%s", flagStruct, driver)
 			}
+			documentationFieldMap[flagName] = helpers.DocumentationFieldConfig{Description: description}
 			resourceFieldMap[flagName] = helpers.ResourceFieldConfig{Type: flagType, Nullable: true, Required: false}
 		}
 	}
-	return &helpers.ResourceData{Blacklist: blacklist, Drivers: drivers.GetDriverNames(), ResourceMap: resourceMap}, nil
+	return &helpers.ResourceData{Blacklist: blacklist, Drivers: drivers.GetDriverNames(), ResourceMap: resourceMap, DocumentationMap: documentationMap}, nil
 }
 
 func getRancherName(machineFlagName string) (string, error) {

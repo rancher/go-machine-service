@@ -10,12 +10,16 @@ import (
 )
 
 func init() {
+	azureHandler := &AzureHandler{}
 	if err := RegisterProvider("azure", azureHandler); err != nil {
 		log.Fatal("could not register azure provider")
 	}
 }
 
-func azureHandler(machine *client.Machine, machineDir string) error {
+type AzureHandler struct {
+}
+
+func (*AzureHandler) HandleCreate(machine *client.Machine, machineDir string) error {
 	var data *string
 	var filename string
 	if machine.AzureConfig.SubscriptionCert != "" {
@@ -31,6 +35,10 @@ func azureHandler(machine *client.Machine, machineDir string) error {
 	}
 	*data = path
 	return nil
+}
+
+func (*AzureHandler) HandleError(msg string) string {
+	return msg
 }
 
 func saveDataToFile(filename, data, machineDir string) (string, error) {

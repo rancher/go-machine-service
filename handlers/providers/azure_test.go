@@ -18,7 +18,9 @@ func TestAzureHandler(t *testing.T) {
 	machine.AzureConfig = new(client.AzureConfig)
 	machine.AzureConfig.SubscriptionCert = "QXp1cmVDb25maWc=" //base64 encoding of 'AzureConfig'
 
-	err := azureHandler(machine, machineDir)
+	azureHandler := &AzureHandler{}
+
+	err := azureHandler.HandleCreate(machine, machineDir)
 
 	if err != nil {
 		t.Errorf("could not save subscriptionCert to path, err=%v", err)

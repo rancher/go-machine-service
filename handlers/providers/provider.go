@@ -6,7 +6,22 @@ import (
 	"github.com/rancherio/go-rancher/client"
 )
 
-type Provider func(machine *client.Machine, machineDir string) error
+type Provider interface {
+	HandleCreate(machine *client.Machine, machineDir string) error
+
+	HandleError(msg string) string
+}
+
+type DefaultProvider struct {
+}
+
+func (*DefaultProvider) HandleCreate(machine *client.Machine, machineDir string) error {
+	return nil
+}
+
+func (*DefaultProvider) HandleError(msg string) string {
+	return msg
+}
 
 var (
 	providers map[string]Provider
@@ -27,5 +42,6 @@ func GetProviderHandler(name string) Provider {
 	if provider, ok := providers[name]; ok {
 		return provider
 	}
-	return nil
+	defaultProvider := &DefaultProvider{}
+	return defaultProvider
 }

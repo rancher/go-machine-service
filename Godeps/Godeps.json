@@ -53,8 +53,8 @@
 		},
 		{
 			"ImportPath": "github.com/rancherio/go-rancher/client",
-			"Comment": "v0.1.0-46-gf6f8dba",
-			"Rev": "f6f8dba550937a22f4a1802113520ce93fcd84d9"
+			"Comment": "v0.1.0-48-g80fa8e0",
+			"Rev": "80fa8e07561bc557a66468e5b0525047a901e301"
 		},
 		{
 			"ImportPath": "github.com/gorilla/websocket",

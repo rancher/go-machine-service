@@ -120,6 +120,35 @@ func newReply(event *events.Event) *client.Publish {
 	}
 }
 
+func cleanupResources(machineDir, name string) error {
+	dExists, err := dirExists(machineDir)
+	if !dExists {
+		return nil
+	}
+
+	mExists, err := machineExists(machineDir, name)
+	if err != nil {
+		return err
+	}
+
+	if !mExists {
+		return nil
+	}
+
+	command := buildCommand(machineDir, []string{"rm", "-f", name})
+
+	err = command.Start()
+	if err != nil {
+		return err
+	}
+
+	err = command.Wait()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func buildCommand(machineDir string, cmdArgs []string) *exec.Cmd {
 	command := exec.Command(machineCmd, cmdArgs...)
 	env := initEnviron(machineDir)

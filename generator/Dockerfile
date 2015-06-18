@@ -1,0 +1,12 @@
+from golang
+RUN go get github.com/Sirupsen/logrus
+
+RUN mkdir -p /go/src/github.com/docker/
+WORKDIR /go/src/github.com/docker/
+RUN git clone https://github.com/rancherio/machine
+
+ENV GOPATH /go/src/github.com/docker/machine/Godeps/_workspace:/go
+ENV USER root
+
+WORKDIR /go/src/github.com/rancherio/go-machine-service
+

@@ -121,6 +121,9 @@ func newReply(event *events.Event) *client.Publish {
 }
 
 func cleanupResources(machineDir, name string) error {
+	log.WithFields(log.Fields{
+		"machine name": name,
+	}).Info("starting cleanup...")
 	dExists, err := dirExists(machineDir)
 	if !dExists {
 		return nil
@@ -146,6 +149,15 @@ func cleanupResources(machineDir, name string) error {
 	if err != nil {
 		return err
 	}
+
+	err = os.RemoveAll(machineDir)
+	if err != nil {
+		return err
+	}
+
+	log.WithFields(log.Fields{
+		"machine name": name,
+	}).Info("cleanup successful")
 	return nil
 }
 

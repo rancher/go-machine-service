@@ -27,7 +27,7 @@ const (
 var regExDockerMsg = regexp.MustCompile("msg=.*")
 var regExHyphen = regexp.MustCompile("([a-z])([A-Z])")
 
-func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
+func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err error) {
 	log.WithFields(log.Fields{
 		"resourceId": event.ResourceId,
 		"eventId":    event.Id,
@@ -48,6 +48,12 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	if err != nil {
 		return handleByIdError(err, event, apiClient)
 	}
+
+	defer func() {
+		if err != nil {
+			cleanupResources(machineDir, machine.Name)
+		}
+	}()
 
 	dataUpdates := map[string]interface{}{machineDirField: machineDir}
 	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
@@ -106,7 +112,6 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		case <-time.After(10 * time.Second):
 			log.Error("Waited 10 seconds to break after command.Wait().  Please review logProgress.")
 		}
-		cleanupResources(machineDir, machine.Name)
 		return err
 	}
 
@@ -116,7 +121,6 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}).Info("Machine Created")
 
 	if f, err := os.Create(filepath.Join(machineDir, "machines", machine.Name, CREATED_FILE)); err != nil {
-		cleanupResources(machineDir, machine.Name)
 		return err
 	} else {
 		f.Close()
@@ -124,7 +128,6 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 
 	destFile, err := createExtractedConfig(event, machine)
 	if err != nil {
-		cleanupResources(machineDir, machine.Name)
 		return err
 	}
 
@@ -132,7 +135,6 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		publishChan <- "Saving Machine Config"
 		extractedConf, err := getExtractedConfig(destFile, machine, apiClient)
 		if err != nil {
-			cleanupResources(machineDir, machine.Name)
 			return err
 		}
 		dataUpdates["+fields"] = map[string]string{"extractedConfig": extractedConf}

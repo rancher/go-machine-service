@@ -26,7 +26,7 @@ const (
 
 var endpointRegEx = regexp.MustCompile("-H=[[:alnum:]]*[[:graph:]]*")
 
-func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error {
+func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err error) {
 	log.WithFields(log.Fields{
 		"resourceId": event.ResourceId,
 		"eventId":    event.Id,
@@ -39,8 +39,14 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 
 	machineDir, err := getMachineDir(machine)
 	if err != nil {
-		return handleByIdError(handleBootstrapError(err, machineDir, machine.Name), event, apiClient)
+		return handleByIdError(err, event, apiClient)
 	}
+
+	defer func() {
+		if err != nil {
+			cleanupResources(machineDir, machine.Name)
+		}
+	}()
 
 	dataUpdates := map[string]interface{}{}
 	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
@@ -50,13 +56,13 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 	// Idempotency. If the resource has the bootstrapped file, then it has been bootstrapped.
 	if _, err := os.Stat(bootstrappedFilePath); !os.IsNotExist(err) {
 		if data, err := ioutil.ReadFile(bootstrappedFilePath); err != nil {
-			return handleByIdError(handleBootstrapError(err, machineDir, machine.Name), event, apiClient)
+			return handleByIdError(err, event, apiClient)
 		} else {
 			dataUpdates[bootstrappedAtField] = string(data)
 		}
 		extractedConfig, extractionErr := getIdempotentExtractedConfig(machine, machineDir, apiClient)
 		if extractionErr != nil {
-			return handleByIdError(handleBootstrapError(err, machineDir, machine.Name), event, apiClient)
+			return handleByIdError(err, event, apiClient)
 		}
 		dataUpdates["+fields"] = map[string]interface{}{"extractedConfig": extractedConfig}
 		reply := newReply(event)
@@ -73,24 +79,24 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 
 	registrationUrl, imageRepo, imageTag, err := getRegistrationUrlAndImage(machine.AccountId, apiClient)
 	if err != nil {
-		return handleBootstrapError(err, machineDir, machine.Name)
+		return err
 	}
 
 	dockerClient, err := GetDockerClient(machineDir, machine.Name)
 	if err != nil {
-		return handleBootstrapError(err, machineDir, machine.Name)
+		return err
 	}
 
 	err = pullImage(dockerClient, imageRepo, imageTag)
 	if err != nil {
-		return handleBootstrapError(err, machineDir, machine.Name)
+		return err
 	}
 
 	publishChan <- "Creating agent container"
 
 	container, err := createContainer(registrationUrl, machine, dockerClient, imageRepo, imageTag)
 	if err != nil {
-		return handleBootstrapError(err, machineDir, machine.Name)
+		return err
 	}
 	log.WithFields(log.Fields{
 		"resourceId":  event.ResourceId,
@@ -102,7 +108,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 
 	err = dockerClient.StartContainer(container.ID, nil)
 	if err != nil {
-		return handleBootstrapError(err, machineDir, machine.Name)
+		return err
 	}
 
 	log.WithFields(log.Fields{
@@ -114,7 +120,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 	t := time.Now()
 	bootstrappedAt := t.Format(time.RFC3339)
 	if f, err := os.OpenFile(bootstrappedFilePath, os.O_CREATE|os.O_WRONLY, 0644); err != nil {
-		return handleBootstrapError(err, machineDir, machine.Name)
+		return err
 	} else {
 		f.WriteString(bootstrappedAt)
 		f.Close()
@@ -123,14 +129,14 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 
 	destFile, err := createExtractedConfig(event, machine)
 	if err != nil {
-		return handleBootstrapError(err, machineDir, machine.Name)
+		return err
 	}
 
 	if destFile != "" {
 		publishChan <- "Saving Machine Config"
 		extractedConf, err := getExtractedConfig(destFile, machine, apiClient)
 		if err != nil {
-			return handleBootstrapError(err, machineDir, machine.Name)
+			return err
 		}
 		dataUpdates["+fields"] = map[string]string{"extractedConfig": extractedConf}
 	}
@@ -138,11 +144,6 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) error
 	reply := newReply(event)
 	reply.Data = eventDataWrapper
 	return publishReply(reply, apiClient)
-}
-
-func handleBootstrapError(err error, machineDir, name string) error {
-	cleanupResources(machineDir, name)
-	return err
 }
 
 func createContainer(registrationUrl string, machine *client.Machine,

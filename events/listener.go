@@ -1,17 +1,21 @@
 package events
 
 import (
-	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/rancherio/go-machine-service/locks"
-	"github.com/rancherio/go-rancher/client"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/websocket"
+
+	"github.com/rancherio/go-machine-service/locks"
+	"github.com/rancherio/go-rancher/client"
 )
 
 const MaxWait = time.Duration(time.Second * 10)
@@ -20,16 +24,17 @@ const MaxWait = time.Duration(time.Second * 10)
 type EventHandler func(*Event, *client.RancherClient) error
 
 type EventRouter struct {
-	name                string
-	priority            int
-	apiUrl              string
-	accessKey           string
-	secretKey           string
-	apiClient           *client.RancherClient
-	subscribeUrl        string
-	eventHandlers       map[string]EventHandler
-	workerCount         int
-	eventStreamResponse *http.Response
+	name          string
+	priority      int
+	apiUrl        string
+	accessKey     string
+	secretKey     string
+	apiClient     *client.RancherClient
+	subscribeUrl  string
+	eventHandlers map[string]EventHandler
+	workerCount   int
+	eventStream   *websocket.Conn
+	mu            *sync.Mutex
 }
 
 type ProcessConfig struct {
@@ -70,7 +75,7 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 	}
 
 	idx := 0
-	subscribeForm := url.Values{}
+	subscribeParams := url.Values{}
 	eventHandlerSuffix := ";handler=" + router.name
 	for event, handler := range router.eventHandlers {
 		processConfig := ProcessConfig{
@@ -79,7 +84,7 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 		}
 		externalHandler.ProcessConfigs[idx] = processConfig
 		fullEventKey := event + eventHandlerSuffix
-		subscribeForm.Add("eventNames", fullEventKey)
+		subscribeParams.Add("eventNames", fullEventKey)
 		handlers[fullEventKey] = handler
 		idx++
 	}
@@ -88,30 +93,33 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 		return err
 	}
 
-	if ready != nil {
-		ready <- true
-	}
-
-	eventStream, err := subscribeToEvents(router.subscribeUrl, router.accessKey, router.secretKey, subscribeForm)
+	eventStream, err := subscribeToEvents(router.subscribeUrl, router.accessKey, router.secretKey, subscribeParams)
 	if err != nil {
 		return err
 	}
 	log.Info("Connection established")
-	router.eventStreamResponse = eventStream
-	defer eventStream.Body.Close()
+	router.eventStream = eventStream
+	defer router.Stop()
 
-	scanner := bufio.NewScanner(eventStream.Body)
-	for scanner.Scan() {
-		line := scanner.Bytes()
+	if ready != nil {
+		ready <- true
+	}
 
-		line = bytes.TrimSpace(line)
-		if len(line) == 0 {
+	for {
+		_, message, err := eventStream.ReadMessage()
+		if err != nil {
+			// Error here means the connection is closed. It's normal, so just return.
+			return nil
+		}
+
+		message = bytes.TrimSpace(message)
+		if len(message) == 0 {
 			continue
 		}
 
 		select {
 		case worker := <-workers:
-			go worker.DoWork(line, handlers, router.apiClient, workers)
+			go worker.DoWork(message, handlers, router.apiClient, workers)
 		default:
 			log.WithFields(log.Fields{
 				"workerCount": router.workerCount,
@@ -123,7 +131,14 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 }
 
 func (router *EventRouter) Stop() (err error) {
-	router.eventStreamResponse.Body.Close()
+	if router.eventStream != nil {
+		router.mu.Lock()
+		defer router.mu.Unlock()
+		if router.eventStream != nil {
+			router.eventStream.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Now().Add(time.Second))
+			router.eventStream = nil
+		}
+	}
 	return nil
 }
 
@@ -205,6 +220,9 @@ func NewEventRouter(name string, priority int, apiUrl string, accessKey string, 
 		}
 	}
 
+	// TODO Get subscribe collection URL from API instead of hard coding
+	subscribeUrl := strings.Replace(apiUrl+"/subscribe", "http", "ws", -1)
+
 	return &EventRouter{
 		name:          name,
 		priority:      priority,
@@ -212,9 +230,10 @@ func NewEventRouter(name string, priority int, apiUrl string, accessKey string, 
 		accessKey:     accessKey,
 		secretKey:     secretKey,
 		apiClient:     apiClient,
-		subscribeUrl:  apiUrl + "/subscribe",
+		subscribeUrl:  subscribeUrl,
 		eventHandlers: eventHandlers,
 		workerCount:   workerCount,
+		mu:            &sync.Mutex{},
 	}, nil
 }
 
@@ -222,15 +241,21 @@ func newWorker() *Worker {
 	return &Worker{}
 }
 
-var subscribeToEvents = func(subscribeUrl string, user string, pass string, data url.Values) (resp *http.Response, err error) {
-	subscribeClient := &http.Client{}
-	req, err := http.NewRequest("POST", subscribeUrl, strings.NewReader(data.Encode()))
+func subscribeToEvents(subscribeUrl string, accessKey string, secretKey string, data url.Values) (*websocket.Conn, error) {
+	dialer := &websocket.Dialer{}
+	headers := http.Header{}
+	headers.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(accessKey+":"+secretKey)))
+	subscribeUrl = subscribeUrl + "?" + data.Encode()
+	ws, _, err := dialer.Dial(subscribeUrl, headers)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"error":        err,
+			"subscribeUrl": subscribeUrl,
+		}).Error("Failed to subscribe to events.")
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.SetBasicAuth(user, pass)
-	return subscribeClient.Do(req)
+
+	return ws, nil
 }
 
 var createNewHandler = func(externalHandler *client.ExternalHandler, apiClient *client.RancherClient) error {

@@ -3,8 +3,10 @@ package test_utils
 import (
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/websocket"
 )
 
 var subscriberChannels []chan string
@@ -31,9 +33,19 @@ func pushEventHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func subscribeHandler(w http.ResponseWriter, req *http.Request) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
+	}
+
+	ws, err := upgrader.Upgrade(w, req, nil)
+	if err != nil {
+		http.Error(w, "Failed to upgrade connection.", 500)
+		return
+	}
+
 	resultChan := make(chan string)
 	subscriberChannels = append(subscriberChannels, resultChan)
-	writeEventToSubscriber(w, resultChan)
+	writeEventToSubscriber(ws, resultChan)
 }
 
 func pushToSubscribers(message string) {
@@ -45,11 +57,12 @@ func pushToSubscribers(message string) {
 	}
 }
 
-func writeEventToSubscriber(w http.ResponseWriter, c chan string) {
+func writeEventToSubscriber(ws *websocket.Conn, c chan string) {
 	for {
-		io.WriteString(w, <-c+"\r\n")
-		if f, ok := w.(http.Flusher); ok {
-			f.Flush()
+		event := <-c
+		err := ws.WriteMessage(websocket.TextMessage, []byte(event))
+		if err != nil {
+			log.WithFields(log.Fields{"error": err, "msg": event}).Fatal("Could not write message.")
 		}
 	}
 }

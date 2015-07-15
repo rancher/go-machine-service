@@ -3,14 +3,15 @@ package events
 import (
 	"bytes"
 	"encoding/json"
-	tu "github.com/rancherio/go-machine-service/test_utils"
-	"github.com/rancherio/go-rancher/client"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 	"testing"
 	"time"
+
+	tu "github.com/rancherio/go-machine-service/test_utils"
+	"github.com/rancherio/go-rancher/client"
 )
 
 const eventServerPort string = "8005"
@@ -167,7 +168,7 @@ func TestWorkerReuse(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		receivedEvent := awaitEvent(eventsReceived, 200, t)
+		receivedEvent := awaitEvent(eventsReceived, 500, t)
 		if receivedEvent != nil {
 			receivedEvents[receivedEvent.Id] = receivedEvent
 		}

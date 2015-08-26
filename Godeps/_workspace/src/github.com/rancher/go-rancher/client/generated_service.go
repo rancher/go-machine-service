@@ -9,6 +9,8 @@ type Service struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	CreateIndex int64 `json:"createIndex,omitempty" yaml:"create_index,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
@@ -39,7 +41,11 @@ type Service struct {
 
 	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
 
+	Upgrade ServiceUpgrade `json:"upgrade,omitempty" yaml:"upgrade,omitempty"`
+
 	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+
+	Vip string `json:"vip,omitempty" yaml:"vip,omitempty"`
 }
 
 type ServiceCollection struct {
@@ -62,6 +68,8 @@ type ServiceOperations interface {
 
 	ActionAddservicelink(*Service, *AddRemoveServiceLinkInput) (*Service, error)
 
+	ActionCancelupgrade(*Service) (*Service, error)
+
 	ActionCreate(*Service) (*Service, error)
 
 	ActionDeactivate(*Service) (*Service, error)
@@ -73,6 +81,8 @@ type ServiceOperations interface {
 	ActionSetservicelinks(*Service, *SetServiceLinksInput) (*Service, error)
 
 	ActionUpdate(*Service) (*Service, error)
+
+	ActionUpgrade(*Service, *ServiceUpgrade) (*Service, error)
 }
 
 func newServiceClient(rancherClient *RancherClient) *ServiceClient {
@@ -127,6 +137,15 @@ func (c *ServiceClient) ActionAddservicelink(resource *Service, input *AddRemove
 	return resp, err
 }
 
+func (c *ServiceClient) ActionCancelupgrade(resource *Service) (*Service, error) {
+
+	resp := &Service{}
+
+	err := c.rancherClient.doAction(SERVICE_TYPE, "cancelupgrade", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
 func (c *ServiceClient) ActionCreate(resource *Service) (*Service, error) {
 
 	resp := &Service{}
@@ -177,6 +196,15 @@ func (c *ServiceClient) ActionUpdate(resource *Service) (*Service, error) {
 	resp := &Service{}
 
 	err := c.rancherClient.doAction(SERVICE_TYPE, "update", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *ServiceClient) ActionUpgrade(resource *Service, input *ServiceUpgrade) (*Service, error) {
+
+	resp := &Service{}
+
+	err := c.rancherClient.doAction(SERVICE_TYPE, "upgrade", &resource.Resource, input, resp)
 
 	return resp, err
 }

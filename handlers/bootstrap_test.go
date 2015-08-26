@@ -3,7 +3,7 @@ package handlers
 import (
 	"testing"
 
-	"github.com/rancherio/go-rancher/client"
+	"github.com/rancher/go-rancher/client"
 )
 
 func TestBuildContainerConfig(t *testing.T) {

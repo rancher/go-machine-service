@@ -21,6 +21,8 @@ type ServiceConsumeMap struct {
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
+	Ports []string `json:"ports,omitempty" yaml:"ports,omitempty"`
+
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
@@ -57,6 +59,8 @@ type ServiceConsumeMapOperations interface {
 	ActionCreate(*ServiceConsumeMap) (*ServiceConsumeMap, error)
 
 	ActionRemove(*ServiceConsumeMap) (*ServiceConsumeMap, error)
+
+	ActionUpdate(*ServiceConsumeMap) (*ServiceConsumeMap, error)
 }
 
 func newServiceConsumeMapClient(rancherClient *RancherClient) *ServiceConsumeMapClient {
@@ -107,6 +111,15 @@ func (c *ServiceConsumeMapClient) ActionRemove(resource *ServiceConsumeMap) (*Se
 	resp := &ServiceConsumeMap{}
 
 	err := c.rancherClient.doAction(SERVICE_CONSUME_MAP_TYPE, "remove", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *ServiceConsumeMapClient) ActionUpdate(resource *ServiceConsumeMap) (*ServiceConsumeMap, error) {
+
+	resp := &ServiceConsumeMap{}
+
+	err := c.rancherClient.doAction(SERVICE_CONSUME_MAP_TYPE, "update", &resource.Resource, nil, resp)
 
 	return resp, err
 }

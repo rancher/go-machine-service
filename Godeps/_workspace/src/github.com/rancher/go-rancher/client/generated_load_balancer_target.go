@@ -25,6 +25,8 @@ type LoadBalancerTarget struct {
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
+	Ports []string `json:"ports,omitempty" yaml:"ports,omitempty"`
+
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
@@ -59,6 +61,8 @@ type LoadBalancerTargetOperations interface {
 	ActionCreate(*LoadBalancerTarget) (*LoadBalancerTarget, error)
 
 	ActionRemove(*LoadBalancerTarget) (*LoadBalancerTarget, error)
+
+	ActionUpdate(*LoadBalancerTarget) (*LoadBalancerTarget, error)
 }
 
 func newLoadBalancerTargetClient(rancherClient *RancherClient) *LoadBalancerTargetClient {
@@ -109,6 +113,15 @@ func (c *LoadBalancerTargetClient) ActionRemove(resource *LoadBalancerTarget) (*
 	resp := &LoadBalancerTarget{}
 
 	err := c.rancherClient.doAction(LOAD_BALANCER_TARGET_TYPE, "remove", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *LoadBalancerTargetClient) ActionUpdate(resource *LoadBalancerTarget) (*LoadBalancerTarget, error) {
+
+	resp := &LoadBalancerTarget{}
+
+	err := c.rancherClient.doAction(LOAD_BALANCER_TARGET_TYPE, "update", &resource.Resource, nil, resp)
 
 	return resp, err
 }

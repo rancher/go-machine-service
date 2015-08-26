@@ -27,6 +27,8 @@ type SecondaryLaunchConfig struct {
 
 	CpuShares int64 `json:"cpuShares,omitempty" yaml:"cpu_shares,omitempty"`
 
+	CreateIndex int64 `json:"createIndex,omitempty" yaml:"create_index,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
@@ -50,6 +52,8 @@ type SecondaryLaunchConfig struct {
 	EntryPoint []string `json:"entryPoint,omitempty" yaml:"entry_point,omitempty"`
 
 	Environment map[string]interface{} `json:"environment,omitempty" yaml:"environment,omitempty"`
+
+	Expose []string `json:"expose,omitempty" yaml:"expose,omitempty"`
 
 	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
 

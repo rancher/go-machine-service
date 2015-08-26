@@ -3,7 +3,7 @@ package providers
 import (
 	"fmt"
 
-	"github.com/rancherio/go-rancher/client"
+	"github.com/rancher/go-rancher/client"
 )
 
 type Provider interface {

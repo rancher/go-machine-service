@@ -9,9 +9,13 @@ type LoadBalancerService struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	CertificateIds []string `json:"certificateIds,omitempty" yaml:"certificate_ids,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
+
+	DefaultCertificateId string `json:"defaultCertificateId,omitempty" yaml:"default_certificate_id,omitempty"`
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 
@@ -39,7 +43,11 @@ type LoadBalancerService struct {
 
 	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
 
+	Upgrade ServiceUpgrade `json:"upgrade,omitempty" yaml:"upgrade,omitempty"`
+
 	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+
+	Vip string `json:"vip,omitempty" yaml:"vip,omitempty"`
 }
 
 type LoadBalancerServiceCollection struct {
@@ -60,7 +68,9 @@ type LoadBalancerServiceOperations interface {
 
 	ActionActivate(*LoadBalancerService) (*Service, error)
 
-	ActionAddservicelink(*LoadBalancerService, *AddRemoveServiceLinkInput) (*Service, error)
+	ActionAddservicelink(*LoadBalancerService, *AddRemoveLoadBalancerServiceLinkInput) (*Service, error)
+
+	ActionCancelupgrade(*LoadBalancerService) (*Service, error)
 
 	ActionCreate(*LoadBalancerService) (*Service, error)
 
@@ -68,11 +78,13 @@ type LoadBalancerServiceOperations interface {
 
 	ActionRemove(*LoadBalancerService) (*Service, error)
 
-	ActionRemoveservicelink(*LoadBalancerService, *AddRemoveServiceLinkInput) (*Service, error)
+	ActionRemoveservicelink(*LoadBalancerService, *AddRemoveLoadBalancerServiceLinkInput) (*Service, error)
 
-	ActionSetservicelinks(*LoadBalancerService, *SetServiceLinksInput) (*Service, error)
+	ActionSetservicelinks(*LoadBalancerService, *SetLoadBalancerServiceLinksInput) (*Service, error)
 
 	ActionUpdate(*LoadBalancerService) (*Service, error)
+
+	ActionUpgrade(*LoadBalancerService, *ServiceUpgrade) (*Service, error)
 }
 
 func newLoadBalancerServiceClient(rancherClient *RancherClient) *LoadBalancerServiceClient {
@@ -118,11 +130,20 @@ func (c *LoadBalancerServiceClient) ActionActivate(resource *LoadBalancerService
 	return resp, err
 }
 
-func (c *LoadBalancerServiceClient) ActionAddservicelink(resource *LoadBalancerService, input *AddRemoveServiceLinkInput) (*Service, error) {
+func (c *LoadBalancerServiceClient) ActionAddservicelink(resource *LoadBalancerService, input *AddRemoveLoadBalancerServiceLinkInput) (*Service, error) {
 
 	resp := &Service{}
 
 	err := c.rancherClient.doAction(LOAD_BALANCER_SERVICE_TYPE, "addservicelink", &resource.Resource, input, resp)
+
+	return resp, err
+}
+
+func (c *LoadBalancerServiceClient) ActionCancelupgrade(resource *LoadBalancerService) (*Service, error) {
+
+	resp := &Service{}
+
+	err := c.rancherClient.doAction(LOAD_BALANCER_SERVICE_TYPE, "cancelupgrade", &resource.Resource, nil, resp)
 
 	return resp, err
 }
@@ -154,7 +175,7 @@ func (c *LoadBalancerServiceClient) ActionRemove(resource *LoadBalancerService) 
 	return resp, err
 }
 
-func (c *LoadBalancerServiceClient) ActionRemoveservicelink(resource *LoadBalancerService, input *AddRemoveServiceLinkInput) (*Service, error) {
+func (c *LoadBalancerServiceClient) ActionRemoveservicelink(resource *LoadBalancerService, input *AddRemoveLoadBalancerServiceLinkInput) (*Service, error) {
 
 	resp := &Service{}
 
@@ -163,7 +184,7 @@ func (c *LoadBalancerServiceClient) ActionRemoveservicelink(resource *LoadBalanc
 	return resp, err
 }
 
-func (c *LoadBalancerServiceClient) ActionSetservicelinks(resource *LoadBalancerService, input *SetServiceLinksInput) (*Service, error) {
+func (c *LoadBalancerServiceClient) ActionSetservicelinks(resource *LoadBalancerService, input *SetLoadBalancerServiceLinksInput) (*Service, error) {
 
 	resp := &Service{}
 
@@ -177,6 +198,15 @@ func (c *LoadBalancerServiceClient) ActionUpdate(resource *LoadBalancerService) 
 	resp := &Service{}
 
 	err := c.rancherClient.doAction(LOAD_BALANCER_SERVICE_TYPE, "update", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *LoadBalancerServiceClient) ActionUpgrade(resource *LoadBalancerService, input *ServiceUpgrade) (*Service, error) {
+
+	resp := &Service{}
+
+	err := c.rancherClient.doAction(LOAD_BALANCER_SERVICE_TYPE, "upgrade", &resource.Resource, input, resp)
 
 	return resp, err
 }

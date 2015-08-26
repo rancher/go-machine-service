@@ -1,10 +1,10 @@
 package client
 
 const (
-	LAUNCH_CONFIG_TYPE = "launchConfig"
+	CONTAINER_TYPE = "container"
 )
 
-type LaunchConfig struct {
+type Container struct {
 	Resource
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
@@ -27,6 +27,8 @@ type LaunchConfig struct {
 
 	CpuShares int64 `json:"cpuShares,omitempty" yaml:"cpu_shares,omitempty"`
 
+	CreateIndex int64 `json:"createIndex,omitempty" yaml:"create_index,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
@@ -34,8 +36,6 @@ type LaunchConfig struct {
 	DataVolumes []string `json:"dataVolumes,omitempty" yaml:"data_volumes,omitempty"`
 
 	DataVolumesFrom []string `json:"dataVolumesFrom,omitempty" yaml:"data_volumes_from,omitempty"`
-
-	DataVolumesFromLaunchConfigs []string `json:"dataVolumesFromLaunchConfigs,omitempty" yaml:"data_volumes_from_launch_configs,omitempty"`
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 
@@ -50,6 +50,8 @@ type LaunchConfig struct {
 	EntryPoint []string `json:"entryPoint,omitempty" yaml:"entry_point,omitempty"`
 
 	Environment map[string]interface{} `json:"environment,omitempty" yaml:"environment,omitempty"`
+
+	Expose []string `json:"expose,omitempty" yaml:"expose,omitempty"`
 
 	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
 
@@ -86,8 +88,6 @@ type LaunchConfig struct {
 	NetworkContainerId string `json:"networkContainerId,omitempty" yaml:"network_container_id,omitempty"`
 
 	NetworkIds []string `json:"networkIds,omitempty" yaml:"network_ids,omitempty"`
-
-	NetworkLaunchConfig string `json:"networkLaunchConfig,omitempty" yaml:"network_launch_config,omitempty"`
 
 	NetworkMode string `json:"networkMode,omitempty" yaml:"network_mode,omitempty"`
 
@@ -142,240 +142,240 @@ type LaunchConfig struct {
 	WorkingDir string `json:"workingDir,omitempty" yaml:"working_dir,omitempty"`
 }
 
-type LaunchConfigCollection struct {
+type ContainerCollection struct {
 	Collection
-	Data []LaunchConfig `json:"data,omitempty"`
+	Data []Container `json:"data,omitempty"`
 }
 
-type LaunchConfigClient struct {
+type ContainerClient struct {
 	rancherClient *RancherClient
 }
 
-type LaunchConfigOperations interface {
-	List(opts *ListOpts) (*LaunchConfigCollection, error)
-	Create(opts *LaunchConfig) (*LaunchConfig, error)
-	Update(existing *LaunchConfig, updates interface{}) (*LaunchConfig, error)
-	ById(id string) (*LaunchConfig, error)
-	Delete(container *LaunchConfig) error
+type ContainerOperations interface {
+	List(opts *ListOpts) (*ContainerCollection, error)
+	Create(opts *Container) (*Container, error)
+	Update(existing *Container, updates interface{}) (*Container, error)
+	ById(id string) (*Container, error)
+	Delete(container *Container) error
 
-	ActionAllocate(*LaunchConfig) (*Instance, error)
+	ActionAllocate(*Container) (*Instance, error)
 
-	ActionConsole(*LaunchConfig, *InstanceConsoleInput) (*InstanceConsole, error)
+	ActionConsole(*Container, *InstanceConsoleInput) (*InstanceConsole, error)
 
-	ActionCreate(*LaunchConfig) (*Instance, error)
+	ActionCreate(*Container) (*Instance, error)
 
-	ActionDeallocate(*LaunchConfig) (*Instance, error)
+	ActionDeallocate(*Container) (*Instance, error)
 
-	ActionExecute(*LaunchConfig, *ContainerExec) (*HostAccess, error)
+	ActionExecute(*Container, *ContainerExec) (*HostAccess, error)
 
-	ActionLogs(*LaunchConfig, *ContainerLogs) (*HostAccess, error)
+	ActionLogs(*Container, *ContainerLogs) (*HostAccess, error)
 
-	ActionMigrate(*LaunchConfig) (*Instance, error)
+	ActionMigrate(*Container) (*Instance, error)
 
-	ActionPurge(*LaunchConfig) (*Instance, error)
+	ActionPurge(*Container) (*Instance, error)
 
-	ActionRemove(*LaunchConfig) (*Instance, error)
+	ActionRemove(*Container) (*Instance, error)
 
-	ActionRestart(*LaunchConfig) (*Instance, error)
+	ActionRestart(*Container) (*Instance, error)
 
-	ActionRestore(*LaunchConfig) (*Instance, error)
+	ActionRestore(*Container) (*Instance, error)
 
-	ActionSetlabels(*LaunchConfig, *SetLabelsInput) (*Container, error)
+	ActionSetlabels(*Container, *SetLabelsInput) (*Container, error)
 
-	ActionStart(*LaunchConfig) (*Instance, error)
+	ActionStart(*Container) (*Instance, error)
 
-	ActionStop(*LaunchConfig, *InstanceStop) (*Instance, error)
+	ActionStop(*Container, *InstanceStop) (*Instance, error)
 
-	ActionUpdate(*LaunchConfig) (*Instance, error)
+	ActionUpdate(*Container) (*Instance, error)
 
-	ActionUpdatehealthy(*LaunchConfig) (*Instance, error)
+	ActionUpdatehealthy(*Container) (*Instance, error)
 
-	ActionUpdateunhealthy(*LaunchConfig) (*Instance, error)
+	ActionUpdateunhealthy(*Container) (*Instance, error)
 }
 
-func newLaunchConfigClient(rancherClient *RancherClient) *LaunchConfigClient {
-	return &LaunchConfigClient{
+func newContainerClient(rancherClient *RancherClient) *ContainerClient {
+	return &ContainerClient{
 		rancherClient: rancherClient,
 	}
 }
 
-func (c *LaunchConfigClient) Create(container *LaunchConfig) (*LaunchConfig, error) {
-	resp := &LaunchConfig{}
-	err := c.rancherClient.doCreate(LAUNCH_CONFIG_TYPE, container, resp)
+func (c *ContainerClient) Create(container *Container) (*Container, error) {
+	resp := &Container{}
+	err := c.rancherClient.doCreate(CONTAINER_TYPE, container, resp)
 	return resp, err
 }
 
-func (c *LaunchConfigClient) Update(existing *LaunchConfig, updates interface{}) (*LaunchConfig, error) {
-	resp := &LaunchConfig{}
-	err := c.rancherClient.doUpdate(LAUNCH_CONFIG_TYPE, &existing.Resource, updates, resp)
+func (c *ContainerClient) Update(existing *Container, updates interface{}) (*Container, error) {
+	resp := &Container{}
+	err := c.rancherClient.doUpdate(CONTAINER_TYPE, &existing.Resource, updates, resp)
 	return resp, err
 }
 
-func (c *LaunchConfigClient) List(opts *ListOpts) (*LaunchConfigCollection, error) {
-	resp := &LaunchConfigCollection{}
-	err := c.rancherClient.doList(LAUNCH_CONFIG_TYPE, opts, resp)
+func (c *ContainerClient) List(opts *ListOpts) (*ContainerCollection, error) {
+	resp := &ContainerCollection{}
+	err := c.rancherClient.doList(CONTAINER_TYPE, opts, resp)
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ById(id string) (*LaunchConfig, error) {
-	resp := &LaunchConfig{}
-	err := c.rancherClient.doById(LAUNCH_CONFIG_TYPE, id, resp)
+func (c *ContainerClient) ById(id string) (*Container, error) {
+	resp := &Container{}
+	err := c.rancherClient.doById(CONTAINER_TYPE, id, resp)
 	return resp, err
 }
 
-func (c *LaunchConfigClient) Delete(container *LaunchConfig) error {
-	return c.rancherClient.doResourceDelete(LAUNCH_CONFIG_TYPE, &container.Resource)
+func (c *ContainerClient) Delete(container *Container) error {
+	return c.rancherClient.doResourceDelete(CONTAINER_TYPE, &container.Resource)
 }
 
-func (c *LaunchConfigClient) ActionAllocate(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionAllocate(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "allocate", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "allocate", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionConsole(resource *LaunchConfig, input *InstanceConsoleInput) (*InstanceConsole, error) {
+func (c *ContainerClient) ActionConsole(resource *Container, input *InstanceConsoleInput) (*InstanceConsole, error) {
 
 	resp := &InstanceConsole{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "console", &resource.Resource, input, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "console", &resource.Resource, input, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionCreate(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionCreate(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "create", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "create", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionDeallocate(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionDeallocate(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "deallocate", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "deallocate", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionExecute(resource *LaunchConfig, input *ContainerExec) (*HostAccess, error) {
+func (c *ContainerClient) ActionExecute(resource *Container, input *ContainerExec) (*HostAccess, error) {
 
 	resp := &HostAccess{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "execute", &resource.Resource, input, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "execute", &resource.Resource, input, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionLogs(resource *LaunchConfig, input *ContainerLogs) (*HostAccess, error) {
+func (c *ContainerClient) ActionLogs(resource *Container, input *ContainerLogs) (*HostAccess, error) {
 
 	resp := &HostAccess{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "logs", &resource.Resource, input, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "logs", &resource.Resource, input, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionMigrate(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionMigrate(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "migrate", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "migrate", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionPurge(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionPurge(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "purge", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "purge", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionRemove(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionRemove(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "remove", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "remove", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionRestart(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionRestart(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "restart", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "restart", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionRestore(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionRestore(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "restore", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionSetlabels(resource *LaunchConfig, input *SetLabelsInput) (*Container, error) {
+func (c *ContainerClient) ActionSetlabels(resource *Container, input *SetLabelsInput) (*Container, error) {
 
 	resp := &Container{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "setlabels", &resource.Resource, input, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "setlabels", &resource.Resource, input, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionStart(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionStart(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "start", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "start", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionStop(resource *LaunchConfig, input *InstanceStop) (*Instance, error) {
+func (c *ContainerClient) ActionStop(resource *Container, input *InstanceStop) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "stop", &resource.Resource, input, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "stop", &resource.Resource, input, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionUpdate(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionUpdate(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "update", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "update", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionUpdatehealthy(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionUpdatehealthy(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "updatehealthy", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "updatehealthy", &resource.Resource, nil, resp)
 
 	return resp, err
 }
 
-func (c *LaunchConfigClient) ActionUpdateunhealthy(resource *LaunchConfig) (*Instance, error) {
+func (c *ContainerClient) ActionUpdateunhealthy(resource *Container) (*Instance, error) {
 
 	resp := &Instance{}
 
-	err := c.rancherClient.doAction(LAUNCH_CONFIG_TYPE, "updateunhealthy", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(CONTAINER_TYPE, "updateunhealthy", &resource.Resource, nil, resp)
 
 	return resp, err
 }

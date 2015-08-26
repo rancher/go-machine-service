@@ -3,8 +3,8 @@ package handlers
 import (
 	"bufio"
 	log "github.com/Sirupsen/logrus"
-	"github.com/rancherio/go-machine-service/events"
-	"github.com/rancherio/go-rancher/client"
+	"github.com/rancher/go-machine-service/events"
+	"github.com/rancher/go-rancher/client"
 	"os"
 )
 

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/rancherio/go-rancher/client"
+	"github.com/rancher/go-rancher/client"
 )
 
 /* This file contains unit tests for azure.go

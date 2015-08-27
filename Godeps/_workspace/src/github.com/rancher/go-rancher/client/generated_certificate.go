@@ -9,9 +9,15 @@ type Certificate struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	Algorithm string `json:"algorithm,omitempty" yaml:"algorithm,omitempty"`
+
+	CN string `json:"cN,omitempty" yaml:"cn,omitempty"`
+
 	Cert string `json:"cert,omitempty" yaml:"cert,omitempty"`
 
 	CertChain string `json:"certChain,omitempty" yaml:"cert_chain,omitempty"`
+
+	CertFingerprint string `json:"certFingerprint,omitempty" yaml:"cert_fingerprint,omitempty"`
 
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
@@ -19,7 +25,15 @@ type Certificate struct {
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 
+	ExpiresAt string `json:"expiresAt,omitempty" yaml:"expires_at,omitempty"`
+
+	IssuedAt string `json:"issuedAt,omitempty" yaml:"issued_at,omitempty"`
+
+	Issuer string `json:"issuer,omitempty" yaml:"issuer,omitempty"`
+
 	Key string `json:"key,omitempty" yaml:"key,omitempty"`
+
+	KeySize int64 `json:"keySize,omitempty" yaml:"key_size,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
@@ -29,9 +43,21 @@ type Certificate struct {
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
 
+	SerialNumber string `json:"serialNumber,omitempty" yaml:"serial_number,omitempty"`
+
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
+	SubjectAlternativeNames []string `json:"subjectAlternativeNames,omitempty" yaml:"subject_alternative_names,omitempty"`
+
+	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`
+
+	TransitioningMessage string `json:"transitioningMessage,omitempty" yaml:"transitioning_message,omitempty"`
+
+	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
+
 	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
+
+	Version string `json:"version,omitempty" yaml:"version,omitempty"`
 }
 
 type CertificateCollection struct {
@@ -49,6 +75,10 @@ type CertificateOperations interface {
 	Update(existing *Certificate, updates interface{}) (*Certificate, error)
 	ById(id string) (*Certificate, error)
 	Delete(container *Certificate) error
+
+	ActionCreate(*Certificate) (*Certificate, error)
+
+	ActionRemove(*Certificate) (*Certificate, error)
 }
 
 func newCertificateClient(rancherClient *RancherClient) *CertificateClient {
@@ -83,4 +113,22 @@ func (c *CertificateClient) ById(id string) (*Certificate, error) {
 
 func (c *CertificateClient) Delete(container *Certificate) error {
 	return c.rancherClient.doResourceDelete(CERTIFICATE_TYPE, &container.Resource)
+}
+
+func (c *CertificateClient) ActionCreate(resource *Certificate) (*Certificate, error) {
+
+	resp := &Certificate{}
+
+	err := c.rancherClient.doAction(CERTIFICATE_TYPE, "create", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *CertificateClient) ActionRemove(resource *Certificate) (*Certificate, error) {
+
+	resp := &Certificate{}
+
+	err := c.rancherClient.doAction(CERTIFICATE_TYPE, "remove", &resource.Resource, nil, resp)
+
+	return resp, err
 }

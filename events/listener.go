@@ -14,8 +14,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 
-	"github.com/rancherio/go-machine-service/locks"
-	"github.com/rancherio/go-rancher/client"
+	"github.com/rancher/go-machine-service/locks"
+	"github.com/rancher/go-rancher/client"
 )
 
 const MaxWait = time.Duration(time.Second * 10)

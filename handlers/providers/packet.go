@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/rancherio/go-rancher/client"
+	"github.com/rancher/go-rancher/client"
 )
 
 func init() {

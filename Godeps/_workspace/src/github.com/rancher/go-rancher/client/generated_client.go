@@ -15,6 +15,8 @@ type RancherClient struct {
 	ExternalHandlerProcessConfig             ExternalHandlerProcessConfigOperations
 	ComposeConfig                            ComposeConfigOperations
 	InstanceHealthCheck                      InstanceHealthCheckOperations
+	ServiceLink                              ServiceLinkOperations
+	ServiceUpgrade                           ServiceUpgradeOperations
 	AddLoadBalancerInput                     AddLoadBalancerInputOperations
 	AddRemoveClusterHostInput                AddRemoveClusterHostInputOperations
 	AddRemoveLoadBalancerHostInput           AddRemoveLoadBalancerHostInputOperations
@@ -44,6 +46,9 @@ type RancherClient struct {
 	DnsService                               DnsServiceOperations
 	LaunchConfig                             LaunchConfigOperations
 	SecondaryLaunchConfig                    SecondaryLaunchConfigOperations
+	AddRemoveLoadBalancerServiceLinkInput    AddRemoveLoadBalancerServiceLinkInputOperations
+	SetLoadBalancerServiceLinksInput         SetLoadBalancerServiceLinksInputOperations
+	LoadBalancerServiceLink                  LoadBalancerServiceLinkOperations
 	Account                                  AccountOperations
 	Agent                                    AgentOperations
 	Certificate                              CertificateOperations
@@ -100,6 +105,8 @@ type RancherClient struct {
 	ResourceDefinition                       ResourceDefinitionOperations
 	StateTransition                          StateTransitionOperations
 	Githubconfig                             GithubconfigOperations
+	Identity                                 IdentityOperations
+	Ldapconfig                               LdapconfigOperations
 	StatsAccess                              StatsAccessOperations
 	Amazonec2Config                          Amazonec2ConfigOperations
 	AzureConfig                              AzureConfigOperations
@@ -137,6 +144,8 @@ func constructClient() *RancherClient {
 	client.ExternalHandlerProcessConfig = newExternalHandlerProcessConfigClient(client)
 	client.ComposeConfig = newComposeConfigClient(client)
 	client.InstanceHealthCheck = newInstanceHealthCheckClient(client)
+	client.ServiceLink = newServiceLinkClient(client)
+	client.ServiceUpgrade = newServiceUpgradeClient(client)
 	client.AddLoadBalancerInput = newAddLoadBalancerInputClient(client)
 	client.AddRemoveClusterHostInput = newAddRemoveClusterHostInputClient(client)
 	client.AddRemoveLoadBalancerHostInput = newAddRemoveLoadBalancerHostInputClient(client)
@@ -166,6 +175,9 @@ func constructClient() *RancherClient {
 	client.DnsService = newDnsServiceClient(client)
 	client.LaunchConfig = newLaunchConfigClient(client)
 	client.SecondaryLaunchConfig = newSecondaryLaunchConfigClient(client)
+	client.AddRemoveLoadBalancerServiceLinkInput = newAddRemoveLoadBalancerServiceLinkInputClient(client)
+	client.SetLoadBalancerServiceLinksInput = newSetLoadBalancerServiceLinksInputClient(client)
+	client.LoadBalancerServiceLink = newLoadBalancerServiceLinkClient(client)
 	client.Account = newAccountClient(client)
 	client.Agent = newAgentClient(client)
 	client.Certificate = newCertificateClient(client)
@@ -222,6 +234,8 @@ func constructClient() *RancherClient {
 	client.ResourceDefinition = newResourceDefinitionClient(client)
 	client.StateTransition = newStateTransitionClient(client)
 	client.Githubconfig = newGithubconfigClient(client)
+	client.Identity = newIdentityClient(client)
+	client.Ldapconfig = newLdapconfigClient(client)
 	client.StatsAccess = newStatsAccessClient(client)
 	client.Amazonec2Config = newAmazonec2ConfigClient(client)
 	client.AzureConfig = newAzureConfigClient(client)

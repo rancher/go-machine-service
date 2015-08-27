@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	tu "github.com/rancherio/go-machine-service/test_utils"
-	"github.com/rancherio/go-rancher/client"
+	tu "github.com/rancher/go-machine-service/test_utils"
+	"github.com/rancher/go-rancher/client"
 )
 
 const eventServerPort string = "8005"

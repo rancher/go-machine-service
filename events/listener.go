@@ -35,6 +35,7 @@ type EventRouter struct {
 	workerCount   int
 	eventStream   *websocket.Conn
 	mu            *sync.Mutex
+	resourceName  string
 }
 
 type ProcessConfig struct {
@@ -80,7 +81,7 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 	for event, handler := range router.eventHandlers {
 		processConfig := ProcessConfig{
 			Name:    event,
-			OnError: "physicalhost.error",
+			OnError: router.resourceName + ".error",
 		}
 		externalHandler.ProcessConfigs[idx] = processConfig
 		fullEventKey := event + eventHandlerSuffix
@@ -205,7 +206,7 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 }
 
 func NewEventRouter(name string, priority int, apiUrl string, accessKey string, secretKey string,
-	apiClient *client.RancherClient, eventHandlers map[string]EventHandler, workerCount int) (*EventRouter, error) {
+	apiClient *client.RancherClient, eventHandlers map[string]EventHandler, resourceName string, workerCount int) (*EventRouter, error) {
 
 	if apiClient == nil {
 		var err error
@@ -234,6 +235,7 @@ func NewEventRouter(name string, priority int, apiUrl string, accessKey string, 
 		eventHandlers: eventHandlers,
 		workerCount:   workerCount,
 		mu:            &sync.Mutex{},
+		resourceName:  resourceName,
 	}, nil
 }
 

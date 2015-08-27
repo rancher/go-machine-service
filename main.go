@@ -32,7 +32,7 @@ func main() {
 	secretKey := os.Getenv("CATTLE_SECRET_KEY")
 
 	router, err := events.NewEventRouter("goMachineService", 2000, apiUrl, accessKey, secretKey,
-		nil, eventHandlers, 10)
+		nil, eventHandlers, "physicalhost", 10)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"Err": err,

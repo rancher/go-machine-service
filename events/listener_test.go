@@ -29,7 +29,7 @@ func newRouter(eventHandlers map[string]EventHandler, workerCount int, t *testin
 	}
 	fakeApiClient := &client.RancherClient{}
 	router, err := NewEventRouter("testRouter", 2000, baseUrl, "accKey", "secret", fakeApiClient,
-		eventHandlers, workerCount)
+		eventHandlers, "physicalhost", workerCount)
 	if err != nil {
 		t.Fatal(err)
 	}

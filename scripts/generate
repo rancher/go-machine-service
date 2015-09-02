@@ -10,9 +10,9 @@ if [[ -z "$IN_DOCKER" ]]; then
     if [[ 0 -eq $(docker images | grep -ci $GITCOMMIT) ]]; then
         docker build --pull --force-rm -t $GITCOMMIT -f `pwd`/$BASEDIR/../generator/Dockerfile $BASEDIR/..
     fi
-    docker run -v `pwd`/$BASEDIR/..:/go/src/github.com/rancherio/go-machine-service/ -e "IN_DOCKER=true" --entrypoint /go/src/github.com/rancherio/go-machine-service/scripts/generate $GITCOMMIT  
+    docker run -v `pwd`/$BASEDIR/..:/go/src/github.com/rancher/go-machine-service/ -e "IN_DOCKER=true" --entrypoint /go/src/github.com/rancher/go-machine-service/scripts/generate $GITCOMMIT  
 else
-    cd /go/src/github.com/rancherio/go-machine-service/generator
+    cd /go/src/github.com/rancher/go-machine-service/generator
     if [[ -e generated/* ]]; then
         rm -r generated/*
     fi

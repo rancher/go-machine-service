@@ -27,7 +27,5 @@ _testmain.go
 
 go-machine-service
 
-generator/generated/*
-
 build
 dist

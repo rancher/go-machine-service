@@ -24,7 +24,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/docker/machine/drivers"
-	"github.com/rancherio/go-machine-service/generator/helpers"
+	"github.com/rancher/go-machine-service/generator/helpers"
 )
 
 func main() {
@@ -124,6 +124,14 @@ func fetchData() (*helpers.ResourceData, error) {
 					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
 				}
 				flagType = "boolean"
+				description = flag.Usage
+			case cli.StringSliceFlag:
+				flag := flagStruct.(cli.StringSliceFlag)
+				flagName, err = getRancherName(flag.Name)
+				if err != nil {
+					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
+				}
+				flagType = "array[string]"
 				description = flag.Usage
 			default:
 				return nil, fmt.Errorf("unknown type of flag %v, for driver=%s", flagStruct, driver)

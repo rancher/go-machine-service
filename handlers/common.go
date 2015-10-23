@@ -243,6 +243,11 @@ func createExtractedConfig(event *events.Event, machine *client.Machine) (string
 			continue
 		}
 
+		if strings.HasSuffix(fileInfo.Name(), ".iso") {
+			// Ignore b2d ISO
+			continue
+		}
+
 		file, err := os.Open(filepath.Join(machineDir, fileInfo.Name()))
 		if err != nil {
 			return "", err

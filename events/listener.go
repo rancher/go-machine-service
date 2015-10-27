@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -38,24 +39,28 @@ type EventRouter struct {
 	resourceName  string
 }
 
-type ProcessConfig struct {
-	Name    string `json:"name"`
-	OnError string `json:"onError"`
+// The difference between Start and StartWithoutCreate is a matter of making this event router
+// more generally usable. The current go-machine-service implementation creates
+// the necessary ExternalHandler upon start up. This router has been refactor to
+// be used in situations where creating an externalHandler is not desired.
+// This allows the router to be used for Agent connections and for ExternalHandlers
+// that are created outside of this router (we want to refactor gms to be that way).
+func (router *EventRouter) Start(ready chan<- bool) error {
+	err := router.createExternalHandler()
+	if err != nil {
+		return err
+	}
+	eventSuffix := ";handler=" + router.name
+	return router.run(ready, eventSuffix)
 }
 
-func (router *EventRouter) Start(ready chan<- bool) (err error) {
-	workers := make(chan *Worker, router.workerCount)
-	for i := 0; i < router.workerCount; i++ {
-		w := newWorker()
-		workers <- w
-	}
+func (router *EventRouter) StartWithoutCreate(ready chan<- bool) error {
+	return router.run(ready, "")
+}
 
-	log.WithFields(log.Fields{
-		"workerCount": router.workerCount,
-	}).Info("Initializing event router")
-
+func (router *EventRouter) createExternalHandler() error {
 	// If it exists, delete it, then create it
-	err = removeOldHandler(router.name, router.apiClient)
+	err := removeOldHandler(router.name, router.apiClient)
 	if err != nil {
 		return err
 	}
@@ -67,6 +72,32 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 		ProcessConfigs: make([]interface{}, len(router.eventHandlers)),
 	}
 
+	idx := 0
+	for event := range router.eventHandlers {
+		externalHandler.ProcessConfigs[idx] = ProcessConfig{
+			Name:    event,
+			OnError: router.resourceName + ".error",
+		}
+		idx++
+	}
+	err = createNewHandler(externalHandler, router.apiClient)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (router *EventRouter) run(ready chan<- bool, eventSuffix string) (err error) {
+	workers := make(chan *Worker, router.workerCount)
+	for i := 0; i < router.workerCount; i++ {
+		w := newWorker()
+		workers <- w
+	}
+
+	log.WithFields(log.Fields{
+		"workerCount": router.workerCount,
+	}).Info("Initializing event router")
+
 	handlers := map[string]EventHandler{}
 
 	if pingHandler, ok := router.eventHandlers["ping"]; ok {
@@ -75,23 +106,11 @@ func (router *EventRouter) Start(ready chan<- bool) (err error) {
 		handlers["ping"] = pingHandler
 	}
 
-	idx := 0
 	subscribeParams := url.Values{}
-	eventHandlerSuffix := ";handler=" + router.name
 	for event, handler := range router.eventHandlers {
-		processConfig := ProcessConfig{
-			Name:    event,
-			OnError: router.resourceName + ".error",
-		}
-		externalHandler.ProcessConfigs[idx] = processConfig
-		fullEventKey := event + eventHandlerSuffix
+		fullEventKey := event + eventSuffix
 		subscribeParams.Add("eventNames", fullEventKey)
 		handlers[fullEventKey] = handler
-		idx++
-	}
-	err = createNewHandler(externalHandler, router.apiClient)
-	if err != nil {
-		return err
 	}
 
 	eventStream, err := subscribeToEvents(router.subscribeUrl, router.accessKey, router.secretKey, subscribeParams)
@@ -143,7 +162,6 @@ func (router *EventRouter) Stop() (err error) {
 	return nil
 }
 
-// TODO Privatize worker
 type Worker struct {
 }
 
@@ -248,15 +266,20 @@ func subscribeToEvents(subscribeUrl string, accessKey string, secretKey string, 
 	headers := http.Header{}
 	headers.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(accessKey+":"+secretKey)))
 	subscribeUrl = subscribeUrl + "?" + data.Encode()
-	ws, _, err := dialer.Dial(subscribeUrl, headers)
+	ws, resp, err := dialer.Dial(subscribeUrl, headers)
 	if err != nil {
+		defer resp.Body.Close()
+		body, _ := ioutil.ReadAll(resp.Body)
 		log.WithFields(log.Fields{
-			"error":        err,
-			"subscribeUrl": subscribeUrl,
+			"status":          resp.Status,
+			"statusCode":      resp.StatusCode,
+			"responseHeaders": resp.Header,
+			"responseBody":    string(body[:]),
+			"error":           err,
+			"subscribeUrl":    subscribeUrl,
 		}).Error("Failed to subscribe to events.")
 		return nil, err
 	}
-
 	return ws, nil
 }
 
@@ -315,6 +338,11 @@ var removeOldHandler = func(name string, apiClient *client.RancherClient) error 
 		}
 	}
 	return nil
+}
+
+type ProcessConfig struct {
+	Name    string `json:"name"`
+	OnError string `json:"onError"`
 }
 
 type doneTranitioningFunc func() (bool, error)

@@ -1,5 +1,6 @@
 from golang
 RUN go get github.com/Sirupsen/logrus
+RUN go get github.com/ubiquityhosting/GoUbi
 
 RUN mkdir -p /go/src/github.com/docker/
 WORKDIR /go/src/github.com/docker/

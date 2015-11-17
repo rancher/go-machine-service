@@ -7,15 +7,9 @@ const (
 type ServiceUpgrade struct {
 	Resource
 
-	BatchSize int64 `json:"batchSize,omitempty" yaml:"batch_size,omitempty"`
+	InServiceStrategy *InServiceUpgradeStrategy `json:"inServiceStrategy,omitempty" yaml:"in_service_strategy,omitempty"`
 
-	FinalScale int64 `json:"finalScale,omitempty" yaml:"final_scale,omitempty"`
-
-	IntervalMillis int64 `json:"intervalMillis,omitempty" yaml:"interval_millis,omitempty"`
-
-	ToServiceId string `json:"toServiceId,omitempty" yaml:"to_service_id,omitempty"`
-
-	UpdateLinks bool `json:"updateLinks,omitempty" yaml:"update_links,omitempty"`
+	ToServiceStrategy *ToServiceUpgradeStrategy `json:"toServiceStrategy,omitempty" yaml:"to_service_strategy,omitempty"`
 }
 
 type ServiceUpgradeCollection struct {
@@ -62,6 +56,11 @@ func (c *ServiceUpgradeClient) List(opts *ListOpts) (*ServiceUpgradeCollection, 
 func (c *ServiceUpgradeClient) ById(id string) (*ServiceUpgrade, error) {
 	resp := &ServiceUpgrade{}
 	err := c.rancherClient.doById(SERVICE_UPGRADE_TYPE, id, resp)
+	if apiError, ok := err.(*ApiError); ok {
+		if apiError.StatusCode == 404 {
+			return nil, nil
+		}
+	}
 	return resp, err
 }
 

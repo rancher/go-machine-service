@@ -17,15 +17,25 @@ type Environment struct {
 
 	DockerCompose string `json:"dockerCompose,omitempty" yaml:"docker_compose,omitempty"`
 
+	Environment map[string]interface{} `json:"environment,omitempty" yaml:"environment,omitempty"`
+
+	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
+
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+
+	Outputs map[string]interface{} `json:"outputs,omitempty" yaml:"outputs,omitempty"`
+
+	PreviousExternalId string `json:"previousExternalId,omitempty" yaml:"previous_external_id,omitempty"`
 
 	RancherCompose string `json:"rancherCompose,omitempty" yaml:"rancher_compose,omitempty"`
 
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
+
+	StartOnCreate bool `json:"startOnCreate,omitempty" yaml:"start_on_create,omitempty"`
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
@@ -54,15 +64,31 @@ type EnvironmentOperations interface {
 	ById(id string) (*Environment, error)
 	Delete(container *Environment) error
 
+	ActionActivateservices(*Environment) (*Environment, error)
+
+	ActionAddoutputs(*Environment, *AddOutputsInput) (*Environment, error)
+
+	ActionCancelrollback(*Environment) (*Environment, error)
+
+	ActionCancelupgrade(*Environment) (*Environment, error)
+
 	ActionCreate(*Environment) (*Environment, error)
+
+	ActionDeactivateservices(*Environment) (*Environment, error)
 
 	ActionError(*Environment) (*Environment, error)
 
 	ActionExportconfig(*Environment, *ComposeConfigInput) (*ComposeConfig, error)
 
+	ActionFinishupgrade(*Environment) (*Environment, error)
+
 	ActionRemove(*Environment) (*Environment, error)
 
+	ActionRollback(*Environment) (*Environment, error)
+
 	ActionUpdate(*Environment) (*Environment, error)
+
+	ActionUpgrade(*Environment, *EnvironmentUpgrade) (*Environment, error)
 }
 
 func newEnvironmentClient(rancherClient *RancherClient) *EnvironmentClient {
@@ -92,6 +118,11 @@ func (c *EnvironmentClient) List(opts *ListOpts) (*EnvironmentCollection, error)
 func (c *EnvironmentClient) ById(id string) (*Environment, error) {
 	resp := &Environment{}
 	err := c.rancherClient.doById(ENVIRONMENT_TYPE, id, resp)
+	if apiError, ok := err.(*ApiError); ok {
+		if apiError.StatusCode == 404 {
+			return nil, nil
+		}
+	}
 	return resp, err
 }
 
@@ -99,11 +130,56 @@ func (c *EnvironmentClient) Delete(container *Environment) error {
 	return c.rancherClient.doResourceDelete(ENVIRONMENT_TYPE, &container.Resource)
 }
 
+func (c *EnvironmentClient) ActionActivateservices(resource *Environment) (*Environment, error) {
+
+	resp := &Environment{}
+
+	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "activateservices", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *EnvironmentClient) ActionAddoutputs(resource *Environment, input *AddOutputsInput) (*Environment, error) {
+
+	resp := &Environment{}
+
+	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "addoutputs", &resource.Resource, input, resp)
+
+	return resp, err
+}
+
+func (c *EnvironmentClient) ActionCancelrollback(resource *Environment) (*Environment, error) {
+
+	resp := &Environment{}
+
+	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "cancelrollback", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *EnvironmentClient) ActionCancelupgrade(resource *Environment) (*Environment, error) {
+
+	resp := &Environment{}
+
+	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "cancelupgrade", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
 func (c *EnvironmentClient) ActionCreate(resource *Environment) (*Environment, error) {
 
 	resp := &Environment{}
 
 	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "create", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *EnvironmentClient) ActionDeactivateservices(resource *Environment) (*Environment, error) {
+
+	resp := &Environment{}
+
+	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "deactivateservices", &resource.Resource, nil, resp)
 
 	return resp, err
 }
@@ -126,6 +202,15 @@ func (c *EnvironmentClient) ActionExportconfig(resource *Environment, input *Com
 	return resp, err
 }
 
+func (c *EnvironmentClient) ActionFinishupgrade(resource *Environment) (*Environment, error) {
+
+	resp := &Environment{}
+
+	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "finishupgrade", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
 func (c *EnvironmentClient) ActionRemove(resource *Environment) (*Environment, error) {
 
 	resp := &Environment{}
@@ -135,11 +220,29 @@ func (c *EnvironmentClient) ActionRemove(resource *Environment) (*Environment, e
 	return resp, err
 }
 
+func (c *EnvironmentClient) ActionRollback(resource *Environment) (*Environment, error) {
+
+	resp := &Environment{}
+
+	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "rollback", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
 func (c *EnvironmentClient) ActionUpdate(resource *Environment) (*Environment, error) {
 
 	resp := &Environment{}
 
 	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "update", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *EnvironmentClient) ActionUpgrade(resource *Environment, input *EnvironmentUpgrade) (*Environment, error) {
+
+	resp := &Environment{}
+
+	err := c.rancherClient.doAction(ENVIRONMENT_TYPE, "upgrade", &resource.Resource, input, resp)
 
 	return resp, err
 }

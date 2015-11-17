@@ -51,8 +51,28 @@ func newApiError(resp *http.Response, url string) *ApiError {
 	} else {
 		body = string(contents)
 	}
-	formattedMsg := fmt.Sprintf("Bad response from [%s], statusCode [%d]. Status [%s]. Body: [%s]",
-		url, resp.StatusCode, resp.Status, body)
+
+	data := map[string]interface{}{}
+	if json.Unmarshal(contents, &data) == nil {
+		delete(data, "id")
+		delete(data, "links")
+		delete(data, "actions")
+		delete(data, "type")
+		delete(data, "status")
+		buf := &bytes.Buffer{}
+		for k, v := range data {
+			if v == nil {
+				continue
+			}
+			if buf.Len() > 0 {
+				buf.WriteString(", ")
+			}
+			fmt.Fprintf(buf, "%s=%v", k, v)
+		}
+		body = buf.String()
+	}
+	formattedMsg := fmt.Sprintf("Bad response statusCode [%d]. Status [%s]. Body: [%s] from [%s]",
+		resp.StatusCode, resp.Status, body, url)
 	return &ApiError{
 		Url:        url,
 		Msg:        formattedMsg,
@@ -319,9 +339,16 @@ func (rancherClient *RancherBaseClient) doModify(method string, url string, crea
 	return nil
 }
 
+func (rancherClient *RancherBaseClient) Create(schemaType string, createObj interface{}, respObject interface{}) error {
+	return rancherClient.doCreate(schemaType, createObj, respObject)
+}
+
 func (rancherClient *RancherBaseClient) doCreate(schemaType string, createObj interface{}, respObject interface{}) error {
 	if createObj == nil {
 		createObj = map[string]string{}
+	}
+	if respObject == nil {
+		respObject = &map[string]interface{}{}
 	}
 	schema, ok := rancherClient.Types[schemaType]
 	if !ok {
@@ -344,6 +371,10 @@ func (rancherClient *RancherBaseClient) doCreate(schemaType string, createObj in
 	return rancherClient.doModify("POST", collectionUrl, createObj, respObject)
 }
 
+func (rancherClient *RancherBaseClient) Update(schemaType string, existing *Resource, updates interface{}, respObject interface{}) error {
+	return rancherClient.doUpdate(schemaType, existing, updates, respObject)
+}
+
 func (rancherClient *RancherBaseClient) doUpdate(schemaType string, existing *Resource, updates interface{}, respObject interface{}) error {
 	if existing == nil {
 		return errors.New("Existing object is nil")
@@ -356,6 +387,10 @@ func (rancherClient *RancherBaseClient) doUpdate(schemaType string, existing *Re
 
 	if updates == nil {
 		updates = map[string]string{}
+	}
+
+	if respObject == nil {
+		respObject = &map[string]interface{}{}
 	}
 
 	schema, ok := rancherClient.Types[schemaType]

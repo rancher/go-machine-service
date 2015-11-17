@@ -17,12 +17,17 @@ type RancherClient struct {
 	InstanceHealthCheck                      InstanceHealthCheckOperations
 	ServiceLink                              ServiceLinkOperations
 	ServiceUpgrade                           ServiceUpgradeOperations
+	ServiceUpgradeStrategy                   ServiceUpgradeStrategyOperations
+	InServiceUpgradeStrategy                 InServiceUpgradeStrategyOperations
+	ToServiceUpgradeStrategy                 ToServiceUpgradeStrategyOperations
 	AddLoadBalancerInput                     AddLoadBalancerInputOperations
+	AddOutputsInput                          AddOutputsInputOperations
 	AddRemoveClusterHostInput                AddRemoveClusterHostInputOperations
 	AddRemoveLoadBalancerHostInput           AddRemoveLoadBalancerHostInputOperations
 	AddRemoveLoadBalancerListenerInput       AddRemoveLoadBalancerListenerInputOperations
 	AddRemoveLoadBalancerTargetInput         AddRemoveLoadBalancerTargetInputOperations
 	AddRemoveServiceLinkInput                AddRemoveServiceLinkInputOperations
+	ChangeSecretInput                        ChangeSecretInputOperations
 	SetLabelsInput                           SetLabelsInputOperations
 	ApiKey                                   ApiKeyOperations
 	Cluster                                  ClusterOperations
@@ -33,6 +38,7 @@ type RancherClient struct {
 	InstanceStop                             InstanceStopOperations
 	IpAddressAssociateInput                  IpAddressAssociateInputOperations
 	Project                                  ProjectOperations
+	Password                                 PasswordOperations
 	Registry                                 RegistryOperations
 	RegistryCredential                       RegistryCredentialOperations
 	RemoveLoadBalancerInput                  RemoveLoadBalancerInputOperations
@@ -49,6 +55,13 @@ type RancherClient struct {
 	AddRemoveLoadBalancerServiceLinkInput    AddRemoveLoadBalancerServiceLinkInputOperations
 	SetLoadBalancerServiceLinksInput         SetLoadBalancerServiceLinksInputOperations
 	LoadBalancerServiceLink                  LoadBalancerServiceLinkOperations
+	PullTask                                 PullTaskOperations
+	ExternalVolumeEvent                      ExternalVolumeEventOperations
+	ExternalStoragePoolEvent                 ExternalStoragePoolEventOperations
+	ExternalServiceEvent                     ExternalServiceEventOperations
+	EnvironmentUpgrade                       EnvironmentUpgradeOperations
+	ExternalDnsEvent                         ExternalDnsEventOperations
+	ExternalHostEvent                        ExternalHostEventOperations
 	Account                                  AccountOperations
 	Agent                                    AgentOperations
 	Certificate                              CertificateOperations
@@ -59,6 +72,7 @@ type RancherClient struct {
 	Databasechangelog                        DatabasechangelogOperations
 	Databasechangeloglock                    DatabasechangeloglockOperations
 	Environment                              EnvironmentOperations
+	ExternalEvent                            ExternalEventOperations
 	ExternalHandler                          ExternalHandlerOperations
 	ExternalHandlerExternalHandlerProcessMap ExternalHandlerExternalHandlerProcessMapOperations
 	ExternalHandlerProcess                   ExternalHandlerProcessOperations
@@ -107,6 +121,7 @@ type RancherClient struct {
 	Githubconfig                             GithubconfigOperations
 	Identity                                 IdentityOperations
 	Ldapconfig                               LdapconfigOperations
+	LocalAuthConfig                          LocalAuthConfigOperations
 	StatsAccess                              StatsAccessOperations
 	Amazonec2Config                          Amazonec2ConfigOperations
 	AzureConfig                              AzureConfigOperations
@@ -116,6 +131,7 @@ type RancherClient struct {
 	PacketConfig                             PacketConfigOperations
 	RackspaceConfig                          RackspaceConfigOperations
 	SoftlayerConfig                          SoftlayerConfigOperations
+	UbiquityConfig                           UbiquityConfigOperations
 	VirtualboxConfig                         VirtualboxConfigOperations
 	VmwarevcloudairConfig                    VmwarevcloudairConfigOperations
 	VmwarevsphereConfig                      VmwarevsphereConfigOperations
@@ -146,12 +162,17 @@ func constructClient() *RancherClient {
 	client.InstanceHealthCheck = newInstanceHealthCheckClient(client)
 	client.ServiceLink = newServiceLinkClient(client)
 	client.ServiceUpgrade = newServiceUpgradeClient(client)
+	client.ServiceUpgradeStrategy = newServiceUpgradeStrategyClient(client)
+	client.InServiceUpgradeStrategy = newInServiceUpgradeStrategyClient(client)
+	client.ToServiceUpgradeStrategy = newToServiceUpgradeStrategyClient(client)
 	client.AddLoadBalancerInput = newAddLoadBalancerInputClient(client)
+	client.AddOutputsInput = newAddOutputsInputClient(client)
 	client.AddRemoveClusterHostInput = newAddRemoveClusterHostInputClient(client)
 	client.AddRemoveLoadBalancerHostInput = newAddRemoveLoadBalancerHostInputClient(client)
 	client.AddRemoveLoadBalancerListenerInput = newAddRemoveLoadBalancerListenerInputClient(client)
 	client.AddRemoveLoadBalancerTargetInput = newAddRemoveLoadBalancerTargetInputClient(client)
 	client.AddRemoveServiceLinkInput = newAddRemoveServiceLinkInputClient(client)
+	client.ChangeSecretInput = newChangeSecretInputClient(client)
 	client.SetLabelsInput = newSetLabelsInputClient(client)
 	client.ApiKey = newApiKeyClient(client)
 	client.Cluster = newClusterClient(client)
@@ -162,6 +183,7 @@ func constructClient() *RancherClient {
 	client.InstanceStop = newInstanceStopClient(client)
 	client.IpAddressAssociateInput = newIpAddressAssociateInputClient(client)
 	client.Project = newProjectClient(client)
+	client.Password = newPasswordClient(client)
 	client.Registry = newRegistryClient(client)
 	client.RegistryCredential = newRegistryCredentialClient(client)
 	client.RemoveLoadBalancerInput = newRemoveLoadBalancerInputClient(client)
@@ -178,6 +200,13 @@ func constructClient() *RancherClient {
 	client.AddRemoveLoadBalancerServiceLinkInput = newAddRemoveLoadBalancerServiceLinkInputClient(client)
 	client.SetLoadBalancerServiceLinksInput = newSetLoadBalancerServiceLinksInputClient(client)
 	client.LoadBalancerServiceLink = newLoadBalancerServiceLinkClient(client)
+	client.PullTask = newPullTaskClient(client)
+	client.ExternalVolumeEvent = newExternalVolumeEventClient(client)
+	client.ExternalStoragePoolEvent = newExternalStoragePoolEventClient(client)
+	client.ExternalServiceEvent = newExternalServiceEventClient(client)
+	client.EnvironmentUpgrade = newEnvironmentUpgradeClient(client)
+	client.ExternalDnsEvent = newExternalDnsEventClient(client)
+	client.ExternalHostEvent = newExternalHostEventClient(client)
 	client.Account = newAccountClient(client)
 	client.Agent = newAgentClient(client)
 	client.Certificate = newCertificateClient(client)
@@ -188,6 +217,7 @@ func constructClient() *RancherClient {
 	client.Databasechangelog = newDatabasechangelogClient(client)
 	client.Databasechangeloglock = newDatabasechangeloglockClient(client)
 	client.Environment = newEnvironmentClient(client)
+	client.ExternalEvent = newExternalEventClient(client)
 	client.ExternalHandler = newExternalHandlerClient(client)
 	client.ExternalHandlerExternalHandlerProcessMap = newExternalHandlerExternalHandlerProcessMapClient(client)
 	client.ExternalHandlerProcess = newExternalHandlerProcessClient(client)
@@ -236,6 +266,7 @@ func constructClient() *RancherClient {
 	client.Githubconfig = newGithubconfigClient(client)
 	client.Identity = newIdentityClient(client)
 	client.Ldapconfig = newLdapconfigClient(client)
+	client.LocalAuthConfig = newLocalAuthConfigClient(client)
 	client.StatsAccess = newStatsAccessClient(client)
 	client.Amazonec2Config = newAmazonec2ConfigClient(client)
 	client.AzureConfig = newAzureConfigClient(client)
@@ -245,6 +276,7 @@ func constructClient() *RancherClient {
 	client.PacketConfig = newPacketConfigClient(client)
 	client.RackspaceConfig = newRackspaceConfigClient(client)
 	client.SoftlayerConfig = newSoftlayerConfigClient(client)
+	client.UbiquityConfig = newUbiquityConfigClient(client)
 	client.VirtualboxConfig = newVirtualboxConfigClient(client)
 	client.VmwarevcloudairConfig = newVmwarevcloudairConfigClient(client)
 	client.VmwarevsphereConfig = newVmwarevsphereConfigClient(client)

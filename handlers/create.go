@@ -219,6 +219,13 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	sDriver := strings.ToLower(machine.Driver)
 	cmd := []string{"create", "-d", sDriver}
 
+	cmd = append(cmd, buildEngineOpts("--engine-opt", machine.EngineOpts)...)
+	cmd = append(cmd, buildEngineOpts("--engine-env", machine.EngineEnv)...)
+	cmd = append(cmd, buildEngineOpts("--engine-insecure-registry", machine.EngineInsecureRegistry)...)
+	cmd = append(cmd, buildEngineOpts("--engine-label", machine.EngineLabel)...)
+	cmd = append(cmd, buildEngineOpts("--engine-registry-mirror", machine.EngineRegistryMirror)...)
+	cmd = append(cmd, buildEngineOpts("--engine-storage-driver", []string{machine.EngineStorageDriver})...)
+
 	valueOfMachine := reflect.ValueOf(machine).Elem()
 
 	// Grab the reflected Value of XyzConfig (i.e. DigitaloceanConfig) based on the machine driver
@@ -258,4 +265,15 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	cmd = append(cmd, machine.Name)
 	log.Infof("Cmd slice: %v", cmd)
 	return cmd, nil
+}
+
+func buildEngineOpts(name string, values []string) []string {
+	opts := []string{}
+	for _, value := range values {
+		if value == "" {
+			continue
+		}
+		opts = append(opts, name, value)
+	}
+	return opts
 }

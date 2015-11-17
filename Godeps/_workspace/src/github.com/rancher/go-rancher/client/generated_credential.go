@@ -64,8 +64,6 @@ type CredentialOperations interface {
 
 	ActionRemove(*Credential) (*Credential, error)
 
-	ActionRestore(*Credential) (*Credential, error)
-
 	ActionUpdate(*Credential) (*Credential, error)
 }
 
@@ -96,6 +94,11 @@ func (c *CredentialClient) List(opts *ListOpts) (*CredentialCollection, error) {
 func (c *CredentialClient) ById(id string) (*Credential, error) {
 	resp := &Credential{}
 	err := c.rancherClient.doById(CREDENTIAL_TYPE, id, resp)
+	if apiError, ok := err.(*ApiError); ok {
+		if apiError.StatusCode == 404 {
+			return nil, nil
+		}
+	}
 	return resp, err
 }
 
@@ -144,15 +147,6 @@ func (c *CredentialClient) ActionRemove(resource *Credential) (*Credential, erro
 	resp := &Credential{}
 
 	err := c.rancherClient.doAction(CREDENTIAL_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *CredentialClient) ActionRestore(resource *Credential) (*Credential, error) {
-
-	resp := &Credential{}
-
-	err := c.rancherClient.doAction(CREDENTIAL_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

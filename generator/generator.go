@@ -4,27 +4,16 @@ package main
 
 import (
 	"fmt"
+	"net/rpc"
 	"os"
+	"reflect"
 	"strings"
-
-	_ "github.com/docker/machine/drivers/amazonec2"
-	_ "github.com/docker/machine/drivers/azure"
-	_ "github.com/docker/machine/drivers/digitalocean"
-	_ "github.com/docker/machine/drivers/exoscale"
-	//	_ "github.com/docker/machine/drivers/google"
-	_ "github.com/docker/machine/drivers/hyperv"
-	_ "github.com/docker/machine/drivers/packet"
-	_ "github.com/docker/machine/drivers/rackspace"
-	_ "github.com/docker/machine/drivers/softlayer"
-	_ "github.com/docker/machine/drivers/ubiquityhosting"
-	_ "github.com/docker/machine/drivers/virtualbox"
-	_ "github.com/docker/machine/drivers/vmwarefusion"
-	_ "github.com/docker/machine/drivers/vmwarevcloudair"
-	_ "github.com/docker/machine/drivers/vmwarevsphere"
+	"unsafe"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/codegangsta/cli"
-	"github.com/docker/machine/drivers"
+	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
+	rpcdriver "github.com/docker/machine/libmachine/drivers/rpc"
+	cli "github.com/docker/machine/libmachine/mcnflag"
 	"github.com/rancher/go-machine-service/generator/helpers"
 )
 
@@ -72,11 +61,48 @@ func loadBlacklist() []string {
 	return []string{}
 }
 
+func getDriverNames() []string {
+	return []string{"amazonec2", "azure", "digitalocean", "exoscale", "packet", "rackspace", "softlayer", "ubiquity", "virtualbox", "vmwarefusion", "vmwarevcloudair", "vmwarevsphere"}
+}
+
+func getCreateFlagsForDriver(driver string) ([]cli.Flag, error) {
+	p, err := localbinary.NewPlugin(driver)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		if err := p.Serve(); err != nil {
+			log.Fatalf("Error starting plugin server for driver=%s, err=%v", driver, err)
+		}
+	}()
+
+	addr, err := p.Address()
+	if err != nil {
+		panic("Error attempting to get plugin server address for RPC")
+	}
+
+	rpcclient, err := rpc.DialHTTP("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("Error dialing to plugin server's address(%v), err=%v", addr, err)
+	}
+
+	c := rpcdriver.NewInternalClient(rpcclient)
+
+	var flags []cli.Flag
+
+	if err := c.Call("RPCServerDriver.GetCreateFlags", struct{}{}, &flags); err != nil {
+		return nil, fmt.Errorf("Error getting flags err=%v", err)
+	}
+
+	return flags, nil
+}
+
 func fetchData() (*helpers.ResourceData, error) {
 	blacklist := loadBlacklist()
 	resourceMap := make(map[string]helpers.ResourceFields)
 	documentationMap := make(map[string][]helpers.DocumentationFields)
-	for _, driver := range drivers.GetDriverNames() {
+	for _, driver := range getDriverNames() {
 		resourceFieldStruct := make(helpers.ResourceFields)
 		resourceFieldMap := make(helpers.ResourceFieldConfigs)
 		resourceFieldStruct["resourceFields"] = resourceFieldMap
@@ -86,54 +112,47 @@ func fetchData() (*helpers.ResourceData, error) {
 		documentationFieldStruct.ResourceFields = documentationFieldMap
 		documentationFieldStruct.Id = driver + "Config"
 		documentationMap[driver] = []helpers.DocumentationFields{*documentationFieldStruct}
-		createFlags, err := drivers.GetCreateFlagsForDriver(driver)
+		createFlags, err := getCreateFlagsForDriver(driver)
 		if err != nil {
 			return nil, fmt.Errorf("error getting create flags for driver=%s, err=%v", driver, err)
 		}
 		for _, flagStruct := range createFlags {
 			var flagName, flagType, description string
 			var err error
-			switch flagStruct.(type) {
-			case cli.StringFlag:
-				flag := flagStruct.(cli.StringFlag)
-				flagName, err = getRancherName(flag.Name)
+			flagPointer := reflect.ValueOf(flagStruct).Pointer()
+			switch reflect.TypeOf(flagStruct).String() {
+			case "*mcnflag.StringFlag":
+				flagName, err = getRancherName(flagStruct.String())
 				if err != nil {
 					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
 				}
 				flagType = "string"
-				description = flag.Usage
-			case cli.IntFlag:
-				flag := flagStruct.(cli.IntFlag)
-				flagName, err = getRancherName(flag.Name)
+				stringFlag := (*cli.StringFlag)(unsafe.Pointer(flagPointer))
+				description = stringFlag.Usage
+			case "*mcnflag.IntFlag":
+				flagName, err = getRancherName(flagStruct.String())
 				if err != nil {
 					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
 				}
 				flagType = "string"
-				description = flag.Usage
-			case cli.BoolFlag:
-				flag := flagStruct.(cli.BoolFlag)
-				flagName, err = getRancherName(flag.Name)
+				intFlag := (*cli.IntFlag)(unsafe.Pointer(flagPointer))
+				description = intFlag.Usage
+			case "*mcnflag.BoolFlag":
+				flagName, err = getRancherName(flagStruct.String())
 				if err != nil {
 					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
 				}
 				flagType = "boolean"
-				description = flag.Usage
-			case cli.BoolTFlag:
-				flag := flagStruct.(cli.BoolTFlag)
-				flagName, err = getRancherName(flag.Name)
-				if err != nil {
-					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
-				}
-				flagType = "boolean"
-				description = flag.Usage
-			case cli.StringSliceFlag:
-				flag := flagStruct.(cli.StringSliceFlag)
-				flagName, err = getRancherName(flag.Name)
+				booleanFlag := (*cli.BoolFlag)(unsafe.Pointer(flagPointer))
+				description = booleanFlag.Usage
+			case "*mcnflag.StringSliceFlag":
+				flagName, err = getRancherName(flagStruct.String())
 				if err != nil {
 					return nil, fmt.Errorf("error getting the rancher name of flagStruct=%v for driver=%s, err=%v", flagStruct, driver, err)
 				}
 				flagType = "array[string]"
-				description = flag.Usage
+				stringSliceFlag := (*cli.StringSliceFlag)(unsafe.Pointer(flagPointer))
+				description = stringSliceFlag.Usage
 			default:
 				return nil, fmt.Errorf("unknown type of flag %v, for driver=%s", flagStruct, driver)
 			}
@@ -141,7 +160,7 @@ func fetchData() (*helpers.ResourceData, error) {
 			resourceFieldMap[flagName] = helpers.ResourceFieldConfig{Type: flagType, Nullable: true, Required: false}
 		}
 	}
-	return &helpers.ResourceData{Blacklist: blacklist, Drivers: drivers.GetDriverNames(), ResourceMap: resourceMap, DocumentationMap: documentationMap}, nil
+	return &helpers.ResourceData{Blacklist: blacklist, Drivers: getDriverNames(), ResourceMap: resourceMap, DocumentationMap: documentationMap}, nil
 }
 
 func getRancherName(machineFlagName string) (string, error) {

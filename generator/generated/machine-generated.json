@@ -16,10 +16,6 @@
             "type": "exoscaleConfig",
             "nullable": true
         },
-        "openstackConfig": {
-            "type": "openstackConfig",
-            "nullable": true
-        },
         "packetConfig": {
             "type": "packetConfig",
             "nullable": true
@@ -38,6 +34,10 @@
         },
         "virtualboxConfig": {
             "type": "virtualboxConfig",
+            "nullable": true
+        },
+        "vmwarefusionConfig": {
+            "type": "vmwarefusionConfig",
             "nullable": true
         },
         "vmwarevcloudairConfig": {

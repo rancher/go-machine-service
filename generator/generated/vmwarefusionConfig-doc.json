@@ -1,0 +1,28 @@
+[
+    {
+        "id": "vmwarefusionConfig",
+        "resourceFields": {
+            "boot2dockerUrl": {
+                "description": "Fusion URL for boot2docker image"
+            },
+            "configdriveUrl": {
+                "description": "Fusion URL for cloud-init configdrive"
+            },
+            "cpuCount": {
+                "description": "number of CPUs for the machine (-1 to use the number of CPUs available)"
+            },
+            "diskSize": {
+                "description": "Fusion size of disk for host VM (in MB)"
+            },
+            "memorySize": {
+                "description": "Fusion size of memory for host VM (in MB)"
+            },
+            "sshPassword": {
+                "description": "SSH password"
+            },
+            "sshUser": {
+                "description": "SSH user"
+            }
+        }
+    }
+]

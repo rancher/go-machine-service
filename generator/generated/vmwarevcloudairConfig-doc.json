@@ -29,9 +29,6 @@
             "password": {
                 "description": "vCloud Air password"
             },
-            "provision": {
-                "description": "vCloud Air Install Docker binaries (default is true)"
-            },
             "publicip": {
                 "description": "vCloud Air Org Public IP to use"
             },

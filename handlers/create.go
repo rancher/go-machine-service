@@ -249,6 +249,10 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 			if f.String() != "" {
 				cmd = append(cmd, dmField, f.String())
 			}
+		case []string:
+			for i := 0; i < f.Len(); i++ {
+				cmd = append(cmd, dmField, f.Index(i).String())
+			}
 		default:
 			return nil, fmt.Errorf("Unsupported type: %v", f.Type())
 		}

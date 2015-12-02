@@ -9,8 +9,6 @@ type Ldapconfig struct {
 
 	AccessMode string `json:"accessMode,omitempty" yaml:"access_mode,omitempty"`
 
-	Configured bool `json:"configured,omitempty" yaml:"configured,omitempty"`
-
 	Domain string `json:"domain,omitempty" yaml:"domain,omitempty"`
 
 	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
@@ -92,6 +90,11 @@ func (c *LdapconfigClient) List(opts *ListOpts) (*LdapconfigCollection, error) {
 func (c *LdapconfigClient) ById(id string) (*Ldapconfig, error) {
 	resp := &Ldapconfig{}
 	err := c.rancherClient.doById(LDAPCONFIG_TYPE, id, resp)
+	if apiError, ok := err.(*ApiError); ok {
+		if apiError.StatusCode == 404 {
+			return nil, nil
+		}
+	}
 	return resp, err
 }
 

@@ -21,6 +21,8 @@ type ServiceExposeMap struct {
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
+	Managed bool `json:"managed,omitempty" yaml:"managed,omitempty"`
+
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
@@ -88,6 +90,11 @@ func (c *ServiceExposeMapClient) List(opts *ListOpts) (*ServiceExposeMapCollecti
 func (c *ServiceExposeMapClient) ById(id string) (*ServiceExposeMap, error) {
 	resp := &ServiceExposeMap{}
 	err := c.rancherClient.doById(SERVICE_EXPOSE_MAP_TYPE, id, resp)
+	if apiError, ok := err.(*ApiError); ok {
+		if apiError.StatusCode == 404 {
+			return nil, nil
+		}
+	}
 	return resp, err
 }
 

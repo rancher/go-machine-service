@@ -33,6 +33,8 @@ type Host struct {
 
 	PhysicalHostId string `json:"physicalHostId,omitempty" yaml:"physical_host_id,omitempty"`
 
+	PublicEndpoints []int64 `json:"publicEndpoints,omitempty" yaml:"public_endpoints,omitempty"`
+
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
@@ -70,6 +72,8 @@ type HostOperations interface {
 
 	ActionDeactivate(*Host) (*Host, error)
 
+	ActionDockersocket(*Host) (*HostAccess, error)
+
 	ActionPurge(*Host) (*Host, error)
 
 	ActionRemove(*Host) (*Host, error)
@@ -106,6 +110,11 @@ func (c *HostClient) List(opts *ListOpts) (*HostCollection, error) {
 func (c *HostClient) ById(id string) (*Host, error) {
 	resp := &Host{}
 	err := c.rancherClient.doById(HOST_TYPE, id, resp)
+	if apiError, ok := err.(*ApiError); ok {
+		if apiError.StatusCode == 404 {
+			return nil, nil
+		}
+	}
 	return resp, err
 }
 
@@ -136,6 +145,15 @@ func (c *HostClient) ActionDeactivate(resource *Host) (*Host, error) {
 	resp := &Host{}
 
 	err := c.rancherClient.doAction(HOST_TYPE, "deactivate", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *HostClient) ActionDockersocket(resource *Host) (*HostAccess, error) {
+
+	resp := &HostAccess{}
+
+	err := c.rancherClient.doAction(HOST_TYPE, "dockersocket", &resource.Resource, nil, resp)
 
 	return resp, err
 }

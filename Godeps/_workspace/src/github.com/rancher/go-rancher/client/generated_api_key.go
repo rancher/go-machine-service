@@ -64,8 +64,6 @@ type ApiKeyOperations interface {
 
 	ActionRemove(*ApiKey) (*Credential, error)
 
-	ActionRestore(*ApiKey) (*Credential, error)
-
 	ActionUpdate(*ApiKey) (*Credential, error)
 }
 
@@ -96,6 +94,11 @@ func (c *ApiKeyClient) List(opts *ListOpts) (*ApiKeyCollection, error) {
 func (c *ApiKeyClient) ById(id string) (*ApiKey, error) {
 	resp := &ApiKey{}
 	err := c.rancherClient.doById(API_KEY_TYPE, id, resp)
+	if apiError, ok := err.(*ApiError); ok {
+		if apiError.StatusCode == 404 {
+			return nil, nil
+		}
+	}
 	return resp, err
 }
 
@@ -144,15 +147,6 @@ func (c *ApiKeyClient) ActionRemove(resource *ApiKey) (*Credential, error) {
 	resp := &Credential{}
 
 	err := c.rancherClient.doAction(API_KEY_TYPE, "remove", &resource.Resource, nil, resp)
-
-	return resp, err
-}
-
-func (c *ApiKeyClient) ActionRestore(resource *ApiKey) (*Credential, error) {
-
-	resp := &Credential{}
-
-	err := c.rancherClient.doAction(API_KEY_TYPE, "restore", &resource.Resource, nil, resp)
 
 	return resp, err
 }

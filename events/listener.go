@@ -303,11 +303,14 @@ var removeOldHandler = func(name string, apiClient *client.RancherClient) error 
 			"handlerId": h.Id,
 		}).Debug("Removing old handler")
 		doneTransitioning := func() (bool, error) {
-			h, err := apiClient.ExternalHandler.ById(h.Id)
+			handler, err := apiClient.ExternalHandler.ById(h.Id)
 			if err != nil {
 				return false, err
 			}
-			return h.Transitioning != "yes", nil
+			if handler == nil {
+				return false, fmt.Errorf("Failed to lookup external handler %v.", handler.Id)
+			}
+			return handler.Transitioning != "yes", nil
 		}
 
 		if _, ok := h.Actions["deactivate"]; ok {
@@ -326,14 +329,16 @@ var removeOldHandler = func(name string, apiClient *client.RancherClient) error 
 		if err != nil {
 			return err
 		}
-		if _, ok := h.Actions["remove"]; ok {
-			h, err = apiClient.ExternalHandler.ActionRemove(h)
-			if err != nil {
-				return err
-			}
-			err = waitForTransition(doneTransitioning)
-			if err != nil {
-				return err
+		if h != nil {
+			if _, ok := h.Actions["remove"]; ok {
+				h, err = apiClient.ExternalHandler.ActionRemove(h)
+				if err != nil {
+					return err
+				}
+				err = waitForTransition(doneTransitioning)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

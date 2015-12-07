@@ -16,7 +16,10 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 
 	machine, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
-		return handleByIdError(err, event, apiClient)
+		return err
+	}
+	if machine == nil {
+		return notAMachineReply(event, apiClient)
 	}
 
 	machineDir, err := getMachineDir(machine)

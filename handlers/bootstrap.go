@@ -34,12 +34,15 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 
 	machine, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
-		return handleByIdError(err, event, apiClient)
+		return err
+	}
+	if machine == nil {
+		return notAMachineReply(event, apiClient)
 	}
 
 	machineDir, err := getMachineDir(machine)
 	if err != nil {
-		return handleByIdError(err, event, apiClient)
+		return err
 	}
 
 	defer func() {
@@ -56,13 +59,13 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 	// Idempotency. If the resource has the bootstrapped file, then it has been bootstrapped.
 	if _, err := os.Stat(bootstrappedFilePath); !os.IsNotExist(err) {
 		if data, err := ioutil.ReadFile(bootstrappedFilePath); err != nil {
-			return handleByIdError(err, event, apiClient)
+			return err
 		} else {
 			dataUpdates[bootstrappedAtField] = string(data)
 		}
 		extractedConfig, extractionErr := getIdempotentExtractedConfig(machine, machineDir, apiClient)
 		if extractionErr != nil {
-			return handleByIdError(err, event, apiClient)
+			return err
 		}
 		dataUpdates["+fields"] = map[string]interface{}{"extractedConfig": extractedConfig}
 		reply := newReply(event)
@@ -282,10 +285,14 @@ func waitForTokenToActivate(token *client.RegistrationToken,
 	timeoutAt := time.Now().Add(maxWait)
 	ticker := time.NewTicker(time.Millisecond * 250)
 	defer ticker.Stop()
+	tokenId := token.Id
 	for t := range ticker.C {
-		token, err := apiClient.RegistrationToken.ById(token.Id)
+		token, err := apiClient.RegistrationToken.ById(tokenId)
 		if err != nil {
 			return nil, err
+		}
+		if token == nil {
+			return nil, fmt.Errorf("Couldn't find token %v.", tokenId)
 		}
 		if token.State == "active" {
 			return token, nil

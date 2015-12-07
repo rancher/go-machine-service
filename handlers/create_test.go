@@ -4,8 +4,41 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-rancher/client"
 )
+
+func TestReplyForPhysicalHost(t *testing.T) {
+	// Assert that when the event is for a phyiscal host and not a machine that
+	// the create handler simply replies.
+	event := &events.Event{
+		ResourceId: "foo",
+		Id:         "event-id",
+		ReplyTo:    "reply-to-id",
+	}
+	mockApiClient := &client.RancherClient{}
+	mockApiClient.Machine = &MockMachineOperations{}
+	publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error {
+		if reply.Name != "reply-to-id" {
+			t.Logf("%+v", reply)
+			t.Fatalf("Reply not as expected: %+v")
+		}
+		return nil
+	}
+	err := CreateMachine(event, mockApiClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+type MockMachineOperations struct {
+	client.MachineClient
+}
+
+func (c *MockMachineOperations) ById(id string) (*client.Machine, error) {
+	// Return nil to indicate a 404
+	return nil, nil
+}
 
 func TestBuildMachineNoEngineOptsCreateCommand(t *testing.T) {
 	machine := new(client.Machine)

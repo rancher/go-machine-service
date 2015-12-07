@@ -35,7 +35,10 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err er
 
 	machine, err := getMachine(event.ResourceId, apiClient)
 	if err != nil {
-		return handleByIdError(err, event, apiClient)
+		return err
+	}
+	if machine == nil {
+		return notAMachineReply(event, apiClient)
 	}
 
 	// Idempotency. If the resource has the property, we're done.
@@ -46,7 +49,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err er
 
 	machineDir, err := buildBaseMachineDir(machine.ExternalId)
 	if err != nil {
-		return handleByIdError(err, event, apiClient)
+		return err
 	}
 
 	defer func() {
@@ -62,7 +65,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err er
 	if _, err := os.Stat(filepath.Join(machineDir, "machines", machine.Name, CREATED_FILE)); !os.IsNotExist(err) {
 		extractedConfig, extractionErr := getIdempotentExtractedConfig(machine, machineDir, apiClient)
 		if extractionErr != nil {
-			return handleByIdError(extractionErr, event, apiClient)
+			return extractionErr
 		}
 		dataUpdates["+fields"] = map[string]interface{}{"extractedConfig": extractedConfig}
 		reply := newReply(event)
@@ -73,7 +76,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err er
 	providerHandler := providers.GetProviderHandler(machine.Driver)
 
 	if err := providerHandler.HandleCreate(machine, machineDir); err != nil {
-		return handleByIdError(err, event, apiClient)
+		return err
 	}
 
 	command, err := buildCreateCommand(machine, machineDir)

@@ -222,6 +222,7 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	sDriver := strings.ToLower(machine.Driver)
 	cmd := []string{"create", "-d", sDriver}
 
+	cmd = append(cmd, buildEngineOpts("--engine-install-url", []string{machine.EngineInstallUrl})...)
 	cmd = append(cmd, buildEngineOpts("--engine-opt", machine.EngineOpts)...)
 	cmd = append(cmd, buildEngineOpts("--engine-env", machine.EngineEnv)...)
 	cmd = append(cmd, buildEngineOpts("--engine-insecure-registry", machine.EngineInsecureRegistry)...)

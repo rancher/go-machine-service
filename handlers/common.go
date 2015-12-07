@@ -103,12 +103,9 @@ var getMachine = func(id string, apiClient *client.RancherClient) (*client.Machi
 	return apiClient.Machine.ById(id)
 }
 
-func handleByIdError(err error, event *events.Event, apiClient *client.RancherClient) error {
-	apiError, ok := err.(*client.ApiError)
-	if !ok || apiError.StatusCode != 404 {
-		return err
-	}
-	// 404 Indicates this is a physicalHost but not a machine. Just reply.
+func notAMachineReply(event *events.Event, apiClient *client.RancherClient) error {
+	// Called when machine.ById() returned a 404, which indicates this is a
+	// physicalHost but not a machine. Just reply.
 	reply := newReply(event)
 	return publishReply(reply, apiClient)
 }

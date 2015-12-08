@@ -62,6 +62,7 @@ func TestBuildMachineNoEngineOptsCreateCommand(t *testing.T) {
 func TestBuildMachineCreateCommand(t *testing.T) {
 	machine := new(client.Machine)
 	machine.Driver = "rackspace"
+	machine.EngineInstallUrl = "test.com"
 	machine.EngineOpts = []string{"key1=val1", "key2=val2"}
 	machine.EngineEnv = []string{"key3=val3"}
 	machine.EngineInsecureRegistry = []string{}
@@ -79,7 +80,7 @@ func TestBuildMachineCreateCommand(t *testing.T) {
 		t.Fatal("Error while building machine craete command", err)
 	}
 
-	if strings.Join(cmd, " ") != "create -d rackspace --engine-opt key1=val1 --engine-opt key2=val2 --engine-env key3=val3 --engine-label io.rancher.label=123 --engine-storage-driver deviceMapper --rackspace-api-key fakeAPiKey --rackspace-username fakeUser fakeMachine" {
+	if strings.Join(cmd, " ") != "create -d rackspace --engine-install-url test.com --engine-opt key1=val1 --engine-opt key2=val2 --engine-env key3=val3 --engine-label io.rancher.label=123 --engine-storage-driver deviceMapper --rackspace-api-key fakeAPiKey --rackspace-username fakeUser fakeMachine" {
 		t.Error("Error building machine create command, got output", strings.Join(cmd, " "))
 	}
 }

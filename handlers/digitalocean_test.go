@@ -55,8 +55,9 @@ func setupDO(access_token string) {
 			Backups:           false,
 			PrivateNetworking: true,
 		},
-		Kind:   "machine",
-		Driver: "DigitalOcean",
+		EngineInstallUrl: "https://test.docker.com/",
+		Kind:             "machine",
+		Driver:           "DigitalOcean",
 	}
 
 	getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {

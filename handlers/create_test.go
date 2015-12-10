@@ -63,10 +63,10 @@ func TestBuildMachineCreateCommand(t *testing.T) {
 	machine := new(client.Machine)
 	machine.Driver = "rackspace"
 	machine.EngineInstallUrl = "test.com"
-	machine.EngineOpts = []string{"key1=val1", "key2=val2"}
-	machine.EngineEnv = []string{"key3=val3"}
+	machine.EngineOpt = map[string]interface{}{"key1": "val1", "key2": "val2"}
+	machine.EngineEnv = map[string]interface{}{"key3": "val3"}
 	machine.EngineInsecureRegistry = []string{}
-	machine.EngineLabel = []string{"io.rancher.label=123"}
+	machine.EngineLabel = map[string]interface{}{"io.rancher.label": "123"}
 	machine.EngineRegistryMirror = []string{}
 	machine.EngineStorageDriver = "deviceMapper"
 	machine.RackspaceConfig = &client.RackspaceConfig{
@@ -80,15 +80,17 @@ func TestBuildMachineCreateCommand(t *testing.T) {
 		t.Fatal("Error while building machine craete command", err)
 	}
 
-	if strings.Join(cmd, " ") != "create -d rackspace --engine-install-url test.com --engine-opt key1=val1 --engine-opt key2=val2 --engine-env key3=val3 --engine-label io.rancher.label=123 --engine-storage-driver deviceMapper --rackspace-api-key fakeAPiKey --rackspace-username fakeUser fakeMachine" {
+	command := strings.Join(cmd, " ")
+	// We have two engine opts in a map and maps are randomized, so have to look for both orders of engine-opt
+	if command != "create -d rackspace --engine-install-url test.com --engine-opt key1=val1 --engine-opt key2=val2 --engine-env key3=val3 --engine-label io.rancher.label=123 --engine-storage-driver deviceMapper --rackspace-api-key fakeAPiKey --rackspace-username fakeUser fakeMachine" && command != "create -d rackspace --engine-install-url test.com --engine-opt key2=val2 --engine-opt key1=val1 --engine-env key3=val3 --engine-label io.rancher.label=123 --engine-storage-driver deviceMapper --rackspace-api-key fakeAPiKey --rackspace-username fakeUser fakeMachine" {
 		t.Error("Error building machine create command, got output", strings.Join(cmd, " "))
 	}
 }
 
 func TestBuildMachineEngineOptsCommand1(t *testing.T) {
-	engineOpts := []string{"key1=val1", "key2=val2"}
+	engineOpts := map[string]interface{}{"key1": "val1", "key2": "val2"}
 
-	cmd := buildEngineOpts("--engine-opt", engineOpts)
+	cmd := buildEngineOpts("--engine-opt", mapToSlice(engineOpts))
 
 	engineOptCount := 0
 	firstOptsFound := false
@@ -135,25 +137,10 @@ func TestBuildMachineEngineOptsCommand2(t *testing.T) {
 }
 
 func TestBuildMachineEngineOptsCommand3(t *testing.T) {
-	engineOpts := []string{}
+	engineOpts := map[string]interface{}{}
 
-	cmd := buildEngineOpts("--engine-opt", engineOpts)
-
-	engineOptCount := 0
-	firstOptsFound := false
-	secondOptsFound := false
-
-	for _, elem := range cmd {
-		if elem == "--engine-opt" {
-			engineOptCount++
-		} else if elem == "key1=val1" {
-			firstOptsFound = true
-		}
-		if elem == "key2=val2" {
-			secondOptsFound = true
-		}
-	}
-	if engineOptCount != 0 || firstOptsFound || secondOptsFound {
-		t.Error("Engine Opts is not being set!")
+	cmd := buildEngineOpts("--engine-opt", mapToSlice(engineOpts))
+	if len(cmd) != 0 {
+		t.Error("Expected empty command")
 	}
 }

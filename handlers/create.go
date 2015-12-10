@@ -223,10 +223,10 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	cmd := []string{"create", "-d", sDriver}
 
 	cmd = append(cmd, buildEngineOpts("--engine-install-url", []string{machine.EngineInstallUrl})...)
-	cmd = append(cmd, buildEngineOpts("--engine-opt", machine.EngineOpts)...)
-	cmd = append(cmd, buildEngineOpts("--engine-env", machine.EngineEnv)...)
+	cmd = append(cmd, buildEngineOpts("--engine-opt", mapToSlice(machine.EngineOpt))...)
+	cmd = append(cmd, buildEngineOpts("--engine-env", mapToSlice(machine.EngineEnv))...)
 	cmd = append(cmd, buildEngineOpts("--engine-insecure-registry", machine.EngineInsecureRegistry)...)
-	cmd = append(cmd, buildEngineOpts("--engine-label", machine.EngineLabel)...)
+	cmd = append(cmd, buildEngineOpts("--engine-label", mapToSlice(machine.EngineLabel))...)
 	cmd = append(cmd, buildEngineOpts("--engine-registry-mirror", machine.EngineRegistryMirror)...)
 	cmd = append(cmd, buildEngineOpts("--engine-storage-driver", []string{machine.EngineStorageDriver})...)
 
@@ -273,6 +273,14 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	cmd = append(cmd, machine.Name)
 	log.Infof("Cmd slice: %v", cmd)
 	return cmd, nil
+}
+
+func mapToSlice(m map[string]interface{}) []string {
+	ret := []string{}
+	for k, v := range m {
+		ret = append(ret, fmt.Sprintf("%s=%s", k, v))
+	}
+	return ret
 }
 
 func buildEngineOpts(name string, values []string) []string {

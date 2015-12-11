@@ -4,6 +4,10 @@
             "type": "string",
             "nullable": true
         },
+        "configdriveUrl": {
+            "type": "string",
+            "nullable": true
+        },
         "cpuCount": {
             "type": "string",
             "nullable": true
@@ -12,28 +16,16 @@
             "type": "string",
             "nullable": true
         },
-        "hostonlyCidr": {
+        "memorySize": {
             "type": "string",
             "nullable": true
         },
-        "hostonlyNicpromisc": {
+        "sshPassword": {
             "type": "string",
             "nullable": true
         },
-        "hostonlyNictype": {
+        "sshUser": {
             "type": "string",
-            "nullable": true
-        },
-        "importBoot2dockerVm": {
-            "type": "string",
-            "nullable": true
-        },
-        "memory": {
-            "type": "string",
-            "nullable": true
-        },
-        "noShare": {
-            "type": "boolean",
             "nullable": true
         }
     }

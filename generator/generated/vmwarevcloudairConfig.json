@@ -36,10 +36,6 @@
             "type": "string",
             "nullable": true
         },
-        "provision": {
-            "type": "boolean",
-            "nullable": true
-        },
         "publicip": {
             "type": "string",
             "nullable": true

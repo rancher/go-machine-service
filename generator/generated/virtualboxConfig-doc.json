@@ -14,6 +14,12 @@
             "hostonlyCidr": {
                 "description": "Specify the Host Only CIDR"
             },
+            "hostonlyNicpromisc": {
+                "description": "Specify the Host Only Network Adapter Promiscuous Mode"
+            },
+            "hostonlyNictype": {
+                "description": "Specify the Host Only Network Adapter Type"
+            },
             "importBoot2dockerVm": {
                 "description": "The name of a Boot2Docker VM to import"
             },

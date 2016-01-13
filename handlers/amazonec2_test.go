@@ -49,13 +49,16 @@ func TestAmazonec2(t *testing.T) {
 
 func setup(accessKey string, secretKey string, vpcId string, zone string) {
 	// TODO Replace functions during teardown.
+	data := make(map[string]interface{})
+	data["fields"] = make(map[string]interface{})
+	data["fields"].(map[string]interface{})["amazonec2Config"]= make(map[string]interface{})
+	data["fields"].(map[string]interface{})["amazonec2Config"].(map[string]interface{})["AccessKey"] =  accessKey
+	data["fields"].(map[string]interface{})["amazonec2Config"].(map[string]interface{})["SecretKey"] =  secretKey
+	data["fields"].(map[string]interface{})["amazonec2Config"].(map[string]interface{})["VpcId"] =      vpcId
+	data["fields"].(map[string]interface{})["amazonec2Config"].(map[string]interface{})["Zone"] =       zone
+
 	machine := &client.Machine{
-		Amazonec2Config: &client.Amazonec2Config{
-			AccessKey: accessKey,
-			SecretKey: secretKey,
-			VpcId:     vpcId,
-			Zone:      zone,
-		},
+		Data: data,
 		Kind:   "machine",
 		Driver: "Amazonec2",
 	}

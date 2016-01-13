@@ -26,6 +26,10 @@ const (
 
 var RegExMachineDirEnv = regexp.MustCompile("^" + machineDirEnvKey + ".*")
 
+var RegExMachinePluginToken = regexp.MustCompile("^" + "MACHINE_PLUGIN_TOKEN=" + ".*")
+
+var RegExMachineDriverName = regexp.MustCompile("^" + "MACHINE_PLUGIN_DRIVER_NAME=" + ".*")
+
 func PingNoOp(event *events.Event, apiClient *client.RancherClient) error {
 	// No-op ping handler
 	return nil
@@ -162,6 +166,7 @@ func buildCommand(machineDir string, cmdArgs []string) *exec.Cmd {
 	command := exec.Command(machineCmd, cmdArgs...)
 	env := initEnviron(machineDir)
 	command.Env = env
+	log.Debugf("Full command: %#v", command)
 	return command
 }
 
@@ -172,6 +177,12 @@ func initEnviron(machineDir string) []string {
 		if RegExMachineDirEnv.MatchString(ev) {
 			env[idx] = machineDirEnvKey + machineDir
 			found = true
+		}
+		if RegExMachinePluginToken.MatchString(ev) {
+			env[idx] = ""
+		}
+		if RegExMachineDriverName.MatchString(ev) {
+			env[idx] =  ""
 		}
 	}
 	if !found {

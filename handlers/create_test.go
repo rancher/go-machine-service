@@ -43,10 +43,14 @@ func (c *MockMachineOperations) ById(id string) (*client.Machine, error) {
 func TestBuildMachineNoEngineOptsCreateCommand(t *testing.T) {
 	machine := new(client.Machine)
 	machine.Driver = "rackspace"
-	machine.RackspaceConfig = &client.RackspaceConfig{
-		Username: "fakeUser",
-		ApiKey:   "fakeAPiKey",
-	}
+
+	data := make(map[string]interface{})
+	data["fields"] = make(map[string]interface{})
+	data["fields"].(map[string]interface{})["rackspaceConfig"]= make(map[string]interface{})
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["ApiKey"] =  "fakeAPiKey"
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["Username"] =  "fakeUser"
+
+	machine.Data = data
 	machine.Name = "fakeMachine"
 
 	cmd, err := buildMachineCreateCmd(machine)
@@ -69,10 +73,15 @@ func TestBuildMachineCreateCommand(t *testing.T) {
 	machine.EngineLabel = map[string]interface{}{"io.rancher.label": "123"}
 	machine.EngineRegistryMirror = []string{}
 	machine.EngineStorageDriver = "deviceMapper"
-	machine.RackspaceConfig = &client.RackspaceConfig{
-		Username: "fakeUser",
-		ApiKey:   "fakeAPiKey",
-	}
+
+
+	data := make(map[string]interface{})
+	data["fields"] = make(map[string]interface{})
+	data["fields"].(map[string]interface{})["rackspaceConfig"]= make(map[string]interface{})
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["ApiKey"] =  "fakeAPiKey"
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["Username"] =  "fakeUser"
+
+	machine.Data = data
 	machine.Name = "fakeMachine"
 
 	cmd, err := buildMachineCreateCmd(machine)

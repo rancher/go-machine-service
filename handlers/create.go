@@ -230,42 +230,39 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	cmd = append(cmd, buildEngineOpts("--engine-registry-mirror", machine.EngineRegistryMirror)...)
 	cmd = append(cmd, buildEngineOpts("--engine-storage-driver", []string{machine.EngineStorageDriver})...)
 
-	valueOfMachine := reflect.ValueOf(machine).Elem()
-
 	// Grab the reflected Value of XyzConfig (i.e. DigitaloceanConfig) based on the machine driver
-	driverConfig := valueOfMachine.FieldByName(strings.ToUpper(sDriver[:1]) + sDriver[1:] + "Config").Elem()
-	typeOfDriverConfig := driverConfig.Type()
+	driverConfig := machine.Data["fields"].(map[string]interface{})[machine.Driver + "Config"].(map[string]interface{})
 
-	for i := 0; i < driverConfig.NumField(); i++ {
+	for k, v := range driverConfig {
 		// We are ignoring the Resource Field as we don't need it.
-		nameConfigField := typeOfDriverConfig.Field(i).Name
+		nameConfigField := k
 		if nameConfigField == "Resource" {
 			continue
 		}
-
-		f := driverConfig.Field(i)
 
 		// This converts all field name of ParameterName to --<driver name>-parameter-name
 		// i.e. AccessToken parameter for DigitalOcean driver becomes --digitalocean-access-token
 		dmField := "--" + sDriver + "-" + strings.ToLower(regExHyphen.ReplaceAllString(nameConfigField, "${1}-${2}"))
 
 		// For now, we only support bool and string.  Will add more as required.
-		switch f.Interface().(type) {
+		switch f := v.(type) {
 		case bool:
 			// dm only accepts field or field=true if value=true
-			if f.Bool() {
+			if f {
 				cmd = append(cmd, dmField)
 			}
 		case string:
-			if f.String() != "" {
-				cmd = append(cmd, dmField, f.String())
+			if f != "" {
+				cmd = append(cmd, dmField, f)
 			}
 		case []string:
-			for i := 0; i < f.Len(); i++ {
-				cmd = append(cmd, dmField, f.Index(i).String())
+			for _, q := range f {
+				cmd = append(cmd, dmField, q)
 			}
+		case nil:
+
 		default:
-			return nil, fmt.Errorf("Unsupported type: %v", f.Type())
+			return nil, fmt.Errorf("Unsupported type: %v", reflect.TypeOf(f))
 		}
 
 	}

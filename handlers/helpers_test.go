@@ -84,19 +84,24 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		"--digitalocean-size",
 		"1gb",
 		"testDO"}
+
+
+	data := make(map[string]interface{})
+	data["fields"] = make(map[string]interface{})
+	data["fields"].(map[string]interface{})["digitaloceanConfig"]= make(map[string]interface{})
+	data["fields"].(map[string]interface{})["digitaloceanConfig"].(map[string]interface{})["AccessToken"] = "abc"
+	data["fields"].(map[string]interface{})["digitaloceanConfig"].(map[string]interface{})["Image"] =       "ubuntu-14-04-x64"
+	data["fields"].(map[string]interface{})["digitaloceanConfig"].(map[string]interface{})["Ipv6"] =        true
+	data["fields"].(map[string]interface{})["digitaloceanConfig"].(map[string]interface{})["Region"] =      "sfo1"
+	data["fields"].(map[string]interface{})["digitaloceanConfig"].(map[string]interface{})["Size"] =        "1gb"
+	data["fields"].(map[string]interface{})["digitaloceanConfig"].(map[string]interface{})["Backups"] =     false
+
 	machine := &client.Machine{
-		DigitaloceanConfig: &client.DigitaloceanConfig{
-			AccessToken: "abc",
-			Region:      "sfo1",
-			Size:        "1gb",
-			Image:       "ubuntu-14-04-x64",
-			Ipv6:        true,
-			Backups:     false,
-		},
 		Kind:   "machine",
-		Driver: "DigitalOcean",
+		Driver: "digitalocean",
 		Name:   "testDO",
 	}
+	machine.Data = data
 	checkCommands(testCmd, machine, t)
 
 	// Test for no params
@@ -105,10 +110,16 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		"-d",
 		"virtualbox",
 		"testVB"}
+
+
+	data = make(map[string]interface{})
+	data["fields"] = make(map[string]interface{})
+	data["fields"].(map[string]interface{})["virtualboxConfig"]= make(map[string]interface{})
+
 	machine = &client.Machine{
-		VirtualboxConfig: &client.VirtualboxConfig{},
+		Data:             data,
 		Kind:             "machine",
-		Driver:           "VirtualBox",
+		Driver:           "virtualbox",
 		Name:             "testVB",
 	}
 	checkCommands(testCmd, machine, t)

@@ -46,11 +46,14 @@ func TestPacket(t *testing.T) {
 
 func setupPacket(apiKey, projectId string) {
 	// TODO Replace functions during teardown.
+	data := make(map[string]interface{})
+	data["fields"] = make(map[string]interface{})
+	data["fields"].(map[string]interface{})["packetConfig"]= make(map[string]interface{})
+	data["fields"].(map[string]interface{})["packetConfig"].(map[string]interface{})["ApiKey"] =  apiKey
+	data["fields"].(map[string]interface{})["packetConfig"].(map[string]interface{})["ProjectId"] =  projectId
+
 	machine := &client.Machine{
-		PacketConfig: &client.PacketConfig{
-			ApiKey:    apiKey,
-			ProjectId: projectId,
-		},
+		Data: data,
 		Kind:   "machine",
 		Driver: "Packet",
 	}

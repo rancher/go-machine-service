@@ -26,11 +26,11 @@ func main() {
 
 	if err != nil || len(errs) > 0 {
 		if err != nil {
-			log.Error("Error from updating:" + err.Error())
+			log.Error("Error from updating:", err.Error())
 		}
 		if len(errs) > 0 {
 			for _, err := range errs {
-				log.Error("Error from driver: " + err.Error())
+				log.Error("Error from driver: ", err.Error())
 			}
 		}
 		os.Exit(1)

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
+	"errors"
 )
 
 func GenerateAuthJsons(resourceData *ResourceData) error {
@@ -29,7 +29,7 @@ func generateAuthJson(resourceData *ResourceData, prefix, perm string) error {
 		}
 		resourceMap, ok := resourceDataUnit["resourceFields"]
 		if !ok {
-			log.Errorf("could not find resource data for driver=%s", driver)
+			return errors.New("Could not find resource data for driver=" + driver)
 		}
 		for key := range resourceMap {
 			fieldData[driver+"Config."+key] = perm

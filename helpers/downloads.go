@@ -142,14 +142,29 @@ func pickDriverFileName(driverUri string) (string, error) {
 	return "", errors.New(fmt.Sprintf("Can't pick filename for driver, not sure of compression: %s", driverUri))
 }
 
-func downloadAndVerifyDriver(driverUri string, driverMD5checksum string) (string, error) {
-	err := downloadFromUrl(driverUri)
+func downloadVerifyExtractDriver(driverUri, driverMD5checksum, driverName string) (error) {
+	fileName, err := downloadFromUrl(driverUri)
 	if err != nil {
-		return "", err
+		return err
+	}
+	err = verifyCheckSum(fileName, driverMD5checksum)
+
+	if err != nil {
+		return err
 	}
 
-	return verifyCheckSum(driverUri, driverMD5checksum)
+	_, err = pickDriverFileName(driverUri)
 
+	if err == nil {
+		fileName, err = extractDriver(driverUri)
+		if err != nil {
+			return err
+		}
+	} else if err != NOT_COMPRESSED {
+		return err
+	}
+
+	return os.Rename(fileName, DRIVERS_LOCATION + asDockerMachineDriver(driverName))
 }
 
 
@@ -178,21 +193,39 @@ func DownloadDrivers() ([]client.MachineDriver, []error, error) {
 		wg.Add(1)
 		go func(driver client.MachineDriver) {
 			defer wg.Done()
-			if driver.State == "inactive" {
-				log.Info("Downloading and verifying: " + driver.Uri)
-				err := downloadAndVerifyAndExtractDriver(driver.Uri, driver.Md5checksum, driver.Name)
+
+			reinstall := false
+			handled := false
+
+			if driver.State == "active" {
+				log.Debug("Verfiying ", driver.Name, " exists in path.")
+				reinstall = !driverBinaryExists(driver.Name)
+				if reinstall {
+					log.Info("Active driver ", driver.Name, " binary: ", asDockerMachineDriver(driver.Name),
+						" not found reinstalling.")
+				} else {
+					log.Info("Active driver ", driver.Name, " currently installed at ",
+						asDockerMachineDriver(driver.Name))
+				}
+			}
+
+			if driver.State == "inactive" || reinstall {
+				log.Debug("Downloading and verifying: " + driver.Uri)
+				err := installDriver(driver.Uri, driver.Md5checksum, driver.Name)
 				if err != nil {
 					driver.TransitioningMessage = err.Error()
 					apiClient.MachineDriver.ActionError(&driver)
 					log.Error("Error while downloading and verifying: ", driver.Uri, err)
 				} else {
 					apiClient.MachineDriver.ActionActivate(&driver)
-					log.Info("Activating driver: ", driver.Name)
+					log.Debug("Activating driver: ", driver.Name)
 				}
+				handled = true
 			} else if driver.State == "error" || driver.State == "erroring" {
 				log.Error("Driver: ", driver.Name, " is ", driver.State, " ignoring driver download.")
-			} else {
-				log.Info("Driver: ", driver.Name, " is ", driver.State, " ignoring driver download.")
+				handled = true
+			} else if !handled {
+				log.Debug("Driver: ", driver.Name, " is ", driver.State, " unknown state nothing was done.")
 			}
 			//Behavior if driver is active?
 		}(driver)
@@ -207,23 +240,23 @@ func DownloadDrivers() ([]client.MachineDriver, []error, error) {
 	}
 
 	driverNames := localbinary.CoreDrivers[:]
+	//Start with core drivers.
 
 	for _,driver := range driversRefreshed.Data {
 		if driver.State == "active" {
+			//Only add active drivers in cattle. Inactive and erroring ones are ignored.
 			driverNames = append(driverNames[:], driver.Name)
 		}
 	}
-
-	log.Error(driverNames)
 
 	for _,driver := range driverNames {
 		wg.Add(1)
 		go  func(driver string) {
 			defer  wg.Done()
-			log.Info("Generating schema for: " + driver)
+			log.Debug("Generating schema for: ", driver)
 			err = generateAndUploadSchema(driver)
 			if (err != nil){
-				log.Info("Err from routine:" + err.Error())
+				log.Debug("Err from routine:" + err.Error())
 				errs = append(errs, err)
 			}
 		} (driver)
@@ -231,29 +264,29 @@ func DownloadDrivers() ([]client.MachineDriver, []error, error) {
 
 	wg.Wait()
 
-	return driversRefreshed.Data, errs, uploadMachineSchema(driverNames[0:])
+	return driversRefreshed.Data, errs, uploadMachineSchema(driverNames[:])
 }
 
-func downloadFromUrl(url string) (error) {
+func downloadFromUrl(url string) (string, error) {
 	fileName := pickDownloadFileName(url)
-	log.Info("Downloading: " + fileName)
+	log.Debug("Downloading: " + fileName)
 	output, err := os.Create(fileName)
 	if err != nil {
-		return err
+		return fileName, err
 	}
 	defer output.Close()
 
 	response, err := http.Get(url)
 	if err != nil {
-		return err
+		return fileName, err
 	}
 	defer response.Body.Close()
 
 	_, err = io.Copy(output, response.Body)
 	if err != nil {
-		return err
+		return fileName, err
 	}
-	return  nil
+	return  fileName, nil
 }
 
 type InvalidCheckSum struct {
@@ -264,57 +297,37 @@ func (e InvalidCheckSum) Error() string {
 	return fmt.Sprintf("Checksum provided: %v does not match calculated checksum : %v for driver with uri: %v", e.driverMD5, e.calculatedCheckSum, e.driverFile)
 }
 
-func verifyCheckSum(driverUri string, driverMD5 string) (string, error) {
-	fileName := pickDownloadFileName(driverUri)
+func verifyCheckSum(fileName, driverMD5 string) error {
 	if  driverMD5 == "" {
 		log.Debug("No md5 skipping check.")
-		return fileName, nil
+		return nil
 	}
 	log.Debug("Checking md5 hash: " + fileName)
 	checkSumCalculated, err := computeMd5(fileName)
 	if err != nil {
-		return fileName, err
+		return err
 	}
-	log.Debug("Calced: " + checkSumCalculated + " given: " + driverMD5)
 	if checkSumCalculated != driverMD5 {
-		log.Debug("Failed checkSum check: " + fileName)
-		return fileName, InvalidCheckSum{
+		log.Error("Failed checkSum check: " + fileName)
+		log.Debug("Calced: " + checkSumCalculated + " given: " + driverMD5)
+		return InvalidCheckSum{
 			fileName,
 			driverMD5,
 			checkSumCalculated,
 		}
 	}
-	return fileName, nil
+	return nil
 }
 
 const DRIVERS_LOCATION = "/usr/local/bin/"
 
-func downloadAndVerifyAndExtractDriver(driverUri, driverMD5, driverName string) error {
+func installDriver(driverUri, driverMD5, driverName string) error {
 
-	fileName, err := downloadAndVerifyDriver(driverUri, driverMD5)
+	err := downloadVerifyExtractDriver(driverUri, driverMD5, driverName)
 	if err != nil  {
 		return err
 	}
 
-	_, err = pickDriverFileName(driverUri)
-
-	if err == NOT_COMPRESSED {
-		log.Debug("moved ", fileName, DRIVERS_LOCATION, driverName)
-		err2 := os.Rename(fileName, DRIVERS_LOCATION + asDockerMachineDriver(driverName))
-		if err2 != nil{
-			return err2
-		}
-		return os.Chmod(DRIVERS_LOCATION + asDockerMachineDriver(driverName), 0777)
-	}
-	fileName2, err := extractDriver(driverUri)
-	if err != nil {
-		return err
-	}
-	log.Debug("moved ", fileName2, DRIVERS_LOCATION,driverName)
-	err2 := os.Rename(fileName2, DRIVERS_LOCATION + asDockerMachineDriver(driverName))
-	if err2 != nil{
-		return err2
-	}
 	return os.Chmod(DRIVERS_LOCATION + asDockerMachineDriver(driverName), 0777)
 }
 
@@ -335,6 +348,7 @@ func extractDriver(driverUri string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	fileName := pickDownloadFileName(driverUri)
 	log.Debug("Extracting... ", fileName)
 	tar, err := exec.LookPath("tar")
@@ -361,4 +375,9 @@ func extractDriver(driverUri string) (string, error) {
 		return "", MultipleFiles{ temp_folder }
 	}
 	return fileNames[0], err
+}
+
+func driverBinaryExists(driverName string) (bool) {
+	_, err := exec.LookPath(asDockerMachineDriver(driverName))
+	return err == nil
 }

@@ -166,7 +166,6 @@ func buildCommand(machineDir string, cmdArgs []string) *exec.Cmd {
 	command := exec.Command(machineCmd, cmdArgs...)
 	env := initEnviron(machineDir)
 	command.Env = env
-	log.Debugf("Full command: %#v", command)
 	return command
 }
 

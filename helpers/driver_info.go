@@ -105,8 +105,6 @@ func generateAndUploadSchema(driver string) error {
 		createFlags = append(createFlags, *cFlag)
 	}
 
-	log.Errorf("create Flags = %+v", createFlags)
-
 	json, err := flagsToJson(createFlags)
 	if err != nil {
 		return err
@@ -132,7 +130,7 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string) 
 	if (len(schemas.Data) > 0) {
 		for _, schema := range schemas.Data {
 			apiClient.DynamicSchema.ActionRemove(&schema)
-			log.Info("Removing ", schemaName, " Id: ", schema.Id)
+			log.Debug("Removing ", schemaName, " Id: ", schema.Id)
 		}
 	}
 
@@ -156,7 +154,6 @@ func flagsToJson(createFlags []CreateFlag) (string, error) {
 		resourceFieldMap[flag.Name] = flagToField(flag)
 	}
 	fieldsJson, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
-	log.Debug(string(fieldsJson))
 	return string(fieldsJson), err
 }
 
@@ -181,7 +178,6 @@ func getCreateFlagsForDriver(driver string) ([]cli.Flag, error) {
 			log.Fatalf("Error starting plugin server for driver=%s, err=%v", driver, err)
 		}
 	}()
-	log.Error(p.Addr)
 	addr, err := p.Address()
 	if err != nil {
 		panic("Error attempting to get plugin server address for RPC")

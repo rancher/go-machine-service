@@ -123,6 +123,7 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string) 
 	}
 	listOpts := client.NewListOpts()
 	listOpts.Filters["name"] = schemaName
+	listOpts.Filters["state"] = "active"
 	schemas, err := apiClient.DynamicSchema.List(listOpts)
 	if (err != nil) {
 		return err
@@ -141,6 +142,9 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string) 
 		Parent: parent,
 		Roles: roles,
 	})
+	if err != nil {
+		log.Error("Failed when uploading ", schemaName, " schema to cattle: ", err.Error())
+	}
 	return err
 }
 

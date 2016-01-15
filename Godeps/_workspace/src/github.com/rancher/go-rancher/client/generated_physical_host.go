@@ -9,11 +9,17 @@ type PhysicalHost struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	AgentId string `json:"agentId,omitempty" yaml:"agent_id,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+
+	Driver string `json:"driver,omitempty" yaml:"driver,omitempty"`
+
+	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 

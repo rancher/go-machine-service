@@ -9,6 +9,8 @@ type Machine struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
+	AgentId string `json:"agentId,omitempty" yaml:"agent_id,omitempty"`
+
 	Amazonec2Config *Amazonec2Config `json:"amazonec2Config,omitempty" yaml:"amazonec2config,omitempty"`
 
 	AuthCertificateAuthority string `json:"authCertificateAuthority,omitempty" yaml:"auth_certificate_authority,omitempty"`
@@ -49,15 +51,21 @@ type Machine struct {
 
 	ExtractedConfig string `json:"extractedConfig,omitempty" yaml:"extracted_config,omitempty"`
 
+	GenericConfig *GenericConfig `json:"genericConfig,omitempty" yaml:"generic_config,omitempty"`
+
+	GoogleConfig *GoogleConfig `json:"googleConfig,omitempty" yaml:"google_config,omitempty"`
+
+	HypervConfig *HypervConfig `json:"hypervConfig,omitempty" yaml:"hyperv_config,omitempty"`
+
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
 	Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
-	OpenstackConfig *OpenstackConfig `json:"openstackConfig,omitempty" yaml:"openstack_config,omitempty"`
+	NoneConfig *NoneConfig `json:"noneConfig,omitempty" yaml:"none_config,omitempty"`
 
-	PacketConfig *PacketConfig `json:"packetConfig,omitempty" yaml:"packet_config,omitempty"`
+	OpenstackConfig *OpenstackConfig `json:"openstackConfig,omitempty" yaml:"openstack_config,omitempty"`
 
 	RackspaceConfig *RackspaceConfig `json:"rackspaceConfig,omitempty" yaml:"rackspace_config,omitempty"`
 
@@ -75,11 +83,11 @@ type Machine struct {
 
 	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
 
-	UbiquityConfig *UbiquityConfig `json:"ubiquityConfig,omitempty" yaml:"ubiquity_config,omitempty"`
-
 	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
 
 	VirtualboxConfig *VirtualboxConfig `json:"virtualboxConfig,omitempty" yaml:"virtualbox_config,omitempty"`
+
+	VmwarefusionConfig *VmwarefusionConfig `json:"vmwarefusionConfig,omitempty" yaml:"vmwarefusion_config,omitempty"`
 
 	VmwarevcloudairConfig *VmwarevcloudairConfig `json:"vmwarevcloudairConfig,omitempty" yaml:"vmwarevcloudair_config,omitempty"`
 

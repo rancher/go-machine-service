@@ -47,20 +47,23 @@ func TestRackspace(t *testing.T) {
 
 func setupRackspace(username, region, apiKey string) {
 	// TODO Replace functions during teardown.
+	data := make(map[string]interface{})
+	data["fields"] = make(map[string]interface{})
+	data["fields"].(map[string]interface{})["rackspaceConfig"]= make(map[string]interface{})
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["Username"]      = username
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["Region"]        = region
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["ApiKey"]        = apiKey
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["EndpointType"]  = "publicURL"
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["ImageId"]       = "598a4282-f14b-4e50-af4c-b3e52749d9f9"
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["FlavorId"]      = "general1-1"
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["SshUser"]       = "root"
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["SshPort"]       = "22"
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["DockerInstall"] = "true"
+
 	machine := &client.Machine{
-		RackspaceConfig: &client.RackspaceConfig{
-			Username:      username,
-			Region:        region,
-			ApiKey:        apiKey,
-			EndpointType:  "publicURL",
-			ImageId:       "598a4282-f14b-4e50-af4c-b3e52749d9f9",
-			FlavorId:      "general1-1",
-			SshUser:       "root",
-			SshPort:       "22",
-			DockerInstall: "true",
-		},
+		Data:   data,
 		Kind:   "machine",
-		Driver: "Rackspace",
+		Driver: "rackspace",
 	}
 
 	getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {

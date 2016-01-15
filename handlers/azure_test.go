@@ -54,9 +54,9 @@ func setupAZ(subscription_id, subscription_cert string) {
 	// TODO Replace functions during teardown.
 	data := make(map[string]interface{})
 	data["fields"] = make(map[string]interface{})
-	data["fields"].(map[string]interface{})["azureConfig"]= make(map[string]interface{})
-	data["fields"].(map[string]interface{})["azureConfig"].(map[string]interface{})["SubscriptionId"] =   subscription_id,
-	data["fields"].(map[string]interface{})["azureConfig"].(map[string]interface{})["SubscriptionCert"] = subscription_cert,
+	data["fields"].(map[string]interface{})["azureConfig"] = make(map[string]interface{})
+	data["fields"].(map[string]interface{})["azureConfig"].(map[string]interface{})["SubscriptionId"] = subscription_id
+	data["fields"].(map[string]interface{})["azureConfig"].(map[string]interface{})["SubscriptionCert"] = subscription_cert
 
 	machine := &client.Machine{
 		Data:   data,

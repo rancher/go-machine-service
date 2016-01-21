@@ -52,11 +52,16 @@ func TestAzure(t *testing.T) {
 
 func setupAZ(subscription_id, subscription_cert string) {
 	// TODO Replace functions during teardown.
+	data := make(map[string]interface{})
+	fields := make(map[string]interface{})
+	data["fields"] = fields
+	azureConfig := make(map[string]interface{})
+	fields["azureConfig"] = azureConfig
+	azureConfig["SubscriptionCert"] = subscription_cert
+	azureConfig["SubscriptionId"] = subscription_id
+
 	machine := &client.Machine{
-		AzureConfig: &client.AzureConfig{
-			SubscriptionId:   subscription_id,
-			SubscriptionCert: subscription_cert,
-		},
+		Data:   data,
 		Kind:   "machine",
 		Driver: "azure",
 	}

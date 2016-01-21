@@ -74,6 +74,8 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		"create",
 		"-d",
 		"digitalocean",
+		"--digitalocean-size",
+		"1gb",
 		"--digitalocean-access-token",
 		"abc",
 		"--digitalocean-image",
@@ -81,20 +83,24 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		"--digitalocean-ipv6",
 		"--digitalocean-region",
 		"sfo1",
-		"--digitalocean-size",
-		"1gb",
 		"testDO"}
+
+	data := make(map[string]interface{})
+	fields := make(map[string]interface{})
+	data["fields"] = fields
+	digitaloceanConfig := make(map[string]interface{})
+	fields["digitaloceanConfig"] = digitaloceanConfig
+	digitaloceanConfig["AccessToken"] = "abc"
+	digitaloceanConfig["Image"] = "ubuntu-14-04-x64"
+	digitaloceanConfig["Ipv6"] = true
+	digitaloceanConfig["Region"] = "sfo1"
+	digitaloceanConfig["Size"] = "1gb"
+	digitaloceanConfig["Backups"] = false
+
 	machine := &client.Machine{
-		DigitaloceanConfig: &client.DigitaloceanConfig{
-			AccessToken: "abc",
-			Region:      "sfo1",
-			Size:        "1gb",
-			Image:       "ubuntu-14-04-x64",
-			Ipv6:        true,
-			Backups:     false,
-		},
+		Data:   data,
 		Kind:   "machine",
-		Driver: "DigitalOcean",
+		Driver: "digitalocean",
 		Name:   "testDO",
 	}
 	checkCommands(testCmd, machine, t)
@@ -105,11 +111,16 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		"-d",
 		"virtualbox",
 		"testVB"}
+
+	data = make(map[string]interface{})
+	data["fields"] = make(map[string]interface{})
+	data["fields"].(map[string]interface{})["virtualboxConfig"] = make(map[string]interface{})
+
 	machine = &client.Machine{
-		VirtualboxConfig: &client.VirtualboxConfig{},
-		Kind:             "machine",
-		Driver:           "VirtualBox",
-		Name:             "testVB",
+		Data:   data,
+		Kind:   "machine",
+		Driver: "virtualbox",
+		Name:   "testVB",
 	}
 	checkCommands(testCmd, machine, t)
 }

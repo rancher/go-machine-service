@@ -45,16 +45,22 @@ func TestDigitalOcean(t *testing.T) {
 
 func setupDO(access_token string) {
 	// TODO Replace functions during teardown.
+	data := make(map[string]interface{})
+	fields := make(map[string]interface{})
+	data["fields"] = fields
+	digitaloceanConfig := make(map[string]interface{})
+	fields["digitaloceanConfig"] = digitaloceanConfig
+
+	digitaloceanConfig["AccessToken"] = access_token
+	digitaloceanConfig["Region"] = "sfo1"
+	digitaloceanConfig["Size"] = "1gb"
+	digitaloceanConfig["Image"] = "ubuntu-14-04-x64"
+	digitaloceanConfig["Ipv6"] = true
+	digitaloceanConfig["Backups"] = false
+	digitaloceanConfig["PrivateNetworking"] = true
+
 	machine := &client.Machine{
-		DigitaloceanConfig: &client.DigitaloceanConfig{
-			AccessToken:       access_token,
-			Region:            "sfo1",
-			Size:              "1gb",
-			Image:             "ubuntu-14-04-x64",
-			Ipv6:              true,
-			Backups:           false,
-			PrivateNetworking: true,
-		},
+		Data:             data,
 		EngineInstallUrl: "https://test.docker.com/",
 		Kind:             "machine",
 		Driver:           "DigitalOcean",

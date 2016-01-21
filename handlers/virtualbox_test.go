@@ -64,13 +64,19 @@ func TestMachineHandlers(t *testing.T) {
 }
 
 func setupVB() {
+
+	data := make(map[string]interface{})
+	fields := make(map[string]interface{})
+	data["fields"] = fields
+	virtualboxConfig := make(map[string]interface{})
+	fields["virtualboxConfig"] = virtualboxConfig
+	virtualboxConfig["DiskSize"] = "40000"
+	virtualboxConfig["Memory"] = "2048"
+
 	machine := &client.Machine{
-		VirtualboxConfig: &client.VirtualboxConfig{
-			DiskSize: "40000",
-			Memory:   "2048",
-		},
+		Data:   data,
 		Kind:   "machine",
-		Driver: "VirtualBox",
+		Driver: "virtualbox",
 	}
 
 	getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {

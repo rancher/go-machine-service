@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-machine-service/handlers"
+	"github.com/rancher/go-machine-service/helpers"
 )
 
 var (
@@ -20,6 +21,20 @@ func main() {
 	log.WithFields(log.Fields{
 		"gitcommit": GITCOMMIT,
 	}).Info("Starting go-machine-service...")
+
+	errs, err := helpers.UpdateDrivers()
+
+	if err != nil || len(errs) > 0 {
+		if err != nil {
+			log.Error("Error from updating:", err.Error())
+		}
+		if len(errs) > 0 {
+			for _, err := range errs {
+				log.Error("Error from driver: ", err.Error())
+			}
+		}
+		os.Exit(1)
+	}
 	eventHandlers := map[string]events.EventHandler{
 		"physicalhost.create":    handlers.CreateMachine,
 		"physicalhost.bootstrap": handlers.ActivateMachine,

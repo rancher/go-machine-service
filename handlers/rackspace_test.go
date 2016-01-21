@@ -47,20 +47,25 @@ func TestRackspace(t *testing.T) {
 
 func setupRackspace(username, region, apiKey string) {
 	// TODO Replace functions during teardown.
+	data := make(map[string]interface{})
+	fields := make(map[string]interface{})
+	data["fields"] = fields
+	rackspaceConfig := make(map[string]interface{})
+	fields["rackspaceConfig"] = rackspaceConfig
+	rackspaceConfig["Username"] = username
+	rackspaceConfig["Region"] = region
+	rackspaceConfig["ApiKey"] = apiKey
+	rackspaceConfig["EndpointType"] = "publicURL"
+	rackspaceConfig["ImageId"] = "598a4282-f14b-4e50-af4c-b3e52749d9f9"
+	rackspaceConfig["FlavorId"] = "general1-1"
+	rackspaceConfig["SshUser"] = "root"
+	rackspaceConfig["SshPort"] = "22"
+	rackspaceConfig["DockerInstall"] = "true"
+
 	machine := &client.Machine{
-		RackspaceConfig: &client.RackspaceConfig{
-			Username:      username,
-			Region:        region,
-			ApiKey:        apiKey,
-			EndpointType:  "publicURL",
-			ImageId:       "598a4282-f14b-4e50-af4c-b3e52749d9f9",
-			FlavorId:      "general1-1",
-			SshUser:       "root",
-			SshPort:       "22",
-			DockerInstall: "true",
-		},
+		Data:   data,
 		Kind:   "machine",
-		Driver: "Rackspace",
+		Driver: "rackspace",
 	}
 
 	getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {

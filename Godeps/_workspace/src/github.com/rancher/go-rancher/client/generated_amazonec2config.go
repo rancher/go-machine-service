@@ -11,6 +11,8 @@ type Amazonec2Config struct {
 
 	Ami string `json:"ami,omitempty" yaml:"ami,omitempty"`
 
+	DeviceName string `json:"deviceName,omitempty" yaml:"device_name,omitempty"`
+
 	IamInstanceProfile string `json:"iamInstanceProfile,omitempty" yaml:"iam_instance_profile,omitempty"`
 
 	InstanceType string `json:"instanceType,omitempty" yaml:"instance_type,omitempty"`
@@ -38,6 +40,8 @@ type Amazonec2Config struct {
 	SubnetId string `json:"subnetId,omitempty" yaml:"subnet_id,omitempty"`
 
 	UsePrivateAddress bool `json:"usePrivateAddress,omitempty" yaml:"use_private_address,omitempty"`
+
+	VolumeType string `json:"volumeType,omitempty" yaml:"volume_type,omitempty"`
 
 	VpcId string `json:"vpcId,omitempty" yaml:"vpc_id,omitempty"`
 

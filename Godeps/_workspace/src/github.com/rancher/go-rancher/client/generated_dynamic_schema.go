@@ -25,8 +25,6 @@ type DynamicSchema struct {
 
 	Roles []string `json:"roles,omitempty" yaml:"roles,omitempty"`
 
-	ServiceId string `json:"serviceId,omitempty" yaml:"service_id,omitempty"`
-
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
 	Transitioning string `json:"transitioning,omitempty" yaml:"transitioning,omitempty"`

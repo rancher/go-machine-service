@@ -15,6 +15,8 @@ type MachineDriver struct {
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 
+	ErrorMessage string `json:"errorMessage,omitempty" yaml:"error_message,omitempty"`
+
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
 	Md5checksum string `json:"md5checksum,omitempty" yaml:"md5checksum,omitempty"`
@@ -58,7 +60,7 @@ type MachineDriverOperations interface {
 
 	ActionCreate(*MachineDriver) (*MachineDriver, error)
 
-	ActionError(*MachineDriver) (*MachineDriver, error)
+	ActionError(*MachineDriver, *MachineDriverErrorInput) (*MachineDriver, error)
 
 	ActionPurge(*MachineDriver) (*MachineDriver, error)
 
@@ -124,11 +126,11 @@ func (c *MachineDriverClient) ActionCreate(resource *MachineDriver) (*MachineDri
 	return resp, err
 }
 
-func (c *MachineDriverClient) ActionError(resource *MachineDriver) (*MachineDriver, error) {
+func (c *MachineDriverClient) ActionError(resource *MachineDriver, input *MachineDriverErrorInput) (*MachineDriver, error) {
 
 	resp := &MachineDriver{}
 
-	err := c.rancherClient.doAction(MACHINE_DRIVER_TYPE, "error", &resource.Resource, nil, resp)
+	err := c.rancherClient.doAction(MACHINE_DRIVER_TYPE, "error", &resource.Resource, input, resp)
 
 	return resp, err
 }

@@ -61,6 +61,7 @@ type RancherClient struct {
 	ExternalHostEvent                        ExternalHostEventOperations
 	LoadBalancerConfig                       LoadBalancerConfigOperations
 	MachineDriverUpdateInput                 MachineDriverUpdateInputOperations
+	MachineDriverErrorInput                  MachineDriverErrorInputOperations
 	Account                                  AccountOperations
 	Agent                                    AgentOperations
 	AuditLog                                 AuditLogOperations
@@ -72,7 +73,6 @@ type RancherClient struct {
 	Databasechangelog                        DatabasechangelogOperations
 	Databasechangeloglock                    DatabasechangeloglockOperations
 	DynamicSchema                            DynamicSchemaOperations
-	DynamicSchemaRole                        DynamicSchemaRoleOperations
 	Environment                              EnvironmentOperations
 	ExternalEvent                            ExternalEventOperations
 	ExternalHandler                          ExternalHandlerOperations
@@ -125,21 +125,6 @@ type RancherClient struct {
 	HostApiProxyToken                        HostApiProxyTokenOperations
 	Register                                 RegisterOperations
 	RegistrationToken                        RegistrationTokenOperations
-	NoneConfig                               NoneConfigOperations
-	OpenstackConfig                          OpenstackConfigOperations
-	DigitaloceanConfig                       DigitaloceanConfigOperations
-	ExoscaleConfig                           ExoscaleConfigOperations
-	GoogleConfig                             GoogleConfigOperations
-	Amazonec2Config                          Amazonec2ConfigOperations
-	AzureConfig                              AzureConfigOperations
-	VmwarevsphereConfig                      VmwarevsphereConfigOperations
-	HypervConfig                             HypervConfigOperations
-	SoftlayerConfig                          SoftlayerConfigOperations
-	VmwarevcloudairConfig                    VmwarevcloudairConfigOperations
-	VmwarefusionConfig                       VmwarefusionConfigOperations
-	GenericConfig                            GenericConfigOperations
-	RackspaceConfig                          RackspaceConfigOperations
-	VirtualboxConfig                         VirtualboxConfigOperations
 	Machine                                  MachineOperations
 }
 
@@ -208,6 +193,7 @@ func constructClient() *RancherClient {
 	client.ExternalHostEvent = newExternalHostEventClient(client)
 	client.LoadBalancerConfig = newLoadBalancerConfigClient(client)
 	client.MachineDriverUpdateInput = newMachineDriverUpdateInputClient(client)
+	client.MachineDriverErrorInput = newMachineDriverErrorInputClient(client)
 	client.Account = newAccountClient(client)
 	client.Agent = newAgentClient(client)
 	client.AuditLog = newAuditLogClient(client)
@@ -219,7 +205,6 @@ func constructClient() *RancherClient {
 	client.Databasechangelog = newDatabasechangelogClient(client)
 	client.Databasechangeloglock = newDatabasechangeloglockClient(client)
 	client.DynamicSchema = newDynamicSchemaClient(client)
-	client.DynamicSchemaRole = newDynamicSchemaRoleClient(client)
 	client.Environment = newEnvironmentClient(client)
 	client.ExternalEvent = newExternalEventClient(client)
 	client.ExternalHandler = newExternalHandlerClient(client)
@@ -272,21 +257,6 @@ func constructClient() *RancherClient {
 	client.HostApiProxyToken = newHostApiProxyTokenClient(client)
 	client.Register = newRegisterClient(client)
 	client.RegistrationToken = newRegistrationTokenClient(client)
-	client.NoneConfig = newNoneConfigClient(client)
-	client.OpenstackConfig = newOpenstackConfigClient(client)
-	client.DigitaloceanConfig = newDigitaloceanConfigClient(client)
-	client.ExoscaleConfig = newExoscaleConfigClient(client)
-	client.GoogleConfig = newGoogleConfigClient(client)
-	client.Amazonec2Config = newAmazonec2ConfigClient(client)
-	client.AzureConfig = newAzureConfigClient(client)
-	client.VmwarevsphereConfig = newVmwarevsphereConfigClient(client)
-	client.HypervConfig = newHypervConfigClient(client)
-	client.SoftlayerConfig = newSoftlayerConfigClient(client)
-	client.VmwarevcloudairConfig = newVmwarevcloudairConfigClient(client)
-	client.VmwarefusionConfig = newVmwarefusionConfigClient(client)
-	client.GenericConfig = newGenericConfigClient(client)
-	client.RackspaceConfig = newRackspaceConfigClient(client)
-	client.VirtualboxConfig = newVirtualboxConfigClient(client)
 	client.Machine = newMachineClient(client)
 
 	return client

@@ -13,6 +13,7 @@ import (
 	"regexp"
 
 	"github.com/gorilla/websocket"
+	"time"
 )
 
 const (
@@ -112,7 +113,7 @@ func appendFilters(urlString string, filters map[string]interface{}) (string, er
 }
 
 func setupRancherBaseClient(rancherClient *RancherBaseClient, opts *ClientOpts) error {
-	client := &http.Client{}
+	client := &http.Client{ Timeout: time.Second * 10 }
 	req, err := http.NewRequest("GET", opts.Url, nil)
 	if err != nil {
 		return err
@@ -187,7 +188,7 @@ func (rancherClient *RancherBaseClient) setupRequest(req *http.Request) {
 }
 
 func (rancherClient *RancherBaseClient) newHttpClient() *http.Client {
-	return &http.Client{}
+	return &http.Client{ Timeout: time.Second * 10 }
 }
 
 func (rancherClient *RancherBaseClient) doDelete(url string) error {

@@ -11,21 +11,15 @@ type Machine struct {
 
 	AgentId string `json:"agentId,omitempty" yaml:"agent_id,omitempty"`
 
-	Amazonec2Config *Amazonec2Config `json:"amazonec2Config,omitempty" yaml:"amazonec2config,omitempty"`
-
 	AuthCertificateAuthority string `json:"authCertificateAuthority,omitempty" yaml:"auth_certificate_authority,omitempty"`
 
 	AuthKey string `json:"authKey,omitempty" yaml:"auth_key,omitempty"`
-
-	AzureConfig *AzureConfig `json:"azureConfig,omitempty" yaml:"azure_config,omitempty"`
 
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
 
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
-
-	DigitaloceanConfig *DigitaloceanConfig `json:"digitaloceanConfig,omitempty" yaml:"digitalocean_config,omitempty"`
 
 	DockerVersion string `json:"dockerVersion,omitempty" yaml:"docker_version,omitempty"`
 
@@ -45,17 +39,9 @@ type Machine struct {
 
 	EngineStorageDriver string `json:"engineStorageDriver,omitempty" yaml:"engine_storage_driver,omitempty"`
 
-	ExoscaleConfig *ExoscaleConfig `json:"exoscaleConfig,omitempty" yaml:"exoscale_config,omitempty"`
-
 	ExternalId string `json:"externalId,omitempty" yaml:"external_id,omitempty"`
 
 	ExtractedConfig string `json:"extractedConfig,omitempty" yaml:"extracted_config,omitempty"`
-
-	GenericConfig *GenericConfig `json:"genericConfig,omitempty" yaml:"generic_config,omitempty"`
-
-	GoogleConfig *GoogleConfig `json:"googleConfig,omitempty" yaml:"google_config,omitempty"`
-
-	HypervConfig *HypervConfig `json:"hypervConfig,omitempty" yaml:"hyperv_config,omitempty"`
 
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
@@ -63,17 +49,9 @@ type Machine struct {
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
-	NoneConfig *NoneConfig `json:"noneConfig,omitempty" yaml:"none_config,omitempty"`
-
-	OpenstackConfig *OpenstackConfig `json:"openstackConfig,omitempty" yaml:"openstack_config,omitempty"`
-
-	RackspaceConfig *RackspaceConfig `json:"rackspaceConfig,omitempty" yaml:"rackspace_config,omitempty"`
-
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
-
-	SoftlayerConfig *SoftlayerConfig `json:"softlayerConfig,omitempty" yaml:"softlayer_config,omitempty"`
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
@@ -84,14 +62,6 @@ type Machine struct {
 	TransitioningProgress int64 `json:"transitioningProgress,omitempty" yaml:"transitioning_progress,omitempty"`
 
 	Uuid string `json:"uuid,omitempty" yaml:"uuid,omitempty"`
-
-	VirtualboxConfig *VirtualboxConfig `json:"virtualboxConfig,omitempty" yaml:"virtualbox_config,omitempty"`
-
-	VmwarefusionConfig *VmwarefusionConfig `json:"vmwarefusionConfig,omitempty" yaml:"vmwarefusion_config,omitempty"`
-
-	VmwarevcloudairConfig *VmwarevcloudairConfig `json:"vmwarevcloudairConfig,omitempty" yaml:"vmwarevcloudair_config,omitempty"`
-
-	VmwarevsphereConfig *VmwarevsphereConfig `json:"vmwarevsphereConfig,omitempty" yaml:"vmwarevsphere_config,omitempty"`
 }
 
 type MachineCollection struct {

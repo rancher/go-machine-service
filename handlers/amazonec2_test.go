@@ -12,52 +12,52 @@ import (
 func TestAmazonec2(t *testing.T) {
 	accessKey := os.Getenv("EC2_ACCESS_KEY")
 	secretKey := os.Getenv("EC2_SECRET_KEY")
-	vpcId := os.Getenv("EC2_VPC_ID")
+	vpcID := os.Getenv("EC2_VPC_ID")
 	zone := os.Getenv("EC2_ZONE")
 
-	if accessKey == "" || secretKey == "" || vpcId == "" {
+	if accessKey == "" || secretKey == "" || vpcID == "" {
 		t.Log("Skipping Amazon EC2 Test.")
 		return
 	}
-	setup(accessKey, secretKey, vpcId, zone)
+	setup(accessKey, secretKey, vpcID, zone)
 
-	resourceId := "EC2-" + strconv.FormatInt(time.Now().Unix(), 10)
+	resourceID := "EC2-" + strconv.FormatInt(time.Now().Unix(), 10)
 	event := &events.Event{
-		ResourceId: resourceId,
-		Id:         "event-id",
+		ResourceID: resourceID,
+		ID:         "event-id",
 		ReplyTo:    "reply-to-id",
 	}
-	mockApiClient := &client.RancherClient{}
+	mockAPIClient := &client.RancherClient{}
 
-	err := CreateMachine(event, mockApiClient)
+	err := CreateMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = ActivateMachine(event, mockApiClient)
+	err = ActivateMachine(event, mockAPIClient)
 	if err != nil {
 		// Fail, not a fatal, so purge will still run.
 		t.Log(err)
 		t.Fail()
 	}
 
-	err = PurgeMachine(event, mockApiClient)
+	err = PurgeMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func setup(accessKey string, secretKey string, vpcId string, zone string) {
+func setup(accessKey string, secretKey string, vpcID string, zone string) {
 	// TODO Replace functions during teardown.
 	data := make(map[string]interface{})
 	fields := make(map[string]interface{})
 	data["fields"] = fields
 	amazonec2Config := make(map[string]interface{})
 	fields["amazonec2Config"] = amazonec2Config
-	amazonec2Config["AccessKey"] = accessKey
-	amazonec2Config["SecretKey"] = secretKey
-	amazonec2Config["VpcId"] = vpcId
-	amazonec2Config["Zone"] = zone
+	amazonec2Config["accessKey"] = accessKey
+	amazonec2Config["secretKey"] = secretKey
+	amazonec2Config["vpcId"] = vpcID
+	amazonec2Config["zone"] = zone
 
 	machine := &client.Machine{
 		Data:   data,
@@ -72,7 +72,7 @@ func setup(accessKey string, secretKey string, vpcId string, zone string) {
 		return machine, nil
 	}
 
-	getRegistrationUrlAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
+	getRegistrationURLAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
 		return "http://1.2.3.4/v1", "rancher/agent", "v0.7.6", nil
 	}
 

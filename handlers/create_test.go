@@ -12,20 +12,20 @@ func TestReplyForPhysicalHost(t *testing.T) {
 	// Assert that when the event is for a phyiscal host and not a machine that
 	// the create handler simply replies.
 	event := &events.Event{
-		ResourceId: "foo",
-		Id:         "event-id",
+		ResourceID: "foo",
+		ID:         "event-id",
 		ReplyTo:    "reply-to-id",
 	}
-	mockApiClient := &client.RancherClient{}
-	mockApiClient.Machine = &MockMachineOperations{}
+	mockAPIClient := &client.RancherClient{}
+	mockAPIClient.Machine = &MockMachineOperations{}
 	publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error {
 		if reply.Name != "reply-to-id" {
 			t.Logf("%+v", reply)
-			t.Fatalf("Reply not as expected: %+v")
+			t.Fatalf("Reply not as expected: %+v", reply)
 		}
 		return nil
 	}
-	err := CreateMachine(event, mockApiClient)
+	err := CreateMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,8 +47,8 @@ func TestBuildMachineNoEngineOptsCreateCommand(t *testing.T) {
 	data := make(map[string]interface{})
 	data["fields"] = make(map[string]interface{})
 	data["fields"].(map[string]interface{})["rackspaceConfig"] = make(map[string]interface{})
-	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["ApiKey"] = "fakeAPiKey"
-	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["Username"] = "fakeUser"
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["apiKey"] = "fakeAPiKey"
+	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["username"] = "fakeUser"
 
 	machine.Data = data
 	machine.Name = "fakeMachine"
@@ -79,8 +79,8 @@ func TestBuildMachineCreateCommand(t *testing.T) {
 	data["fields"] = fields
 	rackspaceConfig := make(map[string]interface{})
 	fields["rackspaceConfig"] = rackspaceConfig
-	rackspaceConfig["ApiKey"] = "fakeAPiKey"
-	rackspaceConfig["Username"] = "fakeUser"
+	rackspaceConfig["apiKey"] = "fakeAPiKey"
+	rackspaceConfig["username"] = "fakeUser"
 
 	machine.Data = data
 	machine.Name = "fakeMachine"

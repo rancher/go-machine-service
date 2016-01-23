@@ -21,18 +21,18 @@ const (
 	maxWait             = time.Duration(time.Second * 10)
 	bootstrappedAtField = "bootstrappedAt"
 	parseMessage        = "Failed to parse config: [%v]"
-	BOOTSTRAPPED_FILE   = "bootstrapped"
+	bootStrappedFile    = "bootstrapped"
 )
 
 var endpointRegEx = regexp.MustCompile("-H=[[:alnum:]]*[[:graph:]]*")
 
 func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err error) {
 	log.WithFields(log.Fields{
-		"resourceId": event.ResourceId,
-		"eventId":    event.Id,
+		"resourceId": event.ResourceID,
+		"eventId":    event.ID,
 	}).Info("Activating Machine")
 
-	machine, err := getMachine(event.ResourceId, apiClient)
+	machine, err := getMachine(event.ResourceID, apiClient)
 	if err != nil {
 		return err
 	}
@@ -54,15 +54,15 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 	dataUpdates := map[string]interface{}{}
 	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
 
-	bootstrappedFilePath := filepath.Join(machineDir, "machines", machine.Name, BOOTSTRAPPED_FILE)
+	bootstrappedFilePath := filepath.Join(machineDir, "machines", machine.Name, bootStrappedFile)
 
 	// Idempotency. If the resource has the bootstrapped file, then it has been bootstrapped.
 	if _, err := os.Stat(bootstrappedFilePath); !os.IsNotExist(err) {
-		if data, err := ioutil.ReadFile(bootstrappedFilePath); err != nil {
+		data, err := ioutil.ReadFile(bootstrappedFilePath)
+		if err != nil {
 			return err
-		} else {
-			dataUpdates[bootstrappedAtField] = string(data)
 		}
+		dataUpdates[bootstrappedAtField] = string(data)
 		extractedConfig, extractionErr := getIdempotentExtractedConfig(machine, machineDir, apiClient)
 		if extractionErr != nil {
 			return err
@@ -80,7 +80,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 
 	publishChan <- "Installing Rancher agent"
 
-	registrationUrl, imageRepo, imageTag, err := getRegistrationUrlAndImage(machine.AccountId, apiClient)
+	registrationURL, imageRepo, imageTag, err := getRegistrationURLAndImage(machine.AccountId, apiClient)
 	if err != nil {
 		return err
 	}
@@ -97,12 +97,12 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 
 	publishChan <- "Creating agent container"
 
-	container, err := createContainer(registrationUrl, machine, dockerClient, imageRepo, imageTag)
+	container, err := createContainer(registrationURL, machine, dockerClient, imageRepo, imageTag)
 	if err != nil {
 		return err
 	}
 	log.WithFields(log.Fields{
-		"resourceId":  event.ResourceId,
+		"resourceId":  event.ResourceID,
 		"machineId":   machine.Id,
 		"containerId": container.ID,
 	}).Info("Container created for machine")
@@ -115,19 +115,19 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 	}
 
 	log.WithFields(log.Fields{
-		"resourceId":        event.ResourceId,
+		"resourceId":        event.ResourceID,
 		"machineExternalId": machine.ExternalId,
 		"containerId":       container.ID,
 	}).Info("Rancher-agent for machine started")
 
 	t := time.Now()
 	bootstrappedAt := t.Format(time.RFC3339)
-	if f, err := os.OpenFile(bootstrappedFilePath, os.O_CREATE|os.O_WRONLY, 0644); err != nil {
+	f, err := os.OpenFile(bootstrappedFilePath, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
 		return err
-	} else {
-		f.WriteString(bootstrappedAt)
-		f.Close()
 	}
+	f.WriteString(bootstrappedAt)
+	f.Close()
 	dataUpdates[bootstrappedAtField] = bootstrappedAt
 
 	destFile, err := createExtractedConfig(event, machine)
@@ -149,9 +149,9 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 	return publishReply(reply, apiClient)
 }
 
-func createContainer(registrationUrl string, machine *client.Machine,
+func createContainer(registrationURL string, machine *client.Machine,
 	dockerClient *docker.Client, imageRepo, imageTag string) (*docker.Container, error) {
-	containerCmd := []string{registrationUrl}
+	containerCmd := []string{registrationURL}
 	containerConfig := buildContainerConfig(containerCmd, machine, imageRepo, imageTag)
 	hostConfig := buildHostConfig()
 
@@ -219,9 +219,9 @@ func pullImage(dockerClient *docker.Client, imageRepo, imageTag string) error {
 	return nil
 }
 
-var getRegistrationUrlAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
+var getRegistrationURLAndImage = func(accountID string, apiClient *client.RancherClient) (string, string, string, error) {
 	listOpts := client.NewListOpts()
-	listOpts.Filters["accountId"] = accountId
+	listOpts.Filters["accountId"] = accountID
 	listOpts.Filters["state"] = "active"
 	tokenCollection, err := apiClient.RegistrationToken.List(listOpts)
 	if err != nil {
@@ -231,15 +231,15 @@ var getRegistrationUrlAndImage = func(accountId string, apiClient *client.Ranche
 	var token client.RegistrationToken
 	if len(tokenCollection.Data) >= 1 {
 		log.WithFields(log.Fields{
-			"accountId": accountId,
+			"accountId": accountID,
 		}).Debug("Found token for account")
 		token = tokenCollection.Data[0]
 	} else {
 		log.WithFields(log.Fields{
-			"accountId": accountId,
+			"accountId": accountID,
 		}).Debug("Creating new token for account")
 		createToken := &client.RegistrationToken{
-			AccountId: accountId,
+			AccountId: accountID,
 		}
 
 		createToken, err = apiClient.RegistrationToken.Create(createToken)
@@ -253,31 +253,31 @@ var getRegistrationUrlAndImage = func(accountId string, apiClient *client.Ranche
 		token = *createToken
 	}
 
-	regUrl, ok := token.Links["registrationUrl"]
+	regURL, ok := token.Links["registrationUrl"]
 	if !ok {
-		return "", "", "", fmt.Errorf("No registration url on token [%v] for account [%v].", token.Id, accountId)
+		return "", "", "", fmt.Errorf("No registration url on token [%v] for account [%v].", token.Id, accountID)
 	}
 
 	imageParts := strings.Split(token.Image, ":")
 	if len(imageParts) != 2 {
-		return "", "", "", fmt.Errorf("Invalid Image format in token [%v] for account [%v]", token.Id, accountId)
+		return "", "", "", fmt.Errorf("Invalid Image format in token [%v] for account [%v]", token.Id, accountID)
 	}
 
-	regUrl = tweakRegistrationUrl(regUrl)
-	return regUrl, imageParts[0], imageParts[1], nil
+	regURL = tweakRegistrationURL(regURL)
+	return regURL, imageParts[0], imageParts[1], nil
 }
 
-func tweakRegistrationUrl(regUrl string) string {
+func tweakRegistrationURL(regURL string) string {
 	// We do this to accomodate end-to-end workflow in our local development environments.
 	// Containers running in a vm won't be able to reach an api running on "localhost"
 	// because typically that localhost is referring to the real computer, not the vm.
 	localHostReplace := os.Getenv("CATTLE_AGENT_LOCALHOST_REPLACE")
 	if localHostReplace == "" {
-		return regUrl
+		return regURL
 	}
 
-	regUrl = strings.Replace(regUrl, "localhost", localHostReplace, 1)
-	return regUrl
+	regURL = strings.Replace(regURL, "localhost", localHostReplace, 1)
+	return regURL
 }
 
 func waitForTokenToActivate(token *client.RegistrationToken,
@@ -285,14 +285,14 @@ func waitForTokenToActivate(token *client.RegistrationToken,
 	timeoutAt := time.Now().Add(maxWait)
 	ticker := time.NewTicker(time.Millisecond * 250)
 	defer ticker.Stop()
-	tokenId := token.Id
+	tokenID := token.Id
 	for t := range ticker.C {
-		token, err := apiClient.RegistrationToken.ById(tokenId)
+		token, err := apiClient.RegistrationToken.ById(tokenID)
 		if err != nil {
 			return nil, err
 		}
 		if token == nil {
-			return nil, fmt.Errorf("Couldn't find token %v.", tokenId)
+			return nil, fmt.Errorf("Couldn't find token %v.", tokenID)
 		}
 		if token.State == "active" {
 			return token, nil

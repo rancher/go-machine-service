@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-machine-service/events"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -21,8 +23,8 @@ const (
 	levelInfo            = "level=\"info\""
 	levelError           = "level=\"error\""
 	errorCreatingMachine = "Error creating machine: "
-	CREATED_FILE         = "created"
-	MACHINE_KIND         = "machine"
+	CreatedFile          = "created"
+	MachineKind          = "machine"
 )
 
 var regExDockerMsg = regexp.MustCompile("msg=.*")
@@ -30,11 +32,11 @@ var regExHyphen = regexp.MustCompile("([a-z])([A-Z])")
 
 func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err error) {
 	log.WithFields(log.Fields{
-		"resourceId": event.ResourceId,
-		"eventId":    event.Id,
+		"resourceId": event.ResourceID,
+		"eventId":    event.ID,
 	}).Info("Creating Machine")
 
-	machine, err := getMachine(event.ResourceId, apiClient)
+	machine, err := getMachine(event.ResourceID, apiClient)
 	if err != nil {
 		return err
 	}
@@ -42,9 +44,6 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err er
 		return notAMachineReply(event, apiClient)
 	}
 
-	if machine.Kind != MACHINE_KIND {
-		return notAMachineReply(event, apiClient)
-	}
 	// Idempotency. If the resource has the property, we're done.
 	if _, ok := machine.Data[machineDirField]; ok {
 		reply := newReply(event)
@@ -66,7 +65,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err er
 	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
 
 	//Idempotency, if the same request is sent, without the machineDir & extractedConfig Field, we need to handle that
-	if _, err := os.Stat(filepath.Join(machineDir, "machines", machine.Name, CREATED_FILE)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(machineDir, "machines", machine.Name, CreatedFile)); !os.IsNotExist(err) {
 		extractedConfig, extractionErr := getIdempotentExtractedConfig(machine, machineDir, apiClient)
 		if extractionErr != nil {
 			return extractionErr
@@ -123,15 +122,15 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err er
 	}
 
 	log.WithFields(log.Fields{
-		"resourceId":        event.ResourceId,
+		"resourceId":        event.ResourceID,
 		"machineExternalId": machine.ExternalId,
 	}).Info("Machine Created")
 
-	if f, err := os.Create(filepath.Join(machineDir, "machines", machine.Name, CREATED_FILE)); err != nil {
+	f, err := os.Create(filepath.Join(machineDir, "machines", machine.Name, CreatedFile))
+	if err != nil {
 		return err
-	} else {
-		f.Close()
 	}
+	f.Close()
 
 	destFile, err := createExtractedConfig(event, machine)
 	if err != nil {
@@ -163,7 +162,7 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 	for scanner.Scan() {
 		msg := scanner.Text()
 		log.WithFields(log.Fields{
-			"resourceId: ": event.ResourceId,
+			"resourceId: ": event.ResourceID,
 		}).Infof("stdout: %s", msg)
 		transitionMsg := filterDockerMessage(msg, machine, errChan, providerHandler)
 		if transitionMsg != "" {
@@ -174,7 +173,7 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 	for scanner.Scan() {
 		msg := scanner.Text()
 		log.WithFields(log.Fields{
-			"resourceId": event.ResourceId,
+			"resourceId": event.ResourceID,
 		}).Infof("stderr: %s", msg)
 		filterDockerMessage(msg, machine, errChan, providerHandler)
 	}
@@ -235,11 +234,18 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	cmd = append(cmd, buildEngineOpts("--engine-storage-driver", []string{machine.EngineStorageDriver})...)
 
 	// Grab the reflected Value of XyzConfig (i.e. DigitaloceanConfig) based on the machine driver
-	driverConfig := machine.Data["fields"].(map[string]interface{})[machine.Driver+"Config"].(map[string]interface{})
-
-	for k, v := range driverConfig {
+	driverConfig := machine.Data["fields"].(map[string]interface{})[machine.Driver+"Config"]
+	if driverConfig == nil {
+		return nil, errors.New(machine.Driver + "Config does not exist on Machine " + machine.Id)
+	}
+	configFields := []string{}
+	for k := range driverConfig.(map[string]interface{}) {
+		configFields = append(configFields, k)
+	}
+	sort.Strings(configFields)
+	driverMapConfig := driverConfig.(map[string]interface{})
+	for _, nameConfigField := range configFields {
 		// We are ignoring the Resource Field as we don't need it.
-		nameConfigField := k
 		if nameConfigField == "Resource" {
 			continue
 		}
@@ -249,7 +255,7 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 		dmField := "--" + sDriver + "-" + strings.ToLower(regExHyphen.ReplaceAllString(nameConfigField, "${1}-${2}"))
 
 		// For now, we only support bool and string.  Will add more as required.
-		switch f := v.(type) {
+		switch f := driverMapConfig[nameConfigField].(type) {
 		case bool:
 			// dm only accepts field or field=true if value=true
 			if f {

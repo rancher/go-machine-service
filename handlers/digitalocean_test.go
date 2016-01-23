@@ -10,40 +10,40 @@ import (
 )
 
 func TestDigitalOcean(t *testing.T) {
-	access_token := os.Getenv("DIGITALOCEAN_KEY")
-	if access_token == "" {
+	accessToken := os.Getenv("DIGITALOCEAN_KEY")
+	if accessToken == "" {
 		t.Log("Skipping Digital Ocean test.")
 		return
 	}
-	setupDO(access_token)
+	setupDO(accessToken)
 
-	resourceId := "DO-" + strconv.FormatInt(time.Now().Unix(), 10)
+	resourceID := "DO-" + strconv.FormatInt(time.Now().Unix(), 10)
 	event := &events.Event{
-		ResourceId: resourceId,
-		Id:         "event-id",
+		ResourceID: resourceID,
+		ID:         "event-id",
 		ReplyTo:    "reply-to-id",
 	}
-	mockApiClient := &client.RancherClient{}
+	mockAPIClient := &client.RancherClient{}
 
-	err := CreateMachine(event, mockApiClient)
+	err := CreateMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = ActivateMachine(event, mockApiClient)
+	err = ActivateMachine(event, mockAPIClient)
 	if err != nil {
 		// Fail, not a fatal, so purge will still run.
 		t.Log(err)
 		t.Fail()
 	}
 
-	err = PurgeMachine(event, mockApiClient)
+	err = PurgeMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func setupDO(access_token string) {
+func setupDO(accessToken string) {
 	// TODO Replace functions during teardown.
 	data := make(map[string]interface{})
 	fields := make(map[string]interface{})
@@ -51,13 +51,13 @@ func setupDO(access_token string) {
 	digitaloceanConfig := make(map[string]interface{})
 	fields["digitaloceanConfig"] = digitaloceanConfig
 
-	digitaloceanConfig["AccessToken"] = access_token
-	digitaloceanConfig["Region"] = "sfo1"
-	digitaloceanConfig["Size"] = "1gb"
-	digitaloceanConfig["Image"] = "ubuntu-14-04-x64"
-	digitaloceanConfig["Ipv6"] = true
-	digitaloceanConfig["Backups"] = false
-	digitaloceanConfig["PrivateNetworking"] = true
+	digitaloceanConfig["accessToken"] = accessToken
+	digitaloceanConfig["region"] = "sfo1"
+	digitaloceanConfig["size"] = "1gb"
+	digitaloceanConfig["image"] = "ubuntu-14-04-x64"
+	digitaloceanConfig["ipv6"] = true
+	digitaloceanConfig["backups"] = false
+	digitaloceanConfig["privateNetworking"] = true
 
 	machine := &client.Machine{
 		Data:             data,
@@ -73,7 +73,7 @@ func setupDO(access_token string) {
 		return machine, nil
 	}
 
-	getRegistrationUrlAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
+	getRegistrationURLAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
 		return "http://1.2.3.4/v1", "rancher/agent", "v0.7.6", nil
 	}
 

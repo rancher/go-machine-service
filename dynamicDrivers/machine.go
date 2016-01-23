@@ -1,4 +1,4 @@
-package helpers
+package dynamicDrivers
 
 import (
 	"encoding/json"
@@ -7,9 +7,9 @@ import (
 )
 
 func uploadMachineSchema(drivers []string) error {
-	err := uploadMachineServiceJson(drivers)
-	err2 := uploadMachineProjectJson(drivers)
-	err3 := uploadMachineUserJson(drivers)
+	err := uploadMachineServiceJSON(drivers)
+	err2 := uploadMachineProjectJSON(drivers)
+	err3 := uploadMachineUserJSON(drivers)
 	if err != nil || err2 != nil || err3 != nil {
 		return errors.New("Failed to upload one of the machine jsons.")
 	}
@@ -25,7 +25,7 @@ func genFieldSchema(resourceFieldStruct ResourceFieldConfigs, field, fieldType, 
 	}
 }
 
-func uploadMachineServiceJson(drivers []string) error {
+func uploadMachineServiceJSON(drivers []string) error {
 	resourceFieldStruct := make(map[string]interface{})
 	resourceFieldMap := make(ResourceFieldConfigs)
 	resourceFieldStruct["collectionMethods"] = []string{"GET", "POST", "PUT", "DELETE"}
@@ -54,7 +54,7 @@ func uploadMachineServiceJson(drivers []string) error {
 	return uploadDynamicSchema("machine", string(jsonData), "physicalHost", []string{"service"}, true)
 }
 
-func uploadMachineProjectJson(drivers []string) error {
+func uploadMachineProjectJSON(drivers []string) error {
 	resourceFieldStruct := make(map[string]interface{})
 	resourceFieldMap := make(ResourceFieldConfigs)
 	resourceFieldStruct["collectionMethods"] = []string{"GET", "POST", "DELETE"}
@@ -83,7 +83,7 @@ func uploadMachineProjectJson(drivers []string) error {
 		[]string{"project", "member", "owner"}, false)
 }
 
-func uploadMachineUserJson(drivers []string) error {
+func uploadMachineUserJSON(drivers []string) error {
 	resourceFieldStruct := make(map[string]interface{})
 	resourceFieldMap := make(ResourceFieldConfigs)
 	resourceFieldStruct["collectionMethods"] = []string{"GET"}

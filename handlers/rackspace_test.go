@@ -19,27 +19,27 @@ func TestRackspace(t *testing.T) {
 	}
 	setupRackspace(username, region, apiKey)
 
-	resourceId := "RK-" + strconv.FormatInt(time.Now().Unix(), 10)
+	resourceID := "RK-" + strconv.FormatInt(time.Now().Unix(), 10)
 	event := &events.Event{
-		ResourceId: resourceId,
-		Id:         "event-id",
+		ResourceID: resourceID,
+		ID:         "event-id",
 		ReplyTo:    "reply-to-id",
 	}
-	mockApiClient := &client.RancherClient{}
+	mockAPIClient := &client.RancherClient{}
 
-	err := CreateMachine(event, mockApiClient)
+	err := CreateMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = ActivateMachine(event, mockApiClient)
+	err = ActivateMachine(event, mockAPIClient)
 	if err != nil {
 		// Fail, not a fatal, so purge will still run.
 		t.Log(err)
 		t.Fail()
 	}
 
-	err = PurgeMachine(event, mockApiClient)
+	err = PurgeMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,15 +52,15 @@ func setupRackspace(username, region, apiKey string) {
 	data["fields"] = fields
 	rackspaceConfig := make(map[string]interface{})
 	fields["rackspaceConfig"] = rackspaceConfig
-	rackspaceConfig["Username"] = username
-	rackspaceConfig["Region"] = region
-	rackspaceConfig["ApiKey"] = apiKey
-	rackspaceConfig["EndpointType"] = "publicURL"
-	rackspaceConfig["ImageId"] = "598a4282-f14b-4e50-af4c-b3e52749d9f9"
-	rackspaceConfig["FlavorId"] = "general1-1"
-	rackspaceConfig["SshUser"] = "root"
-	rackspaceConfig["SshPort"] = "22"
-	rackspaceConfig["DockerInstall"] = "true"
+	rackspaceConfig["username"] = username
+	rackspaceConfig["region"] = region
+	rackspaceConfig["apiKey"] = apiKey
+	rackspaceConfig["endpointType"] = "publicURL"
+	rackspaceConfig["imageId"] = "598a4282-f14b-4e50-af4c-b3e52749d9f9"
+	rackspaceConfig["flavorId"] = "general1-1"
+	rackspaceConfig["sshUser"] = "root"
+	rackspaceConfig["sshPort"] = "22"
+	rackspaceConfig["dockerInstall"] = "true"
 
 	machine := &client.Machine{
 		Data:   data,
@@ -75,7 +75,7 @@ func setupRackspace(username, region, apiKey string) {
 		return machine, nil
 	}
 
-	getRegistrationUrlAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
+	getRegistrationURLAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
 		return "http://1.2.3.4/v1", "rancher/agent", "v0.7.6", nil
 	}
 

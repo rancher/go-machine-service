@@ -1,4 +1,4 @@
-package test_utils
+package testUtils
 
 import (
 	"io"
@@ -78,9 +78,9 @@ func InitializeServer(port string, ready chan string) (err error) {
 	http.HandleFunc("/ready", readyHandler)
 	go http.ListenAndServe(":"+port, nil)
 
-	readyUrl := "http://localhost:" + port + "/pushEvent"
+	readyURL := "http://localhost:" + port + "/pushEvent"
 	for {
-		resp, err := http.Post(readyUrl, "application/json", nil)
+		resp, err := http.Post(readyURL, "application/json", nil)
 		// TODO This was added when I was debuggin. Might not need it now.
 		if err == nil {
 			log.Println(resp.Status)

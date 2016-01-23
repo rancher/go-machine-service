@@ -74,8 +74,6 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		"create",
 		"-d",
 		"digitalocean",
-		"--digitalocean-size",
-		"1gb",
 		"--digitalocean-access-token",
 		"abc",
 		"--digitalocean-image",
@@ -83,19 +81,26 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		"--digitalocean-ipv6",
 		"--digitalocean-region",
 		"sfo1",
+		"--digitalocean-size",
+		"1gb",
 		"testDO"}
 
+	//create -d digitalocean --digitalocean-region sfo1 --digitalocean-size 1gb --digitalocean-access-token abc --digitalocean-image ubuntu-14-04-x64 --digitalocean-ipv6 testDO
+	//create -d digitalocean --digitalocean-access-token abc --digitalocean-image ubuntu-14-04-x64 --digitalocean-ipv6 --digitalocean-region sfo1 --digitalocean-size 1gb testDO
+
+	//create -d digitalocean --digitalocean-region sfo1 --digitalocean-size 1gb --digitalocean-access-token abc --digitalocean-image ubuntu-14-04-x64 --digitalocean-ipv6 testDO
+	//create -d digitalocean --digitalocean-size 1gb --digitalocean-access-token abc --digitalocean-image ubuntu-14-04-x64 --digitalocean-ipv6 --digitalocean-region sfo1 testDO
 	data := make(map[string]interface{})
 	fields := make(map[string]interface{})
 	data["fields"] = fields
 	digitaloceanConfig := make(map[string]interface{})
 	fields["digitaloceanConfig"] = digitaloceanConfig
-	digitaloceanConfig["AccessToken"] = "abc"
-	digitaloceanConfig["Image"] = "ubuntu-14-04-x64"
-	digitaloceanConfig["Ipv6"] = true
-	digitaloceanConfig["Region"] = "sfo1"
-	digitaloceanConfig["Size"] = "1gb"
-	digitaloceanConfig["Backups"] = false
+	digitaloceanConfig["accessToken"] = "abc"
+	digitaloceanConfig["image"] = "ubuntu-14-04-x64"
+	digitaloceanConfig["ipv6"] = true
+	digitaloceanConfig["region"] = "sfo1"
+	digitaloceanConfig["size"] = "1gb"
+	digitaloceanConfig["backups"] = false
 
 	machine := &client.Machine{
 		Data:   data,
@@ -140,7 +145,7 @@ func strsEquals(a, b []string) bool {
 func checkCommands(testCmd []string, machine *client.Machine, t *testing.T) {
 	cmd, err := buildMachineCreateCmd(machine)
 	if err != nil {
-		t.Fatalf("Error building command", err)
+		t.Fatalf("Error building command %v", err)
 	}
 
 	if !strsEquals(cmd, testCmd) {
@@ -152,7 +157,7 @@ func checkCommands(testCmd []string, machine *client.Machine, t *testing.T) {
 func testParse(testArgs, ca, cert, key, endpoint string, t *testing.T) {
 	config, err := parseConnectionArgs(testArgs)
 	if err != nil {
-		t.Fatalf("Error parsing.", err)
+		t.Fatalf("Error parsing. %v", err)
 	}
 	checkField("endpoint", endpoint, config.endpoint, t)
 	checkField("ca", ca, config.caCert, t)

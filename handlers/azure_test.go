@@ -10,8 +10,8 @@ import (
 )
 
 func TestAzure(t *testing.T) {
-	subscriptionId := os.Getenv("SUBSCRIPTION_ID")
-	if subscriptionId == "" {
+	subscriptionID := os.Getenv("SUBSCRIPTION_ID")
+	if subscriptionID == "" {
 		t.Log("Skipping Azure test.")
 		return
 	}
@@ -22,43 +22,43 @@ func TestAzure(t *testing.T) {
 		return
 	}
 
-	setupAZ(subscriptionId, subscriptionCert)
+	setupAZ(subscriptionID, subscriptionCert)
 
-	resourceId := "AZ-" + strconv.FormatInt(time.Now().Unix(), 10)
+	resourceID := "AZ-" + strconv.FormatInt(time.Now().Unix(), 10)
 	event := &events.Event{
-		ResourceId: resourceId,
-		Id:         "event-id",
+		ResourceID: resourceID,
+		ID:         "event-id",
 		ReplyTo:    "reply-to-id",
 	}
-	mockApiClient := &client.RancherClient{}
+	mockAPIClient := &client.RancherClient{}
 
-	err := CreateMachine(event, mockApiClient)
+	err := CreateMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = ActivateMachine(event, mockApiClient)
+	err = ActivateMachine(event, mockAPIClient)
 	if err != nil {
 		// Fail, not a fatal, so purge will still run.
 		t.Log(err)
 		t.Fail()
 	}
 
-	err = PurgeMachine(event, mockApiClient)
+	err = PurgeMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func setupAZ(subscription_id, subscription_cert string) {
+func setupAZ(subscriptionID, subscriptionCert string) {
 	// TODO Replace functions during teardown.
 	data := make(map[string]interface{})
 	fields := make(map[string]interface{})
 	data["fields"] = fields
 	azureConfig := make(map[string]interface{})
 	fields["azureConfig"] = azureConfig
-	azureConfig["SubscriptionCert"] = subscription_cert
-	azureConfig["SubscriptionId"] = subscription_id
+	azureConfig["SubscriptionCert"] = subscriptionCert
+	azureConfig["SubscriptionId"] = subscriptionID
 
 	machine := &client.Machine{
 		Data:   data,
@@ -73,7 +73,7 @@ func setupAZ(subscription_id, subscription_cert string) {
 		return machine, nil
 	}
 
-	getRegistrationUrlAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
+	getRegistrationURLAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
 		return "http://1.2.3.4/v1", "rancher/agent", "v0.7.6", nil
 	}
 

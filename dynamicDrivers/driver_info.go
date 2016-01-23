@@ -1,4 +1,4 @@
-package helpers
+package dynamicDrivers
 
 import (
 	"fmt"
@@ -15,14 +15,15 @@ import (
 	"net/rpc"
 
 	"encoding/json"
+	"errors"
 )
 
 type CreateFlag struct {
-	Name        string      `json: name, "omitempty"`
-	Type        string      `json: type, "omitempty"`
-	Default     interface{} `json: default, "omitempty"`
-	Description string      `json: createFlag.Description, "omitempty"`
-	Create      bool        `json: create, "omitempty"`
+	Name        string      `json:"name,omitempty"`
+	Type        string      `json:"type,omitempty"`
+	Default     interface{} `json:"default,omitempty"`
+	Description string      `json:"createFlag.Description,omitempty"`
+	Create      bool        `json:"create,omitempty"`
 }
 
 func newCreateFlag(flag cli.Flag) (*CreateFlag, error) {
@@ -105,7 +106,7 @@ func generateAndUploadSchema(driver string) error {
 		createFlags = append(createFlags, *cFlag)
 	}
 
-	json, err := flagsToJson(createFlags)
+	json, err := flagsToJSON(createFlags)
 	if err != nil {
 		return err
 	}
@@ -113,27 +114,34 @@ func generateAndUploadSchema(driver string) error {
 		"owner", "project", "admin", "user", "readAdmin", "readonly", "restricted"}, true)
 }
 
-func uploadDynamicSchema(schemaName, definition, parent string, roles []string, delete bool) error {
+func removeSchema(schemaName string, apiClient *client.RancherClient) error {
+	listOpts := client.NewListOpts()
+	listOpts.Filters["name"] = schemaName
+	listOpts.Filters["state"] = "active"
+	schemas, err := apiClient.DynamicSchema.List(listOpts)
+	if err != nil {
+		return err
+	}
 
+	if len(schemas.Data) > 0 {
+		for _, schema := range schemas.Data {
+			_, err = apiClient.DynamicSchema.ActionRemove(&schema)
+			if err != nil {
+				return err
+			}
+			log.Debug("Removed ", schemaName, " Id: ", schema.Id)
+		}
+	}
+	return nil
+}
+
+func uploadDynamicSchema(schemaName, definition, parent string, roles []string, delete bool) error {
 	apiClient, err := getClient()
 	if err != nil {
 		return err
 	}
 	if delete {
-		listOpts := client.NewListOpts()
-		listOpts.Filters["name"] = schemaName
-		listOpts.Filters["state"] = "active"
-		schemas, err := apiClient.DynamicSchema.List(listOpts)
-		if err != nil {
-			return err
-		}
-
-		if len(schemas.Data) > 0 {
-			for _, schema := range schemas.Data {
-				apiClient.DynamicSchema.ActionRemove(&schema)
-				log.Debug("Removing ", schemaName, " Id: ", schema.Id)
-			}
-		}
+		removeSchema(schemaName, apiClient)
 	}
 
 	_, err = apiClient.DynamicSchema.Create(&client.DynamicSchema{
@@ -143,12 +151,12 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string, 
 		Roles:      roles,
 	})
 	if err != nil {
-		log.Error("Failed when uploading ", schemaName, " schema to cattle: ", err.Error())
+		err = errors.New(fmt.Sprint("Failed when uploading ", schemaName, " schema to cattle: ", err.Error()))
 	}
 	return err
 }
 
-func flagsToJson(createFlags []CreateFlag) (string, error) {
+func flagsToJSON(createFlags []CreateFlag) (string, error) {
 	resourceFieldStruct := make(map[string]interface{})
 	resourceFieldMap := make(ResourceFieldConfigs)
 	resourceFieldStruct["collectionMethods"] = []string{"GET", "POST"}
@@ -156,8 +164,8 @@ func flagsToJson(createFlags []CreateFlag) (string, error) {
 	for _, flag := range createFlags {
 		resourceFieldMap[flag.Name] = flagToField(flag)
 	}
-	fieldsJson, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
-	return string(fieldsJson), err
+	fieldsJSON, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
+	return string(fieldsJSON), err
 }
 
 func flagToField(flag CreateFlag) ResourceFieldConfig {
@@ -178,16 +186,19 @@ func getCreateFlagsForDriver(driver string) ([]cli.Flag, error) {
 		return nil, err
 	}
 	go func() {
-		if err := p.Serve(); err != nil {
-			log.Fatalf("Error starting plugin server for driver=%s, err=%v", driver, err)
+		defer p.Close()
+		serveError := p.Serve()
+		if err != nil {
+			log.Errorf("Error starting plugin server for driver=%s, err=%v", driver, serveError)
 		}
 	}()
 	addr, err := p.Address()
 	if err != nil {
-		panic("Error attempting to get plugin server address for RPC")
+		return nil, err
 	}
 
 	rpcclient, err := rpc.DialHTTP("tcp", addr)
+	defer rpcclient.Close()
 	if err != nil {
 		return nil, fmt.Errorf("Error dialing to plugin server's address(%v), err=%v", addr, err)
 	}

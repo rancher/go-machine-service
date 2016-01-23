@@ -55,7 +55,7 @@ func buildBaseMachineDir(uuid string) (string, error) {
 func getBaseMachineDir(uuid string) (string, error) {
 	cattleHome := os.Getenv("CATTLE_HOME")
 	if cattleHome == "" {
-		return "", fmt.Errorf("CATTLE_HOME not set. Cant create machine. Uuid: [%v].", uuid)
+		return "", fmt.Errorf("CATTLE_HOME not set. Cant create machine. Uuid: [%v]", uuid)
 	}
 	machineDir := filepath.Join(cattleHome, "machine", uuid)
 	return machineDir, nil
@@ -79,7 +79,7 @@ func republishTransitioningReply(publishChan <-chan string, event *events.Event,
 	// has not been updated for a period of time, it can no longer be updated.  For now, to deal with this
 	// we will simply republish transitioning messages until the next one is added.
 	// Because this ticker is going to republish every X seconds, it's will most likely republish a message sooner
-	// In all liklihood, we will remove this method later.
+	// In all likelihood, we will remove this method later.
 	defaultWaitTime := time.Second * 15
 	ticker := time.NewTicker(defaultWaitTime)
 	var lastMsg string
@@ -89,10 +89,9 @@ func republishTransitioningReply(publishChan <-chan string, event *events.Event,
 			if !more {
 				ticker.Stop()
 				return
-			} else {
-				lastMsg = msg
-				publishTransitioningReply(lastMsg, event, apiClient)
 			}
+			lastMsg = msg
+			publishTransitioningReply(lastMsg, event, apiClient)
 
 		case <-ticker.C:
 			//republish last message
@@ -117,7 +116,7 @@ func notAMachineReply(event *events.Event, apiClient *client.RancherClient) erro
 func newReply(event *events.Event) *client.Publish {
 	return &client.Publish{
 		Name:        event.ReplyTo,
-		PreviousIds: []string{event.Id},
+		PreviousIds: []string{event.ID},
 	}
 }
 
@@ -201,7 +200,7 @@ func createExtractedConfig(event *events.Event, machine *client.Machine) (string
 	// We will now zip, base64 encode the machine directory created, and upload this to cattle server.  This can be used to either recover
 	// the machine directory or used by Rancher users for their own local machine setup.
 	log.WithFields(log.Fields{
-		"resourceId": event.ResourceId,
+		"resourceId": event.ResourceID,
 	}).Info("Creating and uploading extracted machine config")
 
 	// tar.gz the $CATTLE_HOME/machine/<machine-id>/machines/<machine-name> dir (v0.2.0)
@@ -245,7 +244,7 @@ func createExtractedConfig(event *events.Event, machine *client.Machine) (string
 	// Read and add files into <machine-name>.tar.gz
 	for _, fileInfo := range files {
 
-		// For now, we will skip directories.  If we need to zip directories, we need to revist this code
+		// For now, we will skip directories.  If we need to zip directories, we need to revisit this code
 		if fileInfo.IsDir() {
 			continue
 		}

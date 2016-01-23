@@ -6,9 +6,9 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/rancher/go-machine-service/dynamicDrivers"
 	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-machine-service/handlers"
-	"github.com/rancher/go-machine-service/helpers"
 )
 
 var (
@@ -22,18 +22,31 @@ func main() {
 		"gitcommit": GITCOMMIT,
 	}).Info("Starting go-machine-service...")
 
-	errs, err := helpers.UpdateDrivers()
+	errs := dynamicDrivers.UpdateDrivers()
 
-	if err != nil || len(errs) > 0 {
-		if err != nil {
-			log.Error("Error from updating:", err.Error())
-		}
-		if len(errs) > 0 {
-			for _, err := range errs {
-				log.Error("Error from driver: ", err.Error())
+	if len(errs) > 0 {
+		exit := false
+		multipleErrors := false
+		for _, err := range errs {
+			if err != nil {
+				if exit {
+					multipleErrors = true
+				}
+				exit = true
 			}
 		}
-		os.Exit(1)
+		if exit {
+			if multipleErrors {
+				log.Error("Encountered multiple errors while updating drivers.")
+			}
+			for _, err := range errs {
+				if err != nil {
+					log.Error("Error from driver: ", err.Error())
+					exit = true
+				}
+			}
+			log.Fatal("Encourted an error while updating drivers.")
+		}
 	}
 	eventHandlers := map[string]events.EventHandler{
 		"physicalhost.create":    handlers.CreateMachine,
@@ -42,11 +55,11 @@ func main() {
 		"ping":                   handlers.PingNoOp,
 	}
 
-	apiUrl := os.Getenv("CATTLE_URL")
+	apiURL := os.Getenv("CATTLE_URL")
 	accessKey := os.Getenv("CATTLE_ACCESS_KEY")
 	secretKey := os.Getenv("CATTLE_SECRET_KEY")
 
-	router, err := events.NewEventRouter("goMachineService", 2000, apiUrl, accessKey, secretKey,
+	router, err := events.NewEventRouter("goMachineService", 2000, apiURL, accessKey, secretKey,
 		nil, eventHandlers, "physicalhost", 10)
 	if err != nil {
 		log.WithFields(log.Fields{

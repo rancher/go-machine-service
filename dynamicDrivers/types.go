@@ -1,4 +1,4 @@
-package helpers
+package dynamicDrivers
 
 type ResourceFieldConfig struct {
 	Type        string `json:"type,omitempty"`
@@ -15,7 +15,7 @@ type DocumentationFieldConfig struct {
 }
 
 type DocumentationFields struct {
-	Id             string                    `json:"id,omitempty"`
+	ID             string                    `json:"id,omitempty"`
 	ResourceFields DocumentationFieldConfigs `json:"resourceFields,omitempty"`
 }
 

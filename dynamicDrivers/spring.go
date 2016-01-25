@@ -1,4 +1,14 @@
-<beans xmlns="http://www.springframework.org/schema/beans"
+package dynamicDrivers
+
+import (
+	"bytes"
+	"text/template"
+)
+
+const bodyTemplate = `{{range .}}                <value>{{print .}}Config,parent=baseMachineConfig</value>  
+{{end}}`
+
+const header = `<beans xmlns="http://www.springframework.org/schema/beans"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:context="http://www.springframework.org/schema/context"
     xmlns:aop="http://www.springframework.org/schema/aop"
@@ -16,19 +26,9 @@
         </property>
         <property name="typeNames">
             <set>
-                <value>amazonec2Config,parent=baseMachineConfig</value>  
-                <value>azureConfig,parent=baseMachineConfig</value>  
-                <value>digitaloceanConfig,parent=baseMachineConfig</value>  
-                <value>exoscaleConfig,parent=baseMachineConfig</value>  
-                <value>openstackConfig,parent=baseMachineConfig</value>  
-                <value>packetConfig,parent=baseMachineConfig</value>  
-                <value>rackspaceConfig,parent=baseMachineConfig</value>  
-                <value>softlayerConfig,parent=baseMachineConfig</value>  
-                <value>ubiquityConfig,parent=baseMachineConfig</value>  
-                <value>virtualboxConfig,parent=baseMachineConfig</value>  
-                <value>vmwarevcloudairConfig,parent=baseMachineConfig</value>  
-                <value>vmwarevsphereConfig,parent=baseMachineConfig</value>  
-            </set>
+`
+
+const footer = `            </set>
         </property>
     </bean>
 
@@ -43,3 +43,17 @@
     <bean class="io.cattle.platform.docker.machine.api.filter.MachineValidationFilter" />
     <bean class="io.cattle.platform.docker.machine.api.MachineLinkFilter" />
 </beans>
+`
+
+func generateBody(driverConfigs []string) string {
+	t := template.New("xmlBody")
+	t.Parse(bodyTemplate)
+	var s bytes.Buffer
+	t.Execute(&s, driverConfigs)
+	return s.String()
+}
+
+func GenerateSpringContext(resourceData *ResourceData) error {
+	toWrite := header + generateBody(resourceData.Drivers) + footer
+	return writeToFile([]byte(toWrite), "spring-docker-machine-api-context.xml")
+}

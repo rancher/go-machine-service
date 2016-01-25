@@ -15,8 +15,14 @@ func TestAzureHandler(t *testing.T) {
 	machine := new(client.Machine)
 	machineDir := "."
 
-	machine.AzureConfig = new(client.AzureConfig)
-	machine.AzureConfig.SubscriptionCert = "QXp1cmVDb25maWc=" //base64 encoding of 'AzureConfig'
+	machine.Driver = "azure"
+	data := make(map[string]interface{})
+	machine.Data = data
+	fields := make(map[string]interface{})
+	data["fields"] = fields
+	azureConfig := make(map[string]interface{})
+	fields["azureConfig"] = azureConfig
+	azureConfig["subscriptionCert"] = "QXp1cmVDb25maWc=" //base64 encoding of 'AzureConfig'
 
 	azureHandler := &AzureHandler{}
 

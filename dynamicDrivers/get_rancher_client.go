@@ -3,6 +3,7 @@ package dynamicDrivers
 import (
 	"github.com/rancher/go-rancher/client"
 	"os"
+	"time"
 )
 
 func getClient() (*client.RancherClient, error) {
@@ -11,9 +12,9 @@ func getClient() (*client.RancherClient, error) {
 	secretKey := os.Getenv("CATTLE_SECRET_KEY")
 
 	return client.NewRancherClient(&client.ClientOpts{
-
 		Url:       apiURL,
 		AccessKey: accessKey,
 		SecretKey: secretKey,
+		Timeout:   time.Second * 10,
 	})
 }

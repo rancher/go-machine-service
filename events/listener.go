@@ -227,7 +227,7 @@ func NewEventRouter(name string, priority int, apiURL string, accessKey string, 
 	if apiClient == nil {
 		var err error
 		apiClient, err = client.NewRancherClient(&client.ClientOpts{
-
+			Timeout:   time.Second * 30,
 			Url:       apiURL,
 			AccessKey: accessKey,
 			SecretKey: secretKey,

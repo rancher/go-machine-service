@@ -37,6 +37,8 @@ type Service struct {
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
 
+	RetainIp bool `json:"retainIp,omitempty" yaml:"retain_ip,omitempty"`
+
 	Scale int64 `json:"scale,omitempty" yaml:"scale,omitempty"`
 
 	SecondaryLaunchConfigs []interface{} `json:"secondaryLaunchConfigs,omitempty" yaml:"secondary_launch_configs,omitempty"`
@@ -95,6 +97,8 @@ type ServiceOperations interface {
 	ActionRemove(*Service) (*Service, error)
 
 	ActionRemoveservicelink(*Service, *AddRemoveServiceLinkInput) (*Service, error)
+
+	ActionRestart(*Service, *ServiceRestart) (*Service, error)
 
 	ActionRollback(*Service) (*Service, error)
 
@@ -221,6 +225,15 @@ func (c *ServiceClient) ActionRemoveservicelink(resource *Service, input *AddRem
 	resp := &Service{}
 
 	err := c.rancherClient.doAction(SERVICE_TYPE, "removeservicelink", &resource.Resource, input, resp)
+
+	return resp, err
+}
+
+func (c *ServiceClient) ActionRestart(resource *Service, input *ServiceRestart) (*Service, error) {
+
+	resp := &Service{}
+
+	err := c.rancherClient.doAction(SERVICE_TYPE, "restart", &resource.Resource, input, resp)
 
 	return resp, err
 }

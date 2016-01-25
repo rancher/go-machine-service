@@ -41,6 +41,8 @@ type LoadBalancerService struct {
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
 
+	RetainIp bool `json:"retainIp,omitempty" yaml:"retain_ip,omitempty"`
+
 	Scale int64 `json:"scale,omitempty" yaml:"scale,omitempty"`
 
 	SelectorLink string `json:"selectorLink,omitempty" yaml:"selector_link,omitempty"`
@@ -93,6 +95,8 @@ type LoadBalancerServiceOperations interface {
 	ActionRemove(*LoadBalancerService) (*Service, error)
 
 	ActionRemoveservicelink(*LoadBalancerService, *AddRemoveLoadBalancerServiceLinkInput) (*Service, error)
+
+	ActionRestart(*LoadBalancerService, *ServiceRestart) (*Service, error)
 
 	ActionRollback(*LoadBalancerService) (*Service, error)
 
@@ -219,6 +223,15 @@ func (c *LoadBalancerServiceClient) ActionRemoveservicelink(resource *LoadBalanc
 	resp := &Service{}
 
 	err := c.rancherClient.doAction(LOAD_BALANCER_SERVICE_TYPE, "removeservicelink", &resource.Resource, input, resp)
+
+	return resp, err
+}
+
+func (c *LoadBalancerServiceClient) ActionRestart(resource *LoadBalancerService, input *ServiceRestart) (*Service, error) {
+
+	resp := &Service{}
+
+	err := c.rancherClient.doAction(LOAD_BALANCER_SERVICE_TYPE, "restart", &resource.Resource, input, resp)
 
 	return resp, err
 }

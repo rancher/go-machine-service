@@ -1,64 +1,75 @@
 {
-	"ImportPath": "github.com/rancherio/go-machine-service",
+	"ImportPath": "github.com/rancher/go-machine-service",
 	"GoVersion": "go1.4.1",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.6.4",
-			"Rev": "58f778a886b1e483dccc3b61085ccf347bf1a37e"
+			"Comment": "v0.8.7-53-g446d1c1",
+			"Rev": "446d1c146faa8ed3f4218f056fcd165f6bcfda81"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/pkg/archive",
-			"Comment": "v1.5.0",
-			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
+			"ImportPath": "github.com/docker/docker/pkg/term",
+			"Comment": "v1.4.1-9249-g954613f",
+			"Rev": "954613fb248ee31ed1a919f72153eb43268f2c30"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/pkg/fileutils",
-			"Comment": "v1.5.0",
-			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
+			"ImportPath": "github.com/docker/machine/libmachine/drivers",
+			"Comment": "v0.5.6-33-g7246b2c",
+			"Rev": "7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/pkg/ioutils",
-			"Comment": "v1.5.0",
-			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
+			"ImportPath": "github.com/docker/machine/libmachine/log",
+			"Comment": "v0.5.6-33-g7246b2c",
+			"Rev": "7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/pkg/pools",
-			"Comment": "v1.5.0",
-			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
+			"ImportPath": "github.com/docker/machine/libmachine/mcnflag",
+			"Comment": "v0.5.6-33-g7246b2c",
+			"Rev": "7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/pkg/promise",
-			"Comment": "v1.5.0",
-			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
+			"ImportPath": "github.com/docker/machine/libmachine/mcnutils",
+			"Comment": "v0.5.6-33-g7246b2c",
+			"Rev": "7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/pkg/system",
-			"Comment": "v1.5.0",
-			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
+			"ImportPath": "github.com/docker/machine/libmachine/ssh",
+			"Comment": "v0.5.6-33-g7246b2c",
+			"Rev": "7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/pkg/units",
-			"Comment": "v1.5.0",
-			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
+			"ImportPath": "github.com/docker/machine/libmachine/state",
+			"Comment": "v0.5.6-33-g7246b2c",
+			"Rev": "7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/vendor/src/code.google.com/p/go/src/pkg/archive/tar",
-			"Comment": "v1.5.0",
-			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
+			"ImportPath": "github.com/docker/machine/libmachine/version",
+			"Comment": "v0.5.6-33-g7246b2c",
+			"Rev": "7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84"
 		},
 		{
 			"ImportPath": "github.com/fsouza/go-dockerclient",
-			"Rev": "bc54f3734b9b098e24680d5ad686f602bc152df4"
-		},
-		{
-			"ImportPath": "github.com/rancher/go-rancher/client",
-			"Comment": "v0.1.0-120-gd388a4b",
-			"Rev": "d388a4b1a6b663add15f3f600809523493e93481"
+			"Rev": "2fb7694010aa553998ed513dc8805ab00708077a"
 		},
 		{
 			"ImportPath": "github.com/gorilla/websocket",
-			"Rev": "a3ec486e6a7a41858210b0fc5d7b5df593b3c4a3"
+			"Rev": "3986be78bf859e01f01af631ad76da5b269d270c"
+		},
+		{
+			"ImportPath": "github.com/rancher/go-rancher/client",
+			"Comment": "v0.1.0-133-gd784e76",
+			"Rev": "d784e766741307e0eda2e48bc3f83e725abf8af0"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/curve25519",
+			"Rev": "3760e016850398b85094c4c99e955b8c3dea5711"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh",
+			"Rev": "3760e016850398b85094c4c99e955b8c3dea5711"
 		}
 	]
 }

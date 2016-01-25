@@ -19,6 +19,11 @@ type RancherClient struct {
 	ToServiceUpgradeStrategy                 ToServiceUpgradeStrategyOperations
 	PublicEndpoint                           PublicEndpointOperations
 	VirtualMachineDisk                       VirtualMachineDiskOperations
+	HaproxyConfig                            HaproxyConfigOperations
+	RollingRestartStrategy                   RollingRestartStrategyOperations
+	ServiceRestart                           ServiceRestartOperations
+	ServicesPortRange                        ServicesPortRangeOperations
+	RecreateOnQuorumStrategyConfig           RecreateOnQuorumStrategyConfigOperations
 	AddOutputsInput                          AddOutputsInputOperations
 	AddRemoveClusterHostInput                AddRemoveClusterHostInputOperations
 	AddRemoveServiceLinkInput                AddRemoveServiceLinkInputOperations
@@ -55,8 +60,11 @@ type RancherClient struct {
 	ExternalDnsEvent                         ExternalDnsEventOperations
 	ExternalHostEvent                        ExternalHostEventOperations
 	LoadBalancerConfig                       LoadBalancerConfigOperations
+	MachineDriverUpdateInput                 MachineDriverUpdateInputOperations
+	MachineDriverErrorInput                  MachineDriverErrorInputOperations
 	Account                                  AccountOperations
 	Agent                                    AgentOperations
+	AuditLog                                 AuditLogOperations
 	Certificate                              CertificateOperations
 	ConfigItem                               ConfigItemOperations
 	ConfigItemStatus                         ConfigItemStatusOperations
@@ -64,17 +72,20 @@ type RancherClient struct {
 	Credential                               CredentialOperations
 	Databasechangelog                        DatabasechangelogOperations
 	Databasechangeloglock                    DatabasechangeloglockOperations
+	DynamicSchema                            DynamicSchemaOperations
 	Environment                              EnvironmentOperations
 	ExternalEvent                            ExternalEventOperations
 	ExternalHandler                          ExternalHandlerOperations
 	ExternalHandlerExternalHandlerProcessMap ExternalHandlerExternalHandlerProcessMapOperations
 	ExternalHandlerProcess                   ExternalHandlerProcessOperations
+	HealthcheckInstanceHostMap               HealthcheckInstanceHostMapOperations
 	Host                                     HostOperations
 	Image                                    ImageOperations
 	Instance                                 InstanceOperations
 	InstanceLink                             InstanceLinkOperations
 	IpAddress                                IpAddressOperations
 	Label                                    LabelOperations
+	MachineDriver                            MachineDriverOperations
 	Mount                                    MountOperations
 	Network                                  NetworkOperations
 	PhysicalHost                             PhysicalHostOperations
@@ -110,22 +121,11 @@ type RancherClient struct {
 	Openldapconfig                           OpenldapconfigOperations
 	LocalAuthConfig                          LocalAuthConfigOperations
 	StatsAccess                              StatsAccessOperations
-	Amazonec2Config                          Amazonec2ConfigOperations
-	AzureConfig                              AzureConfigOperations
-	DigitaloceanConfig                       DigitaloceanConfigOperations
-	ExoscaleConfig                           ExoscaleConfigOperations
-	OpenstackConfig                          OpenstackConfigOperations
-	PacketConfig                             PacketConfigOperations
-	RackspaceConfig                          RackspaceConfigOperations
-	SoftlayerConfig                          SoftlayerConfigOperations
-	UbiquityConfig                           UbiquityConfigOperations
-	VirtualboxConfig                         VirtualboxConfigOperations
-	VmwarevcloudairConfig                    VmwarevcloudairConfigOperations
-	VmwarevsphereConfig                      VmwarevsphereConfigOperations
-	Machine                                  MachineOperations
+	BaseMachineConfig                        BaseMachineConfigOperations
 	HostApiProxyToken                        HostApiProxyTokenOperations
 	Register                                 RegisterOperations
 	RegistrationToken                        RegistrationTokenOperations
+	Machine                                  MachineOperations
 }
 
 func constructClient() *RancherClient {
@@ -151,6 +151,11 @@ func constructClient() *RancherClient {
 	client.ToServiceUpgradeStrategy = newToServiceUpgradeStrategyClient(client)
 	client.PublicEndpoint = newPublicEndpointClient(client)
 	client.VirtualMachineDisk = newVirtualMachineDiskClient(client)
+	client.HaproxyConfig = newHaproxyConfigClient(client)
+	client.RollingRestartStrategy = newRollingRestartStrategyClient(client)
+	client.ServiceRestart = newServiceRestartClient(client)
+	client.ServicesPortRange = newServicesPortRangeClient(client)
+	client.RecreateOnQuorumStrategyConfig = newRecreateOnQuorumStrategyConfigClient(client)
 	client.AddOutputsInput = newAddOutputsInputClient(client)
 	client.AddRemoveClusterHostInput = newAddRemoveClusterHostInputClient(client)
 	client.AddRemoveServiceLinkInput = newAddRemoveServiceLinkInputClient(client)
@@ -187,8 +192,11 @@ func constructClient() *RancherClient {
 	client.ExternalDnsEvent = newExternalDnsEventClient(client)
 	client.ExternalHostEvent = newExternalHostEventClient(client)
 	client.LoadBalancerConfig = newLoadBalancerConfigClient(client)
+	client.MachineDriverUpdateInput = newMachineDriverUpdateInputClient(client)
+	client.MachineDriverErrorInput = newMachineDriverErrorInputClient(client)
 	client.Account = newAccountClient(client)
 	client.Agent = newAgentClient(client)
+	client.AuditLog = newAuditLogClient(client)
 	client.Certificate = newCertificateClient(client)
 	client.ConfigItem = newConfigItemClient(client)
 	client.ConfigItemStatus = newConfigItemStatusClient(client)
@@ -196,17 +204,20 @@ func constructClient() *RancherClient {
 	client.Credential = newCredentialClient(client)
 	client.Databasechangelog = newDatabasechangelogClient(client)
 	client.Databasechangeloglock = newDatabasechangeloglockClient(client)
+	client.DynamicSchema = newDynamicSchemaClient(client)
 	client.Environment = newEnvironmentClient(client)
 	client.ExternalEvent = newExternalEventClient(client)
 	client.ExternalHandler = newExternalHandlerClient(client)
 	client.ExternalHandlerExternalHandlerProcessMap = newExternalHandlerExternalHandlerProcessMapClient(client)
 	client.ExternalHandlerProcess = newExternalHandlerProcessClient(client)
+	client.HealthcheckInstanceHostMap = newHealthcheckInstanceHostMapClient(client)
 	client.Host = newHostClient(client)
 	client.Image = newImageClient(client)
 	client.Instance = newInstanceClient(client)
 	client.InstanceLink = newInstanceLinkClient(client)
 	client.IpAddress = newIpAddressClient(client)
 	client.Label = newLabelClient(client)
+	client.MachineDriver = newMachineDriverClient(client)
 	client.Mount = newMountClient(client)
 	client.Network = newNetworkClient(client)
 	client.PhysicalHost = newPhysicalHostClient(client)
@@ -242,22 +253,11 @@ func constructClient() *RancherClient {
 	client.Openldapconfig = newOpenldapconfigClient(client)
 	client.LocalAuthConfig = newLocalAuthConfigClient(client)
 	client.StatsAccess = newStatsAccessClient(client)
-	client.Amazonec2Config = newAmazonec2ConfigClient(client)
-	client.AzureConfig = newAzureConfigClient(client)
-	client.DigitaloceanConfig = newDigitaloceanConfigClient(client)
-	client.ExoscaleConfig = newExoscaleConfigClient(client)
-	client.OpenstackConfig = newOpenstackConfigClient(client)
-	client.PacketConfig = newPacketConfigClient(client)
-	client.RackspaceConfig = newRackspaceConfigClient(client)
-	client.SoftlayerConfig = newSoftlayerConfigClient(client)
-	client.UbiquityConfig = newUbiquityConfigClient(client)
-	client.VirtualboxConfig = newVirtualboxConfigClient(client)
-	client.VmwarevcloudairConfig = newVmwarevcloudairConfigClient(client)
-	client.VmwarevsphereConfig = newVmwarevsphereConfigClient(client)
-	client.Machine = newMachineClient(client)
+	client.BaseMachineConfig = newBaseMachineConfigClient(client)
 	client.HostApiProxyToken = newHostApiProxyTokenClient(client)
 	client.Register = newRegisterClient(client)
 	client.RegistrationToken = newRegistrationTokenClient(client)
+	client.Machine = newMachineClient(client)
 
 	return client
 }

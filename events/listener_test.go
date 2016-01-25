@@ -10,14 +10,14 @@ import (
 	"testing"
 	"time"
 
-	tu "github.com/rancher/go-machine-service/test_utils"
+	tu "github.com/rancher/go-machine-service/testUtils"
 	"github.com/rancher/go-rancher/client"
 )
 
 const eventServerPort string = "8005"
-const baseUrl string = "http://localhost:" + eventServerPort
-const pushUrl string = baseUrl + "/pushEvent"
-const subscribeUrl string = baseUrl + "/subscribe"
+const baseURL string = "http://localhost:" + eventServerPort
+const pushURL string = baseURL + "/pushEvent"
+const subscribeURL string = baseURL + "/subscribe"
 
 func newRouter(eventHandlers map[string]EventHandler, workerCount int, t *testing.T) *EventRouter {
 	// Mock out these functions
@@ -27,8 +27,8 @@ func newRouter(eventHandlers map[string]EventHandler, workerCount int, t *testin
 	removeOldHandler = func(name string, apiClient *client.RancherClient) error {
 		return nil
 	}
-	fakeApiClient := &client.RancherClient{}
-	router, err := NewEventRouter("testRouter", 2000, baseUrl, "accKey", "secret", fakeApiClient,
+	fakeAPIClient := &client.RancherClient{}
+	router, err := NewEventRouter("testRouter", 2000, baseURL, "accKey", "secret", fakeAPIClient,
 		eventHandlers, "physicalhost", workerCount)
 	if err != nil {
 		t.Fatal(err)
@@ -56,15 +56,15 @@ func TestSimpleRouting(t *testing.T) {
 
 	preCount := 0
 	pre := func(event *Event) {
-		event.Id = strconv.Itoa(preCount)
-		event.ResourceId = strconv.FormatInt(time.Now().UnixNano(), 10)
-		preCount += 1
+		event.ID = strconv.Itoa(preCount)
+		event.ResourceID = strconv.FormatInt(time.Now().UnixNano(), 10)
+		preCount++
 		event.Name = "physicalhost.create;handler=testRouter"
 	}
 
 	// Push 3 events
 	for i := 0; i < 3; i++ {
-		err := prepAndPostEvent("../test_utils/resources/create_virtualbox.json", pre)
+		err := prepAndPostEvent("../testUtils/resources/create_virtualbox.json", pre)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -73,7 +73,7 @@ func TestSimpleRouting(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		receivedEvent := awaitEvent(eventsReceived, 100, t)
 		if receivedEvent != nil {
-			receivedEvents[receivedEvent.Id] = receivedEvent
+			receivedEvents[receivedEvent.ID] = receivedEvent
 		}
 	}
 
@@ -108,15 +108,15 @@ func TestEventDropping(t *testing.T) {
 
 	preCount := 0
 	pre := func(event *Event) {
-		event.Id = strconv.Itoa(preCount)
-		event.ResourceId = strconv.FormatInt(time.Now().UnixNano(), 10)
-		preCount += 1
+		event.ID = strconv.Itoa(preCount)
+		event.ResourceID = strconv.FormatInt(time.Now().UnixNano(), 10)
+		preCount++
 		event.Name = "physicalhost.create;handler=testRouter"
 	}
 
 	// Push 3 events
 	for i := 0; i < 3; i++ {
-		err := prepAndPostEvent("../test_utils/resources/create_virtualbox.json", pre)
+		err := prepAndPostEvent("../testUtils/resources/create_virtualbox.json", pre)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -125,7 +125,7 @@ func TestEventDropping(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		receivedEvent := awaitEvent(eventsReceived, 20, t)
 		if receivedEvent != nil {
-			receivedEvents[receivedEvent.Id] = receivedEvent
+			receivedEvents[receivedEvent.ID] = receivedEvent
 		}
 	}
 
@@ -155,22 +155,22 @@ func TestWorkerReuse(t *testing.T) {
 	<-ready
 	preCount := 1
 	pre := func(event *Event) {
-		event.Id = strconv.Itoa(preCount)
-		event.ResourceId = strconv.FormatInt(time.Now().UnixNano(), 10)
-		preCount += 1
+		event.ID = strconv.Itoa(preCount)
+		event.ResourceID = strconv.FormatInt(time.Now().UnixNano(), 10)
+		preCount++
 		event.Name = "physicalhost.create;handler=testRouter"
 	}
 
 	// Push 3 events
 	receivedEvents := map[string]*Event{}
 	for i := 0; i < 2; i++ {
-		err := prepAndPostEvent("../test_utils/resources/create_virtualbox.json", pre)
+		err := prepAndPostEvent("../testUtils/resources/create_virtualbox.json", pre)
 		if err != nil {
 			t.Fatal(err)
 		}
 		receivedEvent := awaitEvent(eventsReceived, 500, t)
 		if receivedEvent != nil {
-			receivedEvents[receivedEvent.Id] = receivedEvent
+			receivedEvents[receivedEvent.ID] = receivedEvent
 		}
 	}
 
@@ -193,7 +193,6 @@ func awaitEvent(eventsReceived chan *Event, millisToWait int, t *testing.T) *Eve
 	case <-timeout:
 		return nil
 	}
-	return nil
 }
 
 type PreFunc func(*Event)
@@ -220,7 +219,7 @@ func prepAndPostEvent(eventFile string, preFunc PreFunc) (err error) {
 	if err != nil {
 		return err
 	}
-	http.Post(pushUrl, "application/json", buffer)
+	http.Post(pushURL, "application/json", buffer)
 
 	return nil
 }

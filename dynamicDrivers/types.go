@@ -1,9 +1,13 @@
-package helpers
+package dynamicDrivers
 
 type ResourceFieldConfig struct {
-	Type     string `json:"type,omitempty"`
-	Nullable bool   `json:"nullable,omitempty"`
-	Required bool   `json:"required,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Description string `json:"description,omitempty"`
+	Nullable    bool   `json:"nullable,omitempty"`
+	Required    bool   `json:"required,omitempty"`
+	MinLength   int    `json:"minLength,omitempty"`
+	Create      bool   `json:"create,omitempty"`
+	Update      bool   `json:"update,omitempty"`
 }
 
 type DocumentationFieldConfig struct {
@@ -11,7 +15,7 @@ type DocumentationFieldConfig struct {
 }
 
 type DocumentationFields struct {
-	Id             string                    `json:"id,omitempty"`
+	ID             string                    `json:"id,omitempty"`
 	ResourceFields DocumentationFieldConfigs `json:"resourceFields,omitempty"`
 }
 

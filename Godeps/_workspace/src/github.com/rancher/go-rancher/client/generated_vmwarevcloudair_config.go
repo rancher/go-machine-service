@@ -7,35 +7,33 @@ const (
 type VmwarevcloudairConfig struct {
 	Resource
 
-	ApiEndpoint string `json:"apiEndpoint,omitempty" yaml:"api_endpoint,omitempty"`
+	Catalog string `json:"catalog,omitempty" yaml:"catalog,omitempty"`
 
-	ApiKey string `json:"apiKey,omitempty" yaml:"api_key,omitempty"`
+	Catalogitem string `json:"catalogitem,omitempty" yaml:"catalogitem,omitempty"`
 
-	Cpu string `json:"cpu,omitempty" yaml:"cpu,omitempty"`
+	Computeid string `json:"computeid,omitempty" yaml:"computeid,omitempty"`
 
-	DiskSize string `json:"diskSize,omitempty" yaml:"disk_size,omitempty"`
+	CpuCount string `json:"cpuCount,omitempty" yaml:"cpu_count,omitempty"`
 
-	Domain string `json:"domain,omitempty" yaml:"domain,omitempty"`
+	DockerPort string `json:"dockerPort,omitempty" yaml:"docker_port,omitempty"`
 
-	Hostname string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	Edgegateway string `json:"edgegateway,omitempty" yaml:"edgegateway,omitempty"`
 
-	HourlyBilling bool `json:"hourlyBilling,omitempty" yaml:"hourly_billing,omitempty"`
+	MemorySize string `json:"memorySize,omitempty" yaml:"memory_size,omitempty"`
 
-	Image string `json:"image,omitempty" yaml:"image,omitempty"`
+	Orgvdcnetwork string `json:"orgvdcnetwork,omitempty" yaml:"orgvdcnetwork,omitempty"`
 
-	LocalDisk bool `json:"localDisk,omitempty" yaml:"local_disk,omitempty"`
+	Password string `json:"password,omitempty" yaml:"password,omitempty"`
 
-	Memory string `json:"memory,omitempty" yaml:"memory,omitempty"`
+	Provision bool `json:"provision,omitempty" yaml:"provision,omitempty"`
 
-	PrivateNetOnly bool `json:"privateNetOnly,omitempty" yaml:"private_net_only,omitempty"`
+	Publicip string `json:"publicip,omitempty" yaml:"publicip,omitempty"`
 
-	PrivateVlanId string `json:"privateVlanId,omitempty" yaml:"private_vlan_id,omitempty"`
+	SshPort string `json:"sshPort,omitempty" yaml:"ssh_port,omitempty"`
 
-	PublicVlanId string `json:"publicVlanId,omitempty" yaml:"public_vlan_id,omitempty"`
+	Username string `json:"username,omitempty" yaml:"username,omitempty"`
 
-	Region string `json:"region,omitempty" yaml:"region,omitempty"`
-
-	User string `json:"user,omitempty" yaml:"user,omitempty"`
+	Vdcid string `json:"vdcid,omitempty" yaml:"vdcid,omitempty"`
 }
 
 type VmwarevcloudairConfigCollection struct {

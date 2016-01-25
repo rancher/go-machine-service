@@ -1,4 +1,4 @@
-package helpers
+package dynamicDrivers
 
 func getWhitelistedDrivers(resourceData *ResourceData) []string {
 	tempMap := make(map[string]string)

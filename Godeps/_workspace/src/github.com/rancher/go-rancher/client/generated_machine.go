@@ -9,8 +9,6 @@ type Machine struct {
 
 	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
 
-	AgentId string `json:"agentId,omitempty" yaml:"agent_id,omitempty"`
-
 	AuthCertificateAuthority string `json:"authCertificateAuthority,omitempty" yaml:"auth_certificate_authority,omitempty"`
 
 	AuthKey string `json:"authKey,omitempty" yaml:"auth_key,omitempty"`

@@ -79,12 +79,19 @@ func UpdateDrivers() []error {
 		return errs
 	}
 
-	go killOnChange(driversCollection.Data, apiClient)
+	blackListSetting, err := getBlackListSetting(apiClient)
+	if err != nil {
+		errs = append(errs, err)
+		return errs
+	}
+
+	go killOnChange(driversCollection.Data, blackListSetting.Value, apiClient)
 	return errs
 }
 
-func killOnChange(startingDrivers []client.MachineDriver, apiClient *client.RancherClient) {
+func killOnChange(startingDrivers []client.MachineDriver, blackListedDrivers string, apiClient *client.RancherClient) {
 	reconnectAttemps := 0
+	log.Info("Started setting and driver watcher.")
 	for {
 		drivers, err := apiClient.MachineDriver.List(nil)
 		if err == nil {
@@ -92,8 +99,17 @@ func killOnChange(startingDrivers []client.MachineDriver, apiClient *client.Ranc
 				log.Info("Detected change to rancher defined machine drivers. Exiting go machine service.")
 				os.Exit(0)
 			}
-			time.Sleep(time.Second * 5)
-			reconnectAttemps = 0
+			blackListSetting, err := getBlackListSetting(apiClient)
+			if err == nil {
+				if blackListSetting.Value != blackListedDrivers {
+					log.Info("Detected change to rancher driver blacklist. Exiting go machine service.")
+					os.Exit(0)
+				}
+				time.Sleep(time.Second * 5)
+				reconnectAttemps = 0
+			} else {
+				time.Sleep(getTime(&reconnectAttemps))
+			}
 		} else {
 			time.Sleep(getTime(&reconnectAttemps))
 		}
@@ -177,6 +193,12 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 		return nil, allErrors
 	}
 
+	blackList, err := getBlackListedDrivers(apiClient)
+	if err != nil {
+		allErrors = append(allErrors, err)
+		return nil, allErrors
+	}
+
 	log.Debug("Starting parallel download of drivers.")
 
 	var wg sync.WaitGroup
@@ -185,6 +207,10 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 		wg.Add(1)
 		go func(driver client.MachineDriver) {
 			defer wg.Done()
+			if isBlacklisted(blackList, driver.Name) {
+				log.Info("Driver: ", driver.Name, " is ", driver.State, " but was in blacklist. Ignoring.")
+				return
+			}
 
 			reinstall := false
 			handled := false
@@ -254,6 +280,15 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 		go func(driver string) {
 			defer wg.Done()
 			routineErrors := []error{}
+			if isBlacklisted(blackList, driver) {
+				log.Info(driver, " is blacklisted removing any schemas it has.")
+				err := removeSchema(driver+"Config", apiClient)
+				if err != nil {
+					routineErrors = append(routineErrors, err)
+				}
+				errsChan <- routineErrors
+				return
+			}
 			log.Debug("Generating schema for: ", driver)
 			errFunc := generateAndUploadSchema(driver)
 			if errFunc != nil {

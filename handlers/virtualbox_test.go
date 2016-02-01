@@ -11,66 +11,72 @@ import (
 )
 
 func TestMachineHandlers(t *testing.T) {
-	test_vbox := os.Getenv("TEST_VIRTUALBOX")
-	if !strings.EqualFold(test_vbox, "true") {
+	testVbox := os.Getenv("TEST_VIRTUALBOX")
+	if !strings.EqualFold(testVbox, "true") {
 		t.Log("Skipping virtualbox test.")
 		return
 	}
 	setupVB()
 
-	resourceId := "test-" + strconv.FormatInt(time.Now().Unix(), 10)
+	resourceID := "test-" + strconv.FormatInt(time.Now().Unix(), 10)
 	event := &events.Event{
-		ResourceId: resourceId,
-		Id:         "event-id",
+		ResourceID: resourceID,
+		ID:         "event-id",
 		ReplyTo:    "reply-to-id",
 	}
-	mockApiClient := &client.RancherClient{}
+	mockAPIClient := &client.RancherClient{}
 
-	err := CreateMachine(event, mockApiClient)
+	err := CreateMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Idempotent check. Should rerun and reply without error
-	err = CreateMachine(event, mockApiClient)
+	err = CreateMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// and test activating that machine
-	err = ActivateMachine(event, mockApiClient)
+	err = ActivateMachine(event, mockAPIClient)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
 	}
 
 	// Idempotent check. Should rerun and reply without error
-	err = ActivateMachine(event, mockApiClient)
+	err = ActivateMachine(event, mockAPIClient)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
 	}
 
 	// and test purging that machine
-	err = PurgeMachine(event, mockApiClient)
+	err = PurgeMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = PurgeMachine(event, mockApiClient)
+	err = PurgeMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func setupVB() {
+
+	data := make(map[string]interface{})
+	fields := make(map[string]interface{})
+	data["fields"] = fields
+	virtualboxConfig := make(map[string]interface{})
+	fields["virtualboxConfig"] = virtualboxConfig
+	virtualboxConfig["diskSize"] = "40000"
+	virtualboxConfig["memory"] = "2048"
+
 	machine := &client.Machine{
-		VirtualboxConfig: &client.VirtualboxConfig{
-			DiskSize: "40000",
-			Memory:   "2048",
-		},
+		Data:   data,
 		Kind:   "machine",
-		Driver: "VirtualBox",
+		Driver: "virtualbox",
 	}
 
 	getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {
@@ -80,7 +86,7 @@ func setupVB() {
 		return machine, nil
 	}
 
-	getRegistrationUrlAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
+	getRegistrationURLAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
 		return "http://1.2.3.4/v1", "rancher/agent", "v0.7.6", nil
 	}
 

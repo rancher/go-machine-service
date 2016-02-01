@@ -27,11 +27,11 @@ type EventHandler func(*Event, *client.RancherClient) error
 type EventRouter struct {
 	name          string
 	priority      int
-	apiUrl        string
+	apiURL        string
 	accessKey     string
 	secretKey     string
 	apiClient     *client.RancherClient
-	subscribeUrl  string
+	subscribeURL  string
 	eventHandlers map[string]EventHandler
 	workerCount   int
 	eventStream   *websocket.Conn
@@ -113,7 +113,7 @@ func (router *EventRouter) run(ready chan<- bool, eventSuffix string) (err error
 		handlers[fullEventKey] = handler
 	}
 
-	eventStream, err := subscribeToEvents(router.subscribeUrl, router.accessKey, router.secretKey, subscribeParams)
+	eventStream, err := subscribeToEvents(router.subscribeURL, router.accessKey, router.secretKey, subscribeParams)
 	if err != nil {
 		return err
 	}
@@ -146,8 +146,6 @@ func (router *EventRouter) run(ready chan<- bool, eventSuffix string) (err error
 			}).Info("No workers available dropping event.")
 		}
 	}
-
-	return nil
 }
 
 func (router *EventRouter) Stop() (err error) {
@@ -184,10 +182,10 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 		}).Debug("Processing event.")
 	}
 
-	unlocker := locks.Lock(event.ResourceId)
+	unlocker := locks.Lock(event.ResourceID)
 	if unlocker == nil {
 		log.WithFields(log.Fields{
-			"resourceId": event.ResourceId,
+			"resourceId": event.ResourceID,
 		}).Debug("Resource locked. Dropping event")
 		return
 	}
@@ -198,14 +196,14 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 		if err != nil {
 			log.WithFields(log.Fields{
 				"eventName":  event.Name,
-				"eventId":    event.Id,
-				"resourceId": event.ResourceId,
+				"eventId":    event.ID,
+				"resourceId": event.ResourceID,
 				"err":        err,
 			}).Error("Error processing event")
 
 			reply := &client.Publish{
 				Name:                 event.ReplyTo,
-				PreviousIds:          []string{event.Id},
+				PreviousIds:          []string{event.ID},
 				Transitioning:        "error",
 				TransitioningMessage: err.Error(),
 			}
@@ -223,14 +221,14 @@ func (w *Worker) DoWork(rawEvent []byte, eventHandlers map[string]EventHandler, 
 	}
 }
 
-func NewEventRouter(name string, priority int, apiUrl string, accessKey string, secretKey string,
+func NewEventRouter(name string, priority int, apiURL string, accessKey string, secretKey string,
 	apiClient *client.RancherClient, eventHandlers map[string]EventHandler, resourceName string, workerCount int) (*EventRouter, error) {
 
 	if apiClient == nil {
 		var err error
 		apiClient, err = client.NewRancherClient(&client.ClientOpts{
-
-			Url:       apiUrl,
+			Timeout:   time.Second * 30,
+			Url:       apiURL,
 			AccessKey: accessKey,
 			SecretKey: secretKey,
 		})
@@ -240,16 +238,16 @@ func NewEventRouter(name string, priority int, apiUrl string, accessKey string, 
 	}
 
 	// TODO Get subscribe collection URL from API instead of hard coding
-	subscribeUrl := strings.Replace(apiUrl+"/subscribe", "http", "ws", -1)
+	subscribeURL := strings.Replace(apiURL+"/subscribe", "http", "ws", -1)
 
 	return &EventRouter{
 		name:          name,
 		priority:      priority,
-		apiUrl:        apiUrl,
+		apiURL:        apiURL,
 		accessKey:     accessKey,
 		secretKey:     secretKey,
 		apiClient:     apiClient,
-		subscribeUrl:  subscribeUrl,
+		subscribeURL:  subscribeURL,
 		eventHandlers: eventHandlers,
 		workerCount:   workerCount,
 		mu:            &sync.Mutex{},
@@ -261,12 +259,12 @@ func newWorker() *Worker {
 	return &Worker{}
 }
 
-func subscribeToEvents(subscribeUrl string, accessKey string, secretKey string, data url.Values) (*websocket.Conn, error) {
+func subscribeToEvents(subscribeURL string, accessKey string, secretKey string, data url.Values) (*websocket.Conn, error) {
 	dialer := &websocket.Dialer{}
 	headers := http.Header{}
 	headers.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(accessKey+":"+secretKey)))
-	subscribeUrl = subscribeUrl + "?" + data.Encode()
-	ws, resp, err := dialer.Dial(subscribeUrl, headers)
+	subscribeURL = subscribeURL + "?" + data.Encode()
+	ws, resp, err := dialer.Dial(subscribeURL, headers)
 	if err != nil {
 		defer resp.Body.Close()
 		body, _ := ioutil.ReadAll(resp.Body)
@@ -276,7 +274,7 @@ func subscribeToEvents(subscribeUrl string, accessKey string, secretKey string, 
 			"responseHeaders": resp.Header,
 			"responseBody":    string(body[:]),
 			"error":           err,
-			"subscribeUrl":    subscribeUrl,
+			"subscribeUrl":    subscribeURL,
 		}).Error("Failed to subscribe to events.")
 		return nil, err
 	}

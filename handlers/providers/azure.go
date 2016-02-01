@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"errors"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/client"
 )
@@ -22,11 +23,23 @@ type AzureHandler struct {
 func (*AzureHandler) HandleCreate(machine *client.Machine, machineDir string) error {
 	var data *string
 	var filename string
-	if machine.AzureConfig.SubscriptionCert != "" {
-		data = &machine.AzureConfig.SubscriptionCert
+	fields := machine.Data["fields"]
+	if fields == nil {
+		return errors.New(machine.Driver + "Config does not exist on Machine " + machine.Id)
+	}
+	driverConfig := fields.(map[string]interface{})[machine.Driver+"Config"]
+	if driverConfig == nil {
+		return errors.New(machine.Driver + "Config does not exist on Machine " + machine.Id)
+	}
+	machineConfig := driverConfig.(map[string]interface{})
+	value := ""
+	if machineConfig["subscriptionCert"].(string) != "" {
+		value = machineConfig["subscriptionCert"].(string)
+		data = &value
 		filename = "subscription-cert.pem"
 	} else {
-		data = &machine.AzureConfig.PublishSettingsFile
+		value = machineConfig["publishSettingsFile"].(string)
+		data = &value
 		filename = "publish-settings.xml"
 	}
 	path, err := saveDataToFile(filename, *data, machineDir)

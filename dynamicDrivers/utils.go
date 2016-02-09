@@ -1,8 +1,10 @@
 package dynamicDrivers
 
 import (
+	"fmt"
 	"github.com/rancher/go-rancher/client"
 	"strings"
+	"time"
 )
 
 func isBlacklisted(blackList []string, driver string) bool {
@@ -24,4 +26,42 @@ func getBlackListedDrivers(apiClient *client.RancherClient) ([]string, error) {
 		return nil, err
 	}
 	return strings.Split(setting.Value, ";"), nil
+}
+
+func waitSuccessDriver(driver client.MachineDriver, apiClient *client.RancherClient) error {
+
+	timeout := time.After(30 * time.Second)
+	tick := time.Tick(time.Millisecond * 500)
+	gotDriver, err := apiClient.MachineDriver.ById(driver.Id)
+	for gotDriver.Transitioning == "yes" {
+		select {
+		case <-timeout:
+			return fmt.Errorf("Timed out waiting for MachineDriver %v to be done.", driver.Id)
+		case <-tick:
+			gotDriver, err = apiClient.MachineDriver.ById(driver.Id)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func waitSuccessSchema(schema client.DynamicSchema, apiClient *client.RancherClient) error {
+
+	timeout := time.After(30 * time.Second)
+	tick := time.Tick(time.Millisecond * 500)
+	gotSchema, err := apiClient.DynamicSchema.ById(schema.Id)
+	for gotSchema.Transitioning == "yes" {
+		select {
+		case <-timeout:
+			return fmt.Errorf("Timed out waiting for Schema %v to be done.", schema.Id)
+		case <-tick:
+			gotSchema, err = apiClient.DynamicSchema.ById(schema.Id)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

@@ -60,8 +60,8 @@
 		},
 		{
 			"ImportPath": "github.com/rancher/go-rancher/client",
-			"Comment": "v0.1.0-133-gd784e76",
-			"Rev": "d784e766741307e0eda2e48bc3f83e725abf8af0"
+			"Comment": "v0.1.0-141-g6ac9bd0",
+			"Rev": "6ac9bd0e2ae71f2cdce394abf8ab70616d7e466d"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/curve25519",

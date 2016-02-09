@@ -205,50 +205,7 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 
 	for _, driver := range drivers.Data {
 		wg.Add(1)
-		go func(driver client.MachineDriver) {
-			defer wg.Done()
-			if isBlacklisted(blackList, driver.Name) {
-				log.Info("Driver: ", driver.Name, " is ", driver.State, " but was in blacklist. Ignoring.")
-				return
-			}
-
-			reinstall := false
-			handled := false
-
-			if driver.State == "active" {
-				log.Debug("Verfiying ", driver.Name, " exists in path.")
-				reinstall = !driverBinaryExists(driver.Name)
-				if reinstall {
-					log.Info("Active driver ", driver.Name, " binary, ", asDockerMachineDriver(driver.Name),
-						", not found reinstalling.")
-				} else {
-					log.Info("Active driver ", driver.Name, " currently installed at ",
-						asDockerMachineDriver(driver.Name), ".")
-					handled = true
-				}
-			}
-
-			if driver.State == "inactive" || reinstall {
-				log.Debug("Downloading and verifying: " + driver.Uri)
-				err := installDriver(driver.Uri, driver.Md5checksum, driver.Name)
-				if err != nil {
-					input := client.MachineDriverErrorInput{ErrorMessage: err.Error()}
-					apiClient.MachineDriver.ActionError(&driver, &input)
-					log.Error("Error while downloading and verifying: ", driver.Uri, err)
-				} else {
-					apiClient.MachineDriver.ActionActivate(&driver)
-					log.Debug("Activating driver: ", driver.Name)
-				}
-				handled = true
-			} else if driver.State == "error" || driver.State == "erroring" {
-				log.Error("Driver: ", driver.Name, " is ", driver.State, " ignoring driver download.")
-				handled = true
-			}
-
-			if !handled {
-				log.Warn("Driver: ", driver.Name, " is ", driver.State, " unknown state nothing was done.")
-			}
-		}(driver)
+		go downloadMachineDriver(driver, blackList, &wg, apiClient)
 	}
 
 	wg.Wait()
@@ -296,6 +253,10 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 				if val, ok := driversMap[driver]; ok {
 					input := client.MachineDriverErrorInput{ErrorMessage: errFunc.Error()}
 					_, errFunc = apiClient.MachineDriver.ActionError(&val, &input)
+					if errFunc != nil {
+						routineErrors = append(routineErrors, err)
+					}
+					errFunc = waitSuccessDriver(val, apiClient)
 					if errFunc != nil {
 						routineErrors = append(routineErrors, err)
 					}
@@ -441,4 +402,58 @@ func extractDriver(driverURI string) (string, error) {
 func driverBinaryExists(driverName string) bool {
 	_, err := exec.LookPath(asDockerMachineDriver(driverName))
 	return err == nil
+}
+
+func downloadMachineDriver(driver client.MachineDriver, blackList []string,
+	wg *sync.WaitGroup, apiClient *client.RancherClient) {
+	defer wg.Done()
+	if isBlacklisted(blackList, driver.Name) {
+		log.Info("Driver: ", driver.Name, " is ", driver.State, " but was in blacklist. Ignoring.")
+		return
+	}
+
+	reinstall := false
+	handled := false
+
+	if driver.State == "active" {
+		log.Debug("Verfiying ", driver.Name, " exists in path.")
+		reinstall = !driverBinaryExists(driver.Name)
+		if reinstall {
+			log.Info("Active driver ", driver.Name, " binary, ", asDockerMachineDriver(driver.Name),
+				", not found reinstalling.")
+		} else {
+			log.Info("Active driver ", driver.Name, " currently installed at ",
+				asDockerMachineDriver(driver.Name), ".")
+			handled = true
+		}
+	}
+
+	if driver.State == "inactive" || reinstall {
+		log.Debug("Downloading and verifying: " + driver.Uri)
+		err := installDriver(driver.Uri, driver.Md5checksum, driver.Name)
+		if err != nil {
+			input := client.MachineDriverErrorInput{ErrorMessage: err.Error()}
+			apiClient.MachineDriver.ActionError(&driver, &input)
+			log.Error("Error while downloading and verifying: ", driver.Uri, err)
+			err = waitSuccessDriver(driver, apiClient)
+			if err != nil {
+				log.Error("Error waiting for driver to error:", err)
+			}
+		} else {
+			apiClient.MachineDriver.ActionActivate(&driver)
+			log.Debug("Activating driver: ", driver.Name)
+			err = waitSuccessDriver(driver, apiClient)
+			if err != nil {
+				log.Error("Error waiting for driver to activate:", err)
+			}
+		}
+		handled = true
+	} else if driver.State == "error" || driver.State == "erroring" {
+		log.Error("Driver: ", driver.Name, " is ", driver.State, " ignoring driver download.")
+		handled = true
+	}
+
+	if !handled {
+		log.Warn("Driver: ", driver.Name, " is ", driver.State, " unknown state nothing was done.")
+	}
 }

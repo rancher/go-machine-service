@@ -129,6 +129,10 @@ func removeSchema(schemaName string, apiClient *client.RancherClient) error {
 			if err != nil {
 				return err
 			}
+			err = waitSuccessSchema(schema, apiClient)
+			if err != nil {
+				return err
+			}
 			log.Debug("Removed ", schemaName, " Id: ", schema.Id)
 		}
 	}
@@ -144,7 +148,7 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string, 
 		removeSchema(schemaName, apiClient)
 	}
 
-	_, err = apiClient.DynamicSchema.Create(&client.DynamicSchema{
+	schema, err := apiClient.DynamicSchema.Create(&client.DynamicSchema{
 		Definition: definition,
 		Name:       schemaName,
 		Parent:     parent,
@@ -153,7 +157,7 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string, 
 	if err != nil {
 		err = errors.New(fmt.Sprint("Failed when uploading ", schemaName, " schema to cattle: ", err.Error()))
 	}
-	return err
+	return waitSuccessSchema(*schema, apiClient)
 }
 
 func flagsToJSON(createFlags []CreateFlag) (string, error) {

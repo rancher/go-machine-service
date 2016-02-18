@@ -24,15 +24,6 @@ func genFieldSchema(resourceFieldStruct ResourceFieldConfigs, field, fieldType, 
 		Update:   strings.Contains(auth, "u"),
 	}
 }
-func nameField(resourceFieldStruct ResourceFieldConfigs) {
-	resourceFieldStruct["name"] = ResourceFieldConfig{
-		Type:     "string",
-		Create:   true,
-		Update:   false,
-		Required: true,
-		Nullable: false,
-	}
-}
 
 func uploadMachineServiceJSON(drivers []string) error {
 	resourceFieldStruct := make(map[string]interface{})
@@ -55,7 +46,6 @@ func uploadMachineServiceJSON(drivers []string) error {
 	genFieldSchema(resourceFieldMap, "engineStorageDriver", "string", "c")
 	genFieldSchema(resourceFieldMap, "extractedConfig", "string", "u")
 	genFieldSchema(resourceFieldMap, "labels", "map[string]", "cu")
-	nameField(resourceFieldMap)
 
 	jsonData, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
 	if err != nil {
@@ -84,7 +74,6 @@ func uploadMachineProjectJSON(drivers []string) error {
 	genFieldSchema(resourceFieldMap, "engineRegistryMirror", "array[string]", "c")
 	genFieldSchema(resourceFieldMap, "engineStorageDriver", "string", "c")
 	genFieldSchema(resourceFieldMap, "labels", "map[string]", "c")
-	nameField(resourceFieldMap)
 
 	jsonData, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
 	if err != nil {
@@ -115,7 +104,6 @@ func uploadMachineUserJSON(drivers []string) error {
 	genFieldSchema(resourceFieldMap, "engineRegistryMirror", "array[string]", "")
 	genFieldSchema(resourceFieldMap, "engineStorageDriver", "string", "")
 	genFieldSchema(resourceFieldMap, "labels", "map[string]", "")
-	nameField(resourceFieldMap)
 
 	jsonData, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
 	if err != nil {

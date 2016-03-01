@@ -222,7 +222,7 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 
 	driversMap := make(map[string]client.MachineDriver)
 	for _, driver := range driversRefreshed.Data {
-		if driver.State == "active" {
+		if driver.State == "requested" {
 			//Only add active drivers in cattle. Inactive and Erroring ones are ignored.
 			driverNames = append(driverNames, driver.Name)
 			driversMap[driver.Name] = driver
@@ -250,18 +250,32 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 			errFunc := generateAndUploadSchema(driver)
 			if errFunc != nil {
 				routineErrors = append(routineErrors, errFunc)
-				if val, ok := driversMap[driver]; ok {
+			}
+			if cattleDriverResource, ok := driversMap[driver]; ok {
+				if errFunc != nil {
 					input := client.MachineDriverErrorInput{ErrorMessage: errFunc.Error()}
-					_, errFunc = apiClient.MachineDriver.ActionError(&val, &input)
+					_, errFunc = apiClient.MachineDriver.ActionError(&cattleDriverResource, &input)
 					if errFunc != nil {
-						routineErrors = append(routineErrors, err)
+						routineErrors = append(routineErrors, errFunc)
 					}
-					errFunc = waitSuccessDriver(val, apiClient)
+					errFunc = waitSuccessDriver(cattleDriverResource, apiClient)
 					if errFunc != nil {
+						routineErrors = append(routineErrors, errFunc)
+					}
+				} else {
+					_, errFunc := apiClient.MachineDriver.ActionActivate(&cattleDriverResource)
+					if errFunc != nil {
+						routineErrors = append(routineErrors, errFunc)
+					}
+					log.Debug("Activating driver: ", cattleDriverResource.Name)
+					err = waitSuccessDriver(cattleDriverResource, apiClient)
+					if err != nil {
+						log.Error("Error waiting for driver to activate:", err)
 						routineErrors = append(routineErrors, err)
 					}
 				}
 			}
+
 			errsChan <- routineErrors
 		}(driver)
 	}
@@ -428,7 +442,7 @@ func downloadMachineDriver(driver client.MachineDriver, blackList []string,
 		}
 	}
 
-	if driver.State == "inactive" || reinstall {
+	if driver.State == "requested" || reinstall {
 		log.Debug("Downloading and verifying: " + driver.Uri)
 		err := installDriver(driver.Uri, driver.Md5checksum, driver.Name)
 		if err != nil {
@@ -438,13 +452,6 @@ func downloadMachineDriver(driver client.MachineDriver, blackList []string,
 			err = waitSuccessDriver(driver, apiClient)
 			if err != nil {
 				log.Error("Error waiting for driver to error:", err)
-			}
-		} else {
-			apiClient.MachineDriver.ActionActivate(&driver)
-			log.Debug("Activating driver: ", driver.Name)
-			err = waitSuccessDriver(driver, apiClient)
-			if err != nil {
-				log.Error("Error waiting for driver to activate:", err)
 			}
 		}
 		handled = true

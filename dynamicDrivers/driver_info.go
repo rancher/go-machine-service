@@ -190,9 +190,9 @@ func getCreateFlagsForDriver(driver string) ([]cli.Flag, error) {
 		return nil, err
 	}
 	go func() {
-		serveError := p.Serve()
+		err := p.Serve()
 		if err != nil {
-			log.Errorf("Error starting plugin server for driver=%s, err=%v", driver, serveError)
+			log.Errorf("Error starting plugin server for driver=%s, err=%v", driver, err)
 		}
 	}()
 	defer p.Close()

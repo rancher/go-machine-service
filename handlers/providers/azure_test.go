@@ -49,4 +49,8 @@ func TestAzureHandler(t *testing.T) {
 		t.Errorf("Saved data [AzureConfig] is not the same as actual data [%s]", string(b))
 	}
 
+	if azureConfig["subscriptionCert"] != filename {
+		t.Fatalf("parameter is wrong, got %s", azureConfig["subscriptionCert"])
+	}
+
 }

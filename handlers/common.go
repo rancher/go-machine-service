@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	b64 "encoding/base64"
-	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-rancher/client"
@@ -19,9 +18,10 @@ import (
 )
 
 const (
-	machineDirEnvKey = "MACHINE_STORAGE_PATH="
-	machineDirField  = "machineDir"
-	machineCmd       = "docker-machine"
+	machineDirEnvKey  = "MACHINE_STORAGE_PATH="
+	machineDirField   = "machineDir"
+	machineCmd        = "docker-machine"
+	defaultCattleHome = "/var/lib/cattle"
 )
 
 var RegExMachineDirEnv = regexp.MustCompile("^" + machineDirEnvKey + ".*")
@@ -55,7 +55,7 @@ func buildBaseMachineDir(uuid string) (string, error) {
 func getBaseMachineDir(uuid string) (string, error) {
 	cattleHome := os.Getenv("CATTLE_HOME")
 	if cattleHome == "" {
-		return "", fmt.Errorf("CATTLE_HOME not set. Cant create machine. Uuid: [%v]", uuid)
+		cattleHome = defaultCattleHome
 	}
 	machineDir := filepath.Join(cattleHome, "machine", uuid)
 	return machineDir, nil

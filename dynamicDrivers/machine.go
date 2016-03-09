@@ -10,7 +10,8 @@ func uploadMachineSchema(drivers []string) error {
 	err := uploadMachineServiceJSON(drivers)
 	err2 := uploadMachineProjectJSON(drivers)
 	err3 := uploadMachineUserJSON(drivers)
-	if err != nil || err2 != nil || err3 != nil {
+	err4 := uploadMachineReadOnlyJSON(drivers)
+	if err != nil || err2 != nil || err3 != nil || err4 != nil {
 		return errors.New("Failed to upload one of the machine jsons.")
 	}
 	return nil
@@ -122,5 +123,33 @@ func uploadMachineUserJSON(drivers []string) error {
 		return err
 	}
 	return uploadDynamicSchema("machine", string(jsonData), "physicalHost", []string{"admin", "user", "readAdmin"},
+		false)
+}
+
+func uploadMachineReadOnlyJSON(drivers []string) error {
+	resourceFieldStruct := make(map[string]interface{})
+	resourceFieldMap := make(ResourceFieldConfigs)
+	resourceFieldStruct["collectionMethods"] = []string{"GET"}
+	resourceFieldStruct["resourceMethods"] = []string{"GET"}
+	resourceFieldStruct["resourceFields"] = resourceFieldMap
+	genFieldSchema(resourceFieldMap, "authCertificateAuthority", "string", "")
+	genFieldSchema(resourceFieldMap, "authKey", "string", "")
+	genFieldSchema(resourceFieldMap, "dockerVersion", "string", "")
+	genFieldSchema(resourceFieldMap, "driver", "string", "")
+	genFieldSchema(resourceFieldMap, "engineEnv", "map[string]", "")
+	genFieldSchema(resourceFieldMap, "engineInsecureRegistry", "array[string]", "")
+	genFieldSchema(resourceFieldMap, "engineInstallUrl", "string", "")
+	genFieldSchema(resourceFieldMap, "engineLabel", "map[string]", "")
+	genFieldSchema(resourceFieldMap, "engineOpt", "map[string]", "")
+	genFieldSchema(resourceFieldMap, "engineRegistryMirror", "array[string]", "")
+	genFieldSchema(resourceFieldMap, "engineStorageDriver", "string", "")
+	genFieldSchema(resourceFieldMap, "labels", "map[string]", "")
+	nameField(resourceFieldMap)
+
+	jsonData, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
+	if err != nil {
+		return err
+	}
+	return uploadDynamicSchema("machine", string(jsonData), "physicalHost", []string{"readonly"},
 		false)
 }

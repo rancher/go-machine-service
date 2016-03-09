@@ -21,7 +21,6 @@ type AzureHandler struct {
 }
 
 func (*AzureHandler) HandleCreate(machine *client.Machine, machineDir string) error {
-	var data *string
 	var filename string
 	fields := machine.Data["fields"]
 	if fields == nil {
@@ -32,21 +31,23 @@ func (*AzureHandler) HandleCreate(machine *client.Machine, machineDir string) er
 		return errors.New(machine.Driver + "Config does not exist on Machine " + machine.Id)
 	}
 	machineConfig := driverConfig.(map[string]interface{})
-	value := ""
 	if machineConfig["subscriptionCert"].(string) != "" {
-		value = machineConfig["subscriptionCert"].(string)
-		data = &value
+		value := machineConfig["subscriptionCert"].(string)
 		filename = "subscription-cert.pem"
+		path, err := saveDataToFile(filename, value, machineDir)
+		if err != nil {
+			return err
+		}
+		machineConfig["subscriptionCert"] = path
 	} else {
-		value = machineConfig["publishSettingsFile"].(string)
-		data = &value
+		value := machineConfig["publishSettingsFile"].(string)
 		filename = "publish-settings.xml"
+		path, err := saveDataToFile(filename, value, machineDir)
+		if err != nil {
+			return err
+		}
+		machineConfig["publishSettingsFile"] = path
 	}
-	path, err := saveDataToFile(filename, *data, machineDir)
-	if err != nil {
-		return err
-	}
-	*data = path
 	return nil
 }
 

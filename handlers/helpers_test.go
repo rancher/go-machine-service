@@ -17,17 +17,17 @@ func TestFilterDockerMessages(t *testing.T) {
 	}
 
 	testString := "Error creating machine: Message"
-	filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{})
+	filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}, false)
 	checkField("Test1", "Message", <-errChan, t)
 
 	testString = "Message with externalId=uuid-1"
-	checkField("Test2", "", filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}), t)
+	checkField("Test2", "", filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}, false), t)
 
 	testString = "Message with name=machine-1"
-	checkField("Test3", "", filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}), t)
+	checkField("Test3", "", filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}, false), t)
 
 	testString = "Message with random characters: =\"=\""
-	checkField("Test4", "Message with random characters: =\"=\"", filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}), t)
+	checkField("Test4", "Message with random characters: =\"=\"", filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}, false), t)
 }
 
 // Tests the simplest case of successfully receiving, routing, and handling

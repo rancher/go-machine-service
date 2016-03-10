@@ -155,8 +155,9 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string, 
 		Roles:      roles,
 	})
 	if err != nil {
-		err = errors.New(fmt.Sprint("Failed when uploading ", schemaName, " schema to cattle: ", err.Error()))
+		return errors.New(fmt.Sprint("Failed when uploading ", schemaName, " schema to cattle: ", err.Error()))
 	}
+	log.Debugf("Waiting for schema: %v to activate.", schema.Name)
 	return waitSuccessSchema(*schema, apiClient)
 }
 
@@ -192,7 +193,7 @@ func getCreateFlagsForDriver(driver string) ([]cli.Flag, error) {
 	go func() {
 		err := p.Serve()
 		if err != nil {
-			log.Errorf("Error starting plugin server for driver=%s, err=%v", driver, err)
+			log.Debugf("Error serving plugin server for driver=%s, err=%v", driver, err)
 		}
 	}()
 	defer p.Close()

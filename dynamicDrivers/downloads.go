@@ -144,17 +144,21 @@ var errNotCompressed = errors.New("File not compressed.")
 type Compression string
 
 func getCompression(driverURI string) Compression {
+	log.Debugf("Driver uri: %v", driverURI)
 	tokens := strings.Split(driverURI, "/")
+	log.Debugf("Driver tokens on / : %#v", tokens)
 	tokens = strings.Split(tokens[len(tokens)-1], ".")[1:]
+	log.Debugf("Driver tokens on . : %#v", tokens)
 	if len(tokens) == 0 {
 		return none
 	}
-	if tokens[0] == "zip" && len(tokens) == 1 {
+	if tokens[len(tokens)-1] == "zip" {
 		return zip
 	}
-	if tokens[0] == "tar" {
+	if tokens[len(tokens)-1] == "tar" || tokens[len(tokens)-2] == "tar" {
 		return tar
 	}
+	log.Debugf("Unknown compression: %#v", tokens)
 	return unKnownCompression
 }
 
@@ -222,16 +226,18 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 
 	driversMap := make(map[string]client.MachineDriver)
 	for _, driver := range driversRefreshed.Data {
-		if driver.State == "requested" {
-			//Only add active drivers in cattle. Inactive and Erroring ones are ignored.
+		if driver.State == "requested" || driver.State == "active" {
+			//Only add active and requested drivers in cattle. Inactive and Erroring ones are ignored.
 			driverNames = append(driverNames, driver.Name)
 			driversMap[driver.Name] = driver
 		} else {
-			removeSchema(driver.Name, apiClient)
+			log.Info(driver.Name, " not to be used removing any schemas it has.")
+			removeSchema(driver.Name+"Confg", apiClient)
 		}
 	}
 
 	errsChan := make(chan []error)
+	driversPublished := []string{}
 	for _, driver := range driverNames {
 		wg.Add(1)
 		go func(driver string) {
@@ -262,7 +268,48 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 					if errFunc != nil {
 						routineErrors = append(routineErrors, errFunc)
 					}
-				} else {
+				}
+			}
+			errored := false
+			if len(routineErrors) > 0 {
+				for _, err := range routineErrors {
+					if err != nil {
+						errored = true
+					}
+				}
+			}
+			if !errored {
+				driversPublished = append(driversPublished, driver)
+			}
+			errsChan <- routineErrors
+		}(driver)
+	}
+
+	for range driverNames {
+		allErrors = append(allErrors, <-errsChan...)
+	}
+
+	wg.Wait()
+
+	if len(allErrors) > 0 {
+		for _, err := range allErrors {
+			if err != nil {
+				return nil, allErrors
+			}
+		}
+	}
+
+	err = uploadMachineSchema(driverNames)
+	if err != nil {
+		return nil, []error{err}
+	}
+
+	for _, driver := range driversPublished {
+		go func(driver string) {
+			routineErrors := []error{}
+			defer func() { errsChan <- routineErrors }()
+			if cattleDriverResource, ok := driversMap[driver]; ok {
+				if cattleDriverResource.State != "active" {
 					_, errFunc := apiClient.MachineDriver.ActionActivate(&cattleDriverResource)
 					if errFunc != nil {
 						routineErrors = append(routineErrors, errFunc)
@@ -275,18 +322,22 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 					}
 				}
 			}
-
-			errsChan <- routineErrors
 		}(driver)
 	}
 
-	for range driverNames {
+	for range driversPublished {
 		allErrors = append(allErrors, <-errsChan...)
 	}
 
 	wg.Wait()
 
-	return driversRefreshed.Data, append(allErrors, uploadMachineSchema(driverNames))
+	driversRefreshed, err = apiClient.MachineDriver.List(nil)
+	if err != nil {
+		allErrors = append(allErrors, err)
+		return nil, allErrors
+	}
+
+	return driversRefreshed.Data, allErrors
 }
 
 func downloadFromURL(url string) (string, error) {

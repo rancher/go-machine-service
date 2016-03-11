@@ -203,10 +203,10 @@ func getCreateFlagsForDriver(driver string) ([]cli.Flag, error) {
 	}
 
 	rpcclient, err := rpc.DialHTTP("tcp", addr)
-	defer rpcclient.Close()
 	if err != nil {
 		return nil, fmt.Errorf("Error dialing to plugin server's address(%v), err=%v", addr, err)
 	}
+	defer rpcclient.Close()
 
 	c := rpcdriver.NewInternalClient(rpcclient)
 

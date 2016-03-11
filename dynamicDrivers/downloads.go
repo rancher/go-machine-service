@@ -8,7 +8,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
 	"github.com/rancher/go-rancher/client"
-	"hash/fnv"
 	"io"
 	"io/ioutil"
 	"math"
@@ -35,16 +34,6 @@ func computeMd5(filePath string) (string, error) {
 	}
 
 	return hex.EncodeToString(hash.Sum(result)), nil
-}
-
-func tmpFolder(uri string) string {
-	h := fnv.New32a()
-	h.Write([]byte(uri))
-	var folderName = fmt.Sprintf("%v%v%v", "/tmp/", h.Sum32(), "/")
-	if _, err := os.Stat(folderName); os.IsNotExist(err) {
-		os.MkdirAll(folderName, 0777)
-	}
-	return folderName
 }
 
 func UpdateDrivers() []error {
@@ -127,11 +116,6 @@ func getTime(reconnectAttempts *int) time.Duration {
 	return 60 * time.Second
 }
 
-func pickDownloadFileName(driverURI string) string {
-	tokens := strings.Split(driverURI, "/")
-	return tmpFolder(driverURI) + tokens[len(tokens)-1]
-}
-
 const (
 	none               = Compression("File not compressed.")
 	unKnownCompression = "File compression unknown."
@@ -143,19 +127,22 @@ var errNotCompressed = errors.New("File not compressed.")
 
 type Compression string
 
-func getCompression(driverURI string) Compression {
-	log.Debugf("Driver uri: %v", driverURI)
-	tokens := strings.Split(driverURI, "/")
-	log.Debugf("Driver tokens on / : %#v", tokens)
+func getCompression(fileName string) Compression {
+	log.Debugf("Driver uri: %v", fileName)
+	tokens := strings.Split(fileName, "/")
+	log.Debugf("Driver tokens on / : %v", tokens)
 	tokens = strings.Split(tokens[len(tokens)-1], ".")[1:]
-	log.Debugf("Driver tokens on . : %#v", tokens)
+	log.Debugf("Driver tokens on . : %v", tokens)
 	if len(tokens) == 0 {
+		log.Debugf("Driver %v is %v", fileName, none)
 		return none
 	}
 	if tokens[len(tokens)-1] == "zip" {
+		log.Debugf("Driver %v is %v", fileName, zip)
 		return zip
 	}
 	if tokens[len(tokens)-1] == "tar" || tokens[len(tokens)-2] == "tar" {
+		log.Debugf("Driver %v is %v", fileName, tar)
 		return tar
 	}
 	log.Debugf("Unknown compression: %#v", tokens)
@@ -173,12 +160,12 @@ func downloadVerifyExtractDriver(driverURI, driverMD5checksum, driverName string
 		return err
 	}
 
-	compression := getCompression(driverURI)
+	compression := getCompression(fileName)
 
 	if compression == unKnownCompression {
 		return errors.New(driverName + " compression unknown.")
 	} else if compression != none {
-		fileName, err = extractDriver(driverURI)
+		fileName, err = extractDriver(fileName)
 		if err != nil {
 			return err
 		}
@@ -341,8 +328,16 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 }
 
 func downloadFromURL(url string) (string, error) {
-	fileName := pickDownloadFileName(url)
-	log.Debug("Downloading: " + fileName)
+	tokens := strings.Split(url, "/")
+	fileName := tokens[len(tokens)-1]
+	tmpFolder, err := ioutil.TempDir("", "gms-")
+	if err != nil {
+		return "", err
+	}
+	tmpFolder = tmpFolder + "/"
+	log.Debug("Downloading: %v to folder %v", fileName, tmpFolder)
+	fileName = tmpFolder + fileName
+
 	output, err := os.Create(fileName)
 	if err != nil {
 		return fileName, err
@@ -414,39 +409,39 @@ func (e MultipleFiles) Error() string {
 	return fmt.Sprintf("Multiple files with docker-machine-driver in %v", e.folder)
 }
 
-func extractDriver(driverURI string) (string, error) {
-	compression := getCompression(driverURI)
+func extractDriver(fileName string) (string, error) {
+	compression := getCompression(fileName)
 	if compression == none {
 		return "", errNotCompressed
 	}
 
-	fileName := pickDownloadFileName(driverURI)
+	tempFolder, err := ioutil.TempDir("", "gms-")
+	if err != nil {
+		return fileName, err
+	}
+	tempFolder = tempFolder + "/"
 	log.Debug("Extracting... ", fileName)
-	tempFolder := tmpFolder(driverURI + fileName)
+	var extraction *exec.Cmd
 	if compression == zip {
 		unzip, err := exec.LookPath("unzip")
 		if err != nil {
 			return "", err
 		}
-		extraction := exec.Command(unzip, fileName, "-d", tempFolder)
-		output, err := extraction.CombinedOutput()
-		log.Debug(string(output[:]))
-		if err != nil {
-			return "", err
-		}
+		extraction = exec.Command(unzip, "-o", fileName, "-d", tempFolder)
 	} else if compression == tar {
 		tar, err := exec.LookPath("tar")
 		if err != nil {
 			return "", err
 		}
-		extraction := exec.Command(tar, "-xvf", fileName, "-C", tempFolder)
-		output, err := extraction.CombinedOutput()
-		log.Debug(string(output[:]))
-		if err != nil {
-			return "", err
-		}
+		extraction = exec.Command(tar, "-xvf", fileName, "-C", tempFolder)
 	} else {
 		return "", errors.New(fileName + " compression unknown.")
+	}
+	log.Debugf("Command for %v : %v", fileName, extraction.Args)
+	output, err := extraction.CombinedOutput()
+	log.Debug(string(output[:]))
+	if err != nil {
+		return "", err
 	}
 
 	files, err := ioutil.ReadDir(tempFolder)
@@ -461,7 +456,7 @@ func extractDriver(driverURI string) (string, error) {
 	if len(fileNames) > 1 {
 		return "", MultipleFiles{tempFolder}
 	}
-	return fileNames[0], err
+	return fileNames[0], nil
 }
 
 func driverBinaryExists(driverName string) bool {
@@ -499,7 +494,7 @@ func downloadMachineDriver(driver client.MachineDriver, blackList []string,
 		if err != nil {
 			input := client.MachineDriverErrorInput{ErrorMessage: err.Error()}
 			apiClient.MachineDriver.ActionError(&driver, &input)
-			log.Error("Error while downloading and verifying: ", driver.Uri, err)
+			log.Errorf("Error while downloading and verifying: %v %v", driver.Uri, err)
 			err = waitSuccessDriver(driver, apiClient)
 			if err != nil {
 				log.Error("Error waiting for driver to error:", err)

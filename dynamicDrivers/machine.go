@@ -3,10 +3,12 @@ package dynamicDrivers
 import (
 	"encoding/json"
 	"errors"
+	log "github.com/Sirupsen/logrus"
 	"strings"
 )
 
 func uploadMachineSchema(drivers []string) error {
+	log.Debug("Uploading machine jsons.")
 	err := uploadMachineServiceJSON(drivers)
 	err2 := uploadMachineProjectJSON(drivers)
 	err3 := uploadMachineUserJSON(drivers)

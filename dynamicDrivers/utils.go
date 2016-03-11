@@ -2,6 +2,7 @@ package dynamicDrivers
 
 import (
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/client"
 	"strings"
 	"time"
@@ -33,6 +34,9 @@ func waitSuccessDriver(driver client.MachineDriver, apiClient *client.RancherCli
 	timeout := time.After(30 * time.Second)
 	tick := time.Tick(time.Millisecond * 500)
 	gotDriver, err := apiClient.MachineDriver.ById(driver.Id)
+	if err != nil {
+		return err
+	}
 	for gotDriver.Transitioning == "yes" {
 		select {
 		case <-timeout:
@@ -52,16 +56,22 @@ func waitSuccessSchema(schema client.DynamicSchema, apiClient *client.RancherCli
 	timeout := time.After(30 * time.Second)
 	tick := time.Tick(time.Millisecond * 500)
 	gotSchema, err := apiClient.DynamicSchema.ById(schema.Id)
+	if err != nil {
+		return err
+	}
 	for gotSchema.Transitioning == "yes" {
 		select {
 		case <-timeout:
+			log.Debugf("Timedout waiting for Schema to activate. %v", schema.Name)
 			return fmt.Errorf("Timed out waiting for Schema %v to be done.", schema.Id)
 		case <-tick:
 			gotSchema, err = apiClient.DynamicSchema.ById(schema.Id)
 			if err != nil {
+				log.Debugf("While waiting for schema : %v to succeed got and error.", schema.Name)
 				return err
 			}
 		}
 	}
+	log.Debugf("Schema %v successfully uploaded.", schema.Name)
 	return nil
 }

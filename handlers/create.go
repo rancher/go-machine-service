@@ -164,7 +164,7 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 		log.WithFields(log.Fields{
 			"resourceId: ": event.ResourceID,
 		}).Infof("stdout: %s", msg)
-		transitionMsg := filterDockerMessage(msg, machine, errChan, providerHandler)
+		transitionMsg := filterDockerMessage(msg, machine, errChan, providerHandler, false)
 		if transitionMsg != "" {
 			publishChan <- transitionMsg
 		}
@@ -175,12 +175,12 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 		log.WithFields(log.Fields{
 			"resourceId": event.ResourceID,
 		}).Infof("stderr: %s", msg)
-		filterDockerMessage(msg, machine, errChan, providerHandler)
+		filterDockerMessage(msg, machine, errChan, providerHandler, true)
 	}
 }
 
-func filterDockerMessage(msg string, machine *client.Machine, errChan chan<- string, providerHandler providers.Provider) string {
-	if strings.Contains(msg, errorCreatingMachine) {
+func filterDockerMessage(msg string, machine *client.Machine, errChan chan<- string, providerHandler providers.Provider, errMsg bool) string {
+	if strings.Contains(msg, errorCreatingMachine) || errMsg {
 		errChan <- providerHandler.HandleError(strings.Replace(msg, errorCreatingMachine, "", 1))
 		return ""
 	}

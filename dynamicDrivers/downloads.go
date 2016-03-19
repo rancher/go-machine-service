@@ -208,8 +208,16 @@ func downloadDrivers(apiClient *client.RancherClient) ([]client.MachineDriver, [
 		return nil, allErrors
 	}
 
-	driverNames := localbinary.CoreDrivers[:]
+	dNames := localbinary.CoreDrivers[:]
 	//Start with core drivers.
+
+	driverNames := []string{}
+	for _, d := range dNames {
+		if d == "none" {
+			continue
+		}
+		driverNames = append(driverNames, d)
+	}
 
 	driversMap := make(map[string]client.MachineDriver)
 	for _, driver := range driversRefreshed.Data {

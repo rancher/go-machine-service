@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	b64 "encoding/base64"
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-rancher/client"
@@ -189,6 +191,56 @@ func initEnviron(machineDir string) []string {
 	return env
 }
 
+func reinitFromExtractedConfig(machine *client.Machine, machineBaseDir string) error {
+	if err := os.MkdirAll(machineBaseDir, 0740); err != nil {
+		return fmt.Errorf("Error reinitializing config (MkdirAll). Config Dir: %v. Error: %v", machineBaseDir, err)
+	}
+
+	configBytes, err := b64.StdEncoding.DecodeString(machine.ExtractedConfig)
+	if err != nil {
+		return fmt.Errorf("Error reinitializing config (base64.DecodeString). Config Dir: %v. Error: %v", machineBaseDir, err)
+	}
+
+	gzipReader, err := gzip.NewReader(bytes.NewReader(configBytes))
+	if err != nil {
+		return err
+	}
+	tarReader := tar.NewReader(gzipReader)
+
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return fmt.Errorf("Error reinitializing config (tarRead.Next). Config Dir: %v. Error: %v", machineBaseDir, err)
+		}
+
+		filename := header.Name
+		filePath := filepath.Join(machineBaseDir, filename)
+		log.Infof("Extracting %v", filePath)
+
+		info := header.FileInfo()
+		if info.IsDir() {
+			err = os.MkdirAll(filePath, os.FileMode(header.Mode))
+			if err != nil {
+				return fmt.Errorf("Error reinitializing config (Mkdirall). Config Dir: %v. Dir: %v. Error: %v", machineBaseDir, info.Name(), err)
+			}
+			continue
+		}
+
+		file, err := os.OpenFile(filePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
+		if err != nil {
+			return fmt.Errorf("Error reinitializing config (OpenFile). Config Dir: %v. File: %v. Error: %v", machineBaseDir, info.Name(), err)
+		}
+		defer file.Close()
+		_, err = io.Copy(file, tarReader)
+		if err != nil {
+			return fmt.Errorf("Error reinitializing config (Copy). Config Dir: %v. File: %v. Error: %v", machineBaseDir, info.Name(), err)
+		}
+	}
+}
+
 func createExtractedConfig(event *events.Event, machine *client.Machine) (string, error) {
 	// We are going to ignore doing anything for VirtualBox given that there is no way you can
 	// use Machine once it has been created.  Virtual is mainly a test-only use case
@@ -197,32 +249,11 @@ func createExtractedConfig(event *events.Event, machine *client.Machine) (string
 		return "", nil
 	}
 
-	// We will now zip, base64 encode the machine directory created, and upload this to cattle server.  This can be used to either recover
-	// the machine directory or used by Rancher users for their own local machine setup.
 	log.WithFields(log.Fields{
 		"resourceId": event.ResourceID,
 	}).Info("Creating and uploading extracted machine config")
 
-	// tar.gz the $CATTLE_HOME/machine/<machine-id>/machines/<machine-name> dir (v0.2.0)
-	// Open the source directory and read all the files we want to tar.gz
 	baseDir, err := getBaseMachineDir(machine.ExternalId)
-	if err != nil {
-		return "", err
-	}
-
-	machineDir := filepath.Join(baseDir, "machines", machine.Name)
-	dir, err := os.Open(machineDir)
-	if err != nil {
-		return "", err
-	}
-	defer dir.Close()
-
-	log.WithFields(log.Fields{
-		"machineDir": machineDir,
-	}).Debug("Preparing directory to be tar.gz")
-
-	// Be able to read the files under this dir
-	files, err := dir.Readdir(0)
 	if err != nil {
 		return "", err
 	}
@@ -233,52 +264,55 @@ func createExtractedConfig(event *events.Event, machine *client.Machine) (string
 	if err != nil {
 		return "", err
 	}
-
 	defer tarfile.Close()
 	fileWriter := gzip.NewWriter(tarfile)
 	defer fileWriter.Close()
-
 	tarfileWriter := tar.NewWriter(fileWriter)
 	defer tarfileWriter.Close()
 
-	// Read and add files into <machine-name>.tar.gz
-	for _, fileInfo := range files {
-
-		// For now, we will skip directories.  If we need to zip directories, we need to revisit this code
-		if fileInfo.IsDir() {
-			continue
-		}
-
-		if strings.HasSuffix(fileInfo.Name(), ".iso") {
-			// Ignore b2d ISO
-			continue
-		}
-
-		file, err := os.Open(filepath.Join(machineDir, fileInfo.Name()))
-		if err != nil {
-			return "", err
-		}
-
-		defer file.Close()
-
-		// prepare the tar header
-		header := new(tar.Header)
-		header.Name = filepath.Join(machine.Name, fileInfo.Name())
-		header.Size = fileInfo.Size()
-		header.Mode = int64(fileInfo.Mode())
-		header.ModTime = fileInfo.ModTime()
-
-		err = tarfileWriter.WriteHeader(header)
-		if err != nil {
-			return "", err
-		}
-
-		_, err = io.Copy(tarfileWriter, file)
-		if err != nil {
-			return "", err
-		}
+	if err := addDirToArchive(baseDir, tarfileWriter); err != nil {
+		return "", err
 	}
+
 	return destFile, nil
+}
+
+func addDirToArchive(source string, tarfileWriter *tar.Writer) error {
+	baseDir := filepath.Base(source)
+
+	return filepath.Walk(source,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if path == source || strings.HasSuffix(info.Name(), ".iso") || strings.HasSuffix(info.Name(), ".tar.gz") {
+				return nil
+			}
+
+			header, err := tar.FileInfoHeader(info, info.Name())
+			if err != nil {
+				return err
+			}
+
+			header.Name = filepath.Join(baseDir, strings.TrimPrefix(path, source))
+
+			if err := tarfileWriter.WriteHeader(header); err != nil {
+				return err
+			}
+
+			if info.IsDir() {
+				return nil
+			}
+
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			_, err = io.Copy(tarfileWriter, file)
+			return err
+		})
 }
 
 func ignoreExtractedConfig(driver string) bool {
@@ -314,4 +348,15 @@ func getExtractedConfig(destFile string, machine *client.Machine, apiClient *cli
 	}).Info("Machine config file created and encoded.")
 
 	return extractedEncodedConfig, nil
+}
+
+func dirExists(machineDir string) (bool, error) {
+	_, err := os.Stat(machineDir)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }

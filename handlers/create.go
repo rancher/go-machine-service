@@ -264,8 +264,11 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 			for _, q := range f {
 				cmd = append(cmd, dmField, q)
 			}
+		case []interface{}:
+			for _, q := range f {
+				cmd = append(cmd, dmField, fmt.Sprintf("%v", q))
+			}
 		case nil:
-
 		default:
 			return nil, fmt.Errorf("Unsupported type: %v", reflect.TypeOf(f))
 		}

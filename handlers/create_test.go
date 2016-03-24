@@ -97,6 +97,41 @@ func TestBuildMachineCreateCommand(t *testing.T) {
 	}
 }
 
+func TestBuildMacineCreateCommandWithInterfaceLists(t *testing.T) {
+	machine := new(client.Machine)
+	machine.Driver = "rackspace"
+	machine.EngineInstallUrl = "test.com"
+	machine.EngineEnv = map[string]interface{}{"key3": "val3"}
+	machine.EngineInsecureRegistry = []string{}
+	machine.EngineLabel = map[string]interface{}{"io.rancher.label": "123"}
+	machine.EngineRegistryMirror = []string{}
+	machine.EngineStorageDriver = "deviceMapper"
+
+	data := make(map[string]interface{})
+	fields := make(map[string]interface{})
+	data["fields"] = fields
+	rackspaceConfig := make(map[string]interface{})
+	fields["rackspaceConfig"] = rackspaceConfig
+	rackspaceConfig["apiKey"] = "fakeAPiKey"
+	rackspaceConfig["username"] = "fakeUser"
+	rackspaceConfig["interfaceList"] = []interface{}{"str1", "str2"}
+
+	machine.Data = data
+	machine.Name = "fakeMachine"
+
+	cmd, err := buildMachineCreateCmd(machine)
+	if err != nil {
+		t.Fatal("Error while building machine craete command", err)
+	}
+
+	command := strings.Join(cmd, " ")
+	// We have two engine opts in a map and maps are randomized, so have to look for both orders of engine-opt
+	if command != "create -d rackspace --engine-install-url test.com --engine-env key3=val3 --engine-label io.rancher.label=123 --engine-storage-driver deviceMapper --rackspace-api-key fakeAPiKey --rackspace-interface-list str1 --rackspace-interface-list str2 --rackspace-username fakeUser fakeMachine" {
+		t.Error("Error building machine create command, got output", strings.Join(cmd, " "))
+	}
+
+}
+
 func TestBuildMachineEngineOptsCommand1(t *testing.T) {
 	engineOpts := map[string]interface{}{"key1": "val1", "key2": "val2"}
 

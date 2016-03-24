@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-machine-service/events"
@@ -20,14 +19,10 @@ import (
 )
 
 const (
-	levelInfo            = "level=\"info\""
-	levelError           = "level=\"error\""
 	errorCreatingMachine = "Error creating machine: "
 	CreatedFile          = "created"
-	MachineKind          = "machine"
 )
 
-var regExDockerMsg = regexp.MustCompile("msg=.*")
 var regExHyphen = regexp.MustCompile("([a-z])([A-Z])")
 
 func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err error) {
@@ -143,7 +138,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err er
 		if err != nil {
 			return err
 		}
-		dataUpdates["+fields"] = map[string]string{"extractedConfig": extractedConf}
+		dataUpdates["+fields"] = map[string]interface{}{"extractedConfig": extractedConf}
 	}
 
 	reply := newReply(event)
@@ -236,7 +231,7 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	// Grab the reflected Value of XyzConfig (i.e. DigitaloceanConfig) based on the machine driver
 	driverConfig := machine.Data["fields"].(map[string]interface{})[machine.Driver+"Config"]
 	if driverConfig == nil {
-		return nil, errors.New(machine.Driver + "Config does not exist on Machine " + machine.Id)
+		return nil, fmt.Errorf("%vConfig does not exist on Machine %v.", machine.Driver, machine.Id)
 	}
 	configFields := []string{}
 	for k := range driverConfig.(map[string]interface{}) {

@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"bufio"
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-rancher/client"
 	"os"
+	"path/filepath"
 )
 
 func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
@@ -22,23 +24,32 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return notAMachineReply(event, apiClient)
 	}
 
-	machineDir, err := getMachineDir(machine)
+	baseMachineDir, err := getBaseMachineDir(machine.ExternalId)
 	if err != nil {
-		// No machine dir, nothing to do.
-		log.WithFields(log.Fields{
-			"resourceId": event.ResourceID,
-			"machineDir": machineDir,
-			"err":        err,
-		}).Warn("Unable to find machineDir.  Nothing to do")
-		reply := newReply(event)
-		return publishReply(reply, apiClient)
+		return fmt.Errorf("Unable to determine base machine directory. Cannot purge machine %v Nothing to do. Error: %v", machine.Name, err)
 	}
 
-	// Idempotency. If this dir doesn't exist, we have nothing to do.
-	dExists, err := dirExists(machineDir)
+	// If this dir doesn't exist, we have nothing to do.
+	dExists, err := dirExists(baseMachineDir)
+	if err != nil {
+		return fmt.Errorf("Unable to determine if base machine directory exists. Cannot purge machine %v. Error: %v", machine.Name, err)
+	}
+
 	if !dExists {
-		reply := newReply(event)
-		return publishReply(reply, apiClient)
+		if ignoreExtractedConfig(machine.Driver) {
+			reply := newReply(event)
+			return publishReply(reply, apiClient)
+		}
+
+		err := reinitFromExtractedConfig(machine, filepath.Dir(baseMachineDir))
+		if err != nil {
+			return err
+		}
+	}
+
+	machineDir, err := getMachineDir(machine)
+	if err != nil {
+		return fmt.Errorf("Unable to determine machine directory. Cannot purge machine %v Nothing to do. Error: %v", machine.Name, err)
 	}
 
 	mExists, err := machineExists(machineDir, machine.Name)
@@ -53,7 +64,7 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		}
 	}
 
-	err = os.RemoveAll(machineDir)
+	err = os.RemoveAll(baseMachineDir)
 	if err != nil {
 		return err
 	}
@@ -81,17 +92,6 @@ func deleteMachine(machineDir string, machine *client.Machine) error {
 	}
 
 	return nil
-}
-
-func dirExists(machineDir string) (bool, error) {
-	_, err := os.Stat(machineDir)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
 }
 
 func machineExists(machineDir string, name string) (bool, error) {

@@ -116,6 +116,16 @@ func buildMockPublishReply(machine *client.Machine) mockPublishReplyFunc {
 			if bootstrap, bootOk := d[bootstrappedAtField]; bootOk {
 				machine.Data[bootstrappedAtField] = bootstrap
 			}
+
+			if fields, ok := d["+fields"]; ok {
+				if fieldMap, ok := fields.(map[string]interface{}); ok {
+					if extractedConfig, ok := fieldMap["extractedConfig"]; ok {
+						if conf, ok := extractedConfig.(string); ok {
+							machine.ExtractedConfig = conf
+						}
+					}
+				}
+			}
 		}
 		return nil
 	}

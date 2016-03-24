@@ -17,7 +17,6 @@ import (
 
 const (
 	bootstrapContName   = "rancher-agent-bootstrap"
-	agentContName       = "rancher-agent"
 	maxWait             = time.Duration(time.Second * 10)
 	bootstrappedAtField = "bootstrappedAt"
 	parseMessage        = "Failed to parse config: [%v]"
@@ -40,6 +39,28 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 		return notAMachineReply(event, apiClient)
 	}
 
+	baseMachineDir, err := getBaseMachineDir(machine.ExternalId)
+	if err != nil {
+		return fmt.Errorf("Unable to get base machine directory. Cannot activate machine %v. Error: %v", machine.Name, err)
+	}
+
+	dExists, err := dirExists(baseMachineDir)
+	if err != nil {
+		return fmt.Errorf("Unable to determine if machine directory exists. Cannot activate machine %v. Error: %v", machine.Name, err)
+	}
+
+	if !dExists {
+		if ignoreExtractedConfig(machine.Driver) {
+			reply := newReply(event)
+			return publishReply(reply, apiClient)
+		}
+
+		err := reinitFromExtractedConfig(machine, filepath.Dir(baseMachineDir))
+		if err != nil {
+			return err
+		}
+	}
+
 	machineDir, err := getMachineDir(machine)
 	if err != nil {
 		return err
@@ -56,16 +77,16 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 
 	bootstrappedFilePath := filepath.Join(machineDir, "machines", machine.Name, bootStrappedFile)
 
-	// Idempotency. If the resource has the bootstrapped file, then it has been bootstrapped.
+	// If the resource has the bootstrapped file, then it has been bootstrapped.
 	if _, err := os.Stat(bootstrappedFilePath); !os.IsNotExist(err) {
 		data, err := ioutil.ReadFile(bootstrappedFilePath)
 		if err != nil {
-			return err
+			return fmt.Errorf("Unable to determine if machine was activated: %v. Error: %v", machine.Name, err)
 		}
 		dataUpdates[bootstrappedAtField] = string(data)
 		extractedConfig, extractionErr := getIdempotentExtractedConfig(machine, machineDir, apiClient)
 		if extractionErr != nil {
-			return err
+			return fmt.Errorf("Unable to get extracted config. Cannot activate machine %v. Error: %v", machine.Name, err)
 		}
 		dataUpdates["+fields"] = map[string]interface{}{"extractedConfig": extractedConfig}
 		reply := newReply(event)
@@ -315,12 +336,12 @@ type tlsConnectionConfig struct {
 func GetDockerClient(machineDir string, machineName string) (*docker.Client, error) {
 	conf, err := getConnectionConfig(machineDir, machineName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error getting connection cofig: %v", err)
 	}
 
 	client, err := docker.NewTLSClient(conf.endpoint, conf.cert, conf.key, conf.caCert)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error getting docker client: %v", err)
 	}
 	return client, nil
 }

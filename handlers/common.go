@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	b64 "encoding/base64"
+	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-machine-service/events"
@@ -31,6 +32,8 @@ var RegExMachineDirEnv = regexp.MustCompile("^" + machineDirEnvKey + ".*")
 var RegExMachinePluginToken = regexp.MustCompile("^" + "MACHINE_PLUGIN_TOKEN=" + ".*")
 
 var RegExMachineDriverName = regexp.MustCompile("^" + "MACHINE_PLUGIN_DRIVER_NAME=" + ".*")
+
+var noExtractedConfig = errors.New("Machine does not have an saved config. Cannot reinitialize.")
 
 func PingNoOp(event *events.Event, apiClient *client.RancherClient) error {
 	// No-op ping handler
@@ -194,6 +197,10 @@ func initEnviron(machineDir string) []string {
 func reinitFromExtractedConfig(machine *client.Machine, machineBaseDir string) error {
 	if err := os.MkdirAll(machineBaseDir, 0740); err != nil {
 		return fmt.Errorf("Error reinitializing config (MkdirAll). Config Dir: %v. Error: %v", machineBaseDir, err)
+	}
+
+	if machine.ExtractedConfig == "" {
+		return noExtractedConfig
 	}
 
 	configBytes, err := b64.StdEncoding.DecodeString(machine.ExtractedConfig)

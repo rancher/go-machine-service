@@ -43,7 +43,9 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 
 		err := reinitFromExtractedConfig(machine, filepath.Dir(baseMachineDir))
 		if err != nil {
-			return err
+			if err != noExtractedConfig {
+				return err
+			}
 		}
 	}
 

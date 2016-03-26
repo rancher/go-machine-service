@@ -22,7 +22,7 @@ func TestDigitalOcean(t *testing.T) {
 	}
 	setupDO(accessToken)
 
-	resourceID := "DO-" + strconv.FormatInt(time.Now().Unix(), 10)
+	resourceID := "gmstest-" + strconv.FormatInt(time.Now().Unix(), 10)
 	event := &events.Event{
 		ResourceID: resourceID,
 		ID:         "event-id",
@@ -56,7 +56,7 @@ func TestHADigitalOcean(t *testing.T) {
 	}
 	setupDO(accessToken)
 
-	resourceID := "craig" + strconv.FormatInt(time.Now().Unix(), 10)
+	resourceID := "gmstest-" + strconv.FormatInt(time.Now().Unix(), 10)
 	event := &events.Event{
 		ResourceID: resourceID,
 		ID:         "event-id",
@@ -116,6 +116,13 @@ func TestHADigitalOcean(t *testing.T) {
 	}
 
 	// Delete it twice just to prove that works
+	err = PurgeMachine(event, mockAPIClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Unset extractedConfig to prove it doesn't error out
+	machine.ExtractedConfig = ""
 	err = PurgeMachine(event, mockAPIClient)
 	if err != nil {
 		t.Fatal(err)

@@ -117,14 +117,23 @@ func generateAndUploadSchema(driver string) error {
 func removeSchema(schemaName string, apiClient *client.RancherClient) error {
 	listOpts := client.NewListOpts()
 	listOpts.Filters["name"] = schemaName
-	listOpts.Filters["state"] = "active"
+	listOpts.Filters["limit"] = "-1"
+	listOpts.Filters["state_ne"] = "purged"
 	schemas, err := apiClient.DynamicSchema.List(listOpts)
 	if err != nil {
 		return err
 	}
 
 	if len(schemas.Data) > 0 {
+		log.Debugf("Removing %d schemas for %s", len(schemas.Data), schemaName)
 		for _, schema := range schemas.Data {
+			log.Debugf("Removing ", schemaName, " Id: ", schema.Id, " state: ", schema.State)
+			if schema.State == "creating" {
+				err = waitSuccessSchema(schema, apiClient)
+				if err != nil {
+					return err
+				}
+			}
 			_, err = apiClient.DynamicSchema.ActionRemove(&schema)
 			if err != nil {
 				return err

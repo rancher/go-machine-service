@@ -53,7 +53,7 @@ func waitSuccessDriver(driver client.MachineDriver, apiClient *client.RancherCli
 
 func waitSuccessSchema(schema client.DynamicSchema, apiClient *client.RancherClient) error {
 
-	timeout := time.After(30 * time.Second)
+	timeout := time.After(5 * time.Minute)
 	tick := time.Tick(time.Millisecond * 500)
 	gotSchema, err := apiClient.DynamicSchema.ById(schema.Id)
 	if err != nil {

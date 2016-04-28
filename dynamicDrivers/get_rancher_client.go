@@ -15,6 +15,6 @@ func getClient() (*client.RancherClient, error) {
 		Url:       apiURL,
 		AccessKey: accessKey,
 		SecretKey: secretKey,
-		Timeout:   time.Second * 10,
+		Timeout:   time.Second * 60,
 	})
 }

@@ -21,7 +21,7 @@ import (
 
 const MaxWait = time.Duration(time.Second * 10)
 
-// Defines the function "interface" that handlers must conform to.
+// EventHandler Defines the function "interface" that handlers must conform to.
 type EventHandler func(*Event, *client.RancherClient) error
 
 type EventRouter struct {
@@ -45,6 +45,7 @@ type EventRouter struct {
 // be used in situations where creating an externalHandler is not desired.
 // This allows the router to be used for Agent connections and for ExternalHandlers
 // that are created outside of this router (we want to refactor gms to be that way).
+
 func (router *EventRouter) Start(ready chan<- bool) error {
 	err := router.createExternalHandler()
 	if err != nil {

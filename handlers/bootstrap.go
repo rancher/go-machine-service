@@ -332,7 +332,7 @@ type tlsConnectionConfig struct {
 	caCert   string
 }
 
-// Returns a TLS-enabled docker client for the specified machine.
+// GetDockerClient Returns a TLS-enabled docker client for the specified machine.
 func GetDockerClient(machineDir string, machineName string) (*docker.Client, error) {
 	conf, err := getConnectionConfig(machineDir, machineName)
 	if err != nil {

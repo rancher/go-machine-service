@@ -167,7 +167,7 @@ func getDropletID(machineDir, name string) (int, error) {
 		return 0, err
 	}
 
-	config := &configJson{}
+	config := &configJSON{}
 	//fmt.Printf("yo: %s\n", string(file))
 	err = json.Unmarshal(file, config)
 	if err != nil {
@@ -177,12 +177,12 @@ func getDropletID(machineDir, name string) (int, error) {
 	return config.Driver.DropletID, nil
 }
 
-type driverJson struct {
+type driverJSON struct {
 	DropletID int `json:"DropletID"`
 }
 
-type configJson struct {
-	Driver driverJson `json:"Driver"`
+type configJSON struct {
+	Driver driverJSON `json:"Driver"`
 }
 
 func setupDO(accessToken string) {

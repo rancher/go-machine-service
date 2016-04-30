@@ -231,7 +231,7 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	// Grab the reflected Value of XyzConfig (i.e. DigitaloceanConfig) based on the machine driver
 	driverConfig := machine.Data["fields"].(map[string]interface{})[machine.Driver+"Config"]
 	if driverConfig == nil {
-		return nil, fmt.Errorf("%vConfig does not exist on Machine %v.", machine.Driver, machine.Id)
+		return nil, fmt.Errorf("%vConfig does not exist on Machine %v", machine.Driver, machine.Id)
 	}
 	configFields := []string{}
 	for k := range driverConfig.(map[string]interface{}) {

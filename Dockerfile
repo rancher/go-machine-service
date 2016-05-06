@@ -1,4 +1,4 @@
-FROM golang:1.5
+FROM golang:1.6.1
 COPY ./scripts/bootstrap /scripts/bootstrap
 RUN /scripts/bootstrap
-WORKDIR /source
+WORKDIR /go/src/github.com/rancher/go-machine-service

@@ -6,7 +6,7 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/rancher/go-machine-service/dynamicDrivers"
+	"github.com/rancher/go-machine-service/dynamic"
 	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-machine-service/handlers"
 )
@@ -22,7 +22,7 @@ func main() {
 		"gitcommit": GITCOMMIT,
 	}).Info("Starting go-machine-service...")
 
-	errs := dynamicDrivers.UpdateDrivers()
+	errs := dynamic.UpdateDrivers()
 
 	if len(errs) > 0 {
 		exit := false

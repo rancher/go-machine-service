@@ -1,9 +1,10 @@
-package dynamicDrivers
+package dynamic
 
 import (
-	"github.com/rancher/go-rancher/client"
 	"os"
 	"time"
+
+	"github.com/rancher/go-rancher/client"
 )
 
 func getClient() (*client.RancherClient, error) {

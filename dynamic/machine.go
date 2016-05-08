@@ -1,10 +1,11 @@
-package dynamicDrivers
+package dynamic
 
 import (
 	"encoding/json"
 	"errors"
-	log "github.com/Sirupsen/logrus"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func uploadMachineSchema(drivers []string) error {

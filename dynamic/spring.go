@@ -1,4 +1,4 @@
-package dynamicDrivers
+package dynamic
 
 import (
 	"bytes"

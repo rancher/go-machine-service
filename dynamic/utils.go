@@ -1,11 +1,12 @@
-package dynamicDrivers
+package dynamic
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/client"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/rancher/go-rancher/client"
 )
 
 func isBlacklisted(blackList []string, driver string) bool {

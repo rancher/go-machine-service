@@ -1,4 +1,4 @@
-package dynamicDrivers
+package dynamic
 
 import (
 	"fmt"
@@ -9,10 +9,11 @@ import (
 	log "github.com/Sirupsen/logrus"
 	cli "github.com/docker/machine/libmachine/mcnflag"
 
+	"net/rpc"
+
 	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
 	rpcdriver "github.com/docker/machine/libmachine/drivers/rpc"
 	"github.com/rancher/go-rancher/client"
-	"net/rpc"
 
 	"encoding/json"
 	"errors"

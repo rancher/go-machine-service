@@ -1,4 +1,4 @@
-package dynamicDrivers
+package dynamic
 
 type ResourceFieldConfig struct {
 	Type        string `json:"type,omitempty"`

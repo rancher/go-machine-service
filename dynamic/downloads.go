@@ -1,13 +1,10 @@
-package dynamicDrivers
+package dynamic
 
 import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
-	"github.com/rancher/go-rancher/client"
 	"io"
 	"io/ioutil"
 	"math"
@@ -18,6 +15,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
+	"github.com/rancher/go-rancher/client"
 )
 
 func computeMd5(filePath string) (string, error) {

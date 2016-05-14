@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"unsafe"
+	"sync"
 
 	log "github.com/Sirupsen/logrus"
 	cli "github.com/docker/machine/libmachine/mcnflag"
@@ -14,138 +14,120 @@ import (
 	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
 	rpcdriver "github.com/docker/machine/libmachine/drivers/rpc"
 	"github.com/rancher/go-rancher/client"
-
-	"encoding/json"
-	"errors"
 )
 
-type CreateFlag struct {
-	Name        string      `json:"name,omitempty"`
-	Type        string      `json:"type,omitempty"`
-	Default     interface{} `json:"default,omitempty"`
-	Description string      `json:"createFlag.Description,omitempty"`
-	Create      bool        `json:"create,omitempty"`
-}
+const (
+	schemaBase = "baseMachineConfig"
+)
 
-func newCreateFlag(flag cli.Flag) (*CreateFlag, error) {
-	createFlag := &CreateFlag{
+var (
+	schemaLock  = sync.Mutex{}
+	schemaRoles = []string{"service",
+		"member",
+		"owner",
+		"project",
+		"admin",
+		"user",
+		"readAdmin",
+		"readonly",
+		"restricted"}
+)
+
+func flagToField(flag cli.Flag) (string, client.Field, error) {
+	field := client.Field{
 		Default: flag.Default(),
 		Create:  true,
+		Type:    "string",
 	}
-	var err error
-	flagValue := reflect.ValueOf(flag)
-	flagPointer := flagValue.Pointer()
-	switch flagValue.Type().String() {
-	case "*mcnflag.StringFlag":
-		createFlag.Name, err = getRancherName(flag.String())
-		if err != nil {
-			return nil, fmt.Errorf("error getting the rancher name of flag=%v err=%v", flag, err)
-		}
-		createFlag.Type = "string"
-		stringFlag := (*cli.StringFlag)(unsafe.Pointer(flagPointer))
-		createFlag.Description = stringFlag.Usage
-	case "*mcnflag.IntFlag":
-		createFlag.Name, err = getRancherName(flag.String())
-		if err != nil {
-			return nil, fmt.Errorf("error getting the rancher name of flag=%v err=%v", flag, err)
-		}
-		createFlag.Type = "string"
-		intFlag := (*cli.IntFlag)(unsafe.Pointer(flagPointer))
-		createFlag.Description = intFlag.Usage
-	case "*mcnflag.BoolFlag":
-		createFlag.Name, err = getRancherName(flag.String())
-		if err != nil {
-			return nil, fmt.Errorf("error getting the rancher name of flag=%v err=%v", flag, err)
-		}
-		createFlag.Type = "boolean"
-		booleanFlag := (*cli.BoolFlag)(unsafe.Pointer(flagPointer))
-		createFlag.Description = booleanFlag.Usage
-	case "*mcnflag.StringSliceFlag":
-		createFlag.Name, err = getRancherName(flag.String())
-		if err != nil {
-			return nil, fmt.Errorf("error getting the rancher name of flag=%v err=%v", flag, err)
-		}
-		createFlag.Type = "array[string]"
-		stringSliceFlag := (*cli.StringSliceFlag)(unsafe.Pointer(flagPointer))
-		createFlag.Description = stringSliceFlag.Usage
+
+	name, err := toLowerCamelCase(flag.String())
+	if err != nil {
+		return name, field, err
+	}
+
+	switch v := flag.(type) {
+	case *cli.StringFlag:
+		field.Description = v.Usage
+	case *cli.IntFlag:
+		field.Description = v.Usage
+	case *cli.BoolFlag:
+		field.Type = "boolean"
+		field.Description = v.Usage
+	case *cli.StringSliceFlag:
+		field.Type = "array[string]"
+		field.Description = v.Usage
 	default:
-		return nil, fmt.Errorf("unknown type of flag %v", flag)
+		return name, field, fmt.Errorf("unknown type of flag %v: %v", flag, reflect.TypeOf(flag))
 	}
-	return createFlag, nil
+
+	return name, field, nil
 }
 
-func getRancherName(machineFlagName string) (string, error) {
-	parts := strings.SplitN(machineFlagName, "-", 2)
-	if len(parts) != 2 {
-		return "", fmt.Errorf("parameter %s does not follow expected naming convention [DRIVER]-[FLAG-NAME]", machineFlagName)
-	}
-	flagNameParts := strings.Split(parts[1], "-")
-	flagName := flagNameParts[0]
-	for i, flagNamePart := range flagNameParts {
-		if i == 0 {
-			continue
-		}
-		flagName = flagName + strings.ToUpper(flagNamePart[:1]) + flagNamePart[1:]
-	}
-	return flagName, nil
-}
+func GenerateAndUploadSchema(driver string) error {
+	schemaLock.Lock()
+	defer schemaLock.Unlock()
 
-func generateAndUploadSchema(driver string) error {
 	driverName := strings.TrimPrefix(driver, "docker-machine-driver-")
 	flags, err := getCreateFlagsForDriver(driverName)
 	if err != nil {
 		return err
 	}
 
-	var createFlags []CreateFlag
-
-	for _, fl := range flags {
-		cFlag, err := newCreateFlag(fl)
+	resourceFields := map[string]client.Field{}
+	for _, flag := range flags {
+		name, field, err := flagToField(flag)
 		if err != nil {
-			return nil
+			return err
 		}
-		createFlags = append(createFlags, *cFlag)
+		resourceFields[name] = field
 	}
 
-	json, err := flagsToJSON(createFlags)
+	json, err := toJSON(&client.Schema{
+		CollectionMethods: []string{"GET", "POST"},
+		ResourceFields:    resourceFields,
+	})
 	if err != nil {
 		return err
 	}
-	return uploadDynamicSchema(driverName+"Config", json, "baseMachineConfig", []string{"service", "member",
-		"owner", "project", "admin", "user", "readAdmin", "readonly", "restricted"}, true)
+	return uploadDynamicSchema(driverName+"Config", json, schemaBase, schemaRoles, true)
 }
 
-func removeSchema(schemaName string, apiClient *client.RancherClient) error {
-	listOpts := client.NewListOpts()
-	listOpts.Filters["name"] = schemaName
-	listOpts.Filters["limit"] = "-1"
-	listOpts.Filters["state_ne"] = "purged"
+func RemoveSchemas(schemaName string, apiClient *client.RancherClient) error {
+	listOpts := &client.ListOpts{
+		Filters: map[string]interface{}{
+			"name":         schemaName,
+			"limit":        "-1",
+			"removed_null": "true",
+		},
+	}
 	schemas, err := apiClient.DynamicSchema.List(listOpts)
 	if err != nil {
 		return err
 	}
 
-	if len(schemas.Data) > 0 {
-		log.Debugf("Removing %d schemas for %s", len(schemas.Data), schemaName)
-		for _, schema := range schemas.Data {
-			log.Debugf("Removing ", schemaName, " Id: ", schema.Id, " state: ", schema.State)
-			if schema.State == "creating" {
-				err = waitSuccessSchema(schema, apiClient)
-				if err != nil {
-					return err
-				}
-			}
-			_, err = apiClient.DynamicSchema.ActionRemove(&schema)
-			if err != nil {
-				return err
-			}
-			err = waitSuccessSchema(schema, apiClient)
-			if err != nil {
-				return err
-			}
-			log.Debug("Removed ", schemaName, " Id: ", schema.Id)
+	for _, schema := range schemas.Data {
+		if err := waitSchema(schema, apiClient); err != nil {
+			return err
+		}
+
+		if err := apiClient.Reload(&schema.Resource, &schema); err != nil {
+			return err
+		}
+
+		if schema.Removed != "" {
+			continue
+		}
+
+		log.Debugf("Removing %s id: %s state: %s", schemaName, schema.Id, schema.State)
+		if err := apiClient.DynamicSchema.Delete(&schema); err != nil {
+			return err
+		}
+
+		if err := waitSchema(schema, apiClient); err != nil {
+			return err
 		}
 	}
+
 	return nil
 }
 
@@ -155,7 +137,7 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string, 
 		return err
 	}
 	if delete {
-		removeSchema(schemaName, apiClient)
+		RemoveSchemas(schemaName, apiClient)
 	}
 
 	schema, err := apiClient.DynamicSchema.Create(&client.DynamicSchema{
@@ -164,34 +146,12 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string, 
 		Parent:     parent,
 		Roles:      roles,
 	})
+	log.WithField("id", schema.Id).Infof("Creating schema %s, roles %v", schemaName, roles)
 	if err != nil {
-		return errors.New(fmt.Sprint("Failed when uploading ", schemaName, " schema to cattle: ", err.Error()))
+		return fmt.Errorf("Failed when uploading %s schema: %v", schemaName, err)
 	}
-	log.Debugf("Waiting for schema: %v to activate.", schema.Name)
-	return waitSuccessSchema(*schema, apiClient)
-}
 
-func flagsToJSON(createFlags []CreateFlag) (string, error) {
-	resourceFieldStruct := make(map[string]interface{})
-	resourceFieldMap := make(ResourceFieldConfigs)
-	resourceFieldStruct["collectionMethods"] = []string{"GET", "POST"}
-	resourceFieldStruct["resourceFields"] = resourceFieldMap
-	for _, flag := range createFlags {
-		resourceFieldMap[flag.Name] = flagToField(flag)
-	}
-	fieldsJSON, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
-	return string(fieldsJSON), err
-}
-
-func flagToField(flag CreateFlag) ResourceFieldConfig {
-	return ResourceFieldConfig{
-		Type:        flag.Type,
-		Nullable:    true,
-		Required:    false,
-		Create:      flag.Create,
-		Update:      true,
-		Description: flag.Description,
-	}
+	return waitSchema(*schema, apiClient)
 }
 
 func getCreateFlagsForDriver(driver string) ([]cli.Flag, error) {

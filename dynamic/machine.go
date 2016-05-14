@@ -1,158 +1,123 @@
 package dynamic
 
 import (
-	"encoding/json"
-	"errors"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/rancher/go-rancher/client"
 )
 
-func uploadMachineSchema(drivers []string) error {
-	log.Debug("Uploading machine jsons.")
-	err := uploadMachineServiceJSON(drivers)
-	err2 := uploadMachineProjectJSON(drivers)
-	err3 := uploadMachineUserJSON(drivers)
-	err4 := uploadMachineReadOnlyJSON(drivers)
-	if err != nil || err2 != nil || err3 != nil || err4 != nil {
-		return errors.New("Failed to upload one of the machine jsons.")
+func UploadMachineSchemas(apiClient *client.RancherClient) error {
+	schemaLock.Lock()
+	defer schemaLock.Unlock()
+
+	drivers := []string{}
+	existing, err := apiClient.MachineDriver.List(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"removed_null": "true",
+		},
+	})
+	if err != nil {
+		return err
 	}
-	return nil
+
+	for _, driver := range existing.Data {
+		if driver.Name != "" && (driver.State == "active" || driver.State == "activating") {
+			drivers = append(drivers, driver.Name)
+		}
+	}
+
+	log.Infof("Uploadating machine jsons for  %v", drivers)
+	if err := uploadMachineServiceJSON(drivers, true); err != nil {
+		return err
+	}
+	if err := uploadMachineProjectJSON(drivers, false); err != nil {
+		return err
+	}
+	if err := uploadMachineUserJSON(drivers, false); err != nil {
+		return err
+	}
+	return uploadMachineReadOnlyJSON(false)
 }
 
-func genFieldSchema(resourceFieldStruct ResourceFieldConfigs, field, fieldType, auth string) {
-	resourceFieldStruct[field] = ResourceFieldConfig{
+func field(resourceFields map[string]client.Field, field, fieldType, auth string) {
+	resourceFields[field] = client.Field{
 		Nullable: true,
 		Type:     fieldType,
 		Create:   strings.Contains(auth, "c"),
 		Update:   strings.Contains(auth, "u"),
 	}
 }
-func nameField(resourceFieldStruct ResourceFieldConfigs) {
-	resourceFieldStruct["name"] = ResourceFieldConfig{
-		Type:     "string",
-		Create:   true,
-		Update:   false,
-		Required: true,
-		Nullable: false,
-	}
-}
 
-func uploadMachineServiceJSON(drivers []string) error {
-	resourceFieldStruct := make(map[string]interface{})
-	resourceFieldMap := make(ResourceFieldConfigs)
-	resourceFieldStruct["collectionMethods"] = []string{"GET", "POST", "PUT", "DELETE"}
-	resourceFieldStruct["resourceMethods"] = []string{"GET", "PUT", "DELETE"}
-	resourceFieldStruct["resourceFields"] = resourceFieldMap
+func baseSchema(drivers []string, defaultAuth string) client.Schema {
+	schema := client.Schema{
+		CollectionMethods: []string{"GET"},
+		ResourceMethods:   []string{"GET"},
+		ResourceFields: map[string]client.Field{
+			"name": client.Field{
+				Type:     "string",
+				Create:   true,
+				Update:   false,
+				Required: true,
+				Nullable: false,
+			},
+		},
+	}
+
+	if strings.Contains(defaultAuth, "c") {
+		schema.CollectionMethods = append(schema.CollectionMethods, "POST", "DELETE")
+		schema.ResourceMethods = append(schema.ResourceMethods, "DELETE")
+	}
+
 	for _, driver := range drivers {
-		genFieldSchema(resourceFieldMap, driver+"Config", driver+"Config", "c")
+		field(schema.ResourceFields, driver+"Config", driver+"Config", defaultAuth)
 	}
-	genFieldSchema(resourceFieldMap, "authCertificateAuthority", "string", "c")
-	genFieldSchema(resourceFieldMap, "authKey", "string", "c")
-	genFieldSchema(resourceFieldMap, "dockerVersion", "string", "c")
-	genFieldSchema(resourceFieldMap, "engineEnv", "map[string]", "c")
-	genFieldSchema(resourceFieldMap, "engineInsecureRegistry", "array[string]", "c")
-	genFieldSchema(resourceFieldMap, "engineInstallUrl", "string", "c")
-	genFieldSchema(resourceFieldMap, "engineLabel", "map[string]", "c")
-	genFieldSchema(resourceFieldMap, "engineOpt", "map[string]", "c")
-	genFieldSchema(resourceFieldMap, "engineRegistryMirror", "array[string]", "c")
-	genFieldSchema(resourceFieldMap, "engineStorageDriver", "string", "c")
-	genFieldSchema(resourceFieldMap, "extractedConfig", "string", "u")
-	genFieldSchema(resourceFieldMap, "labels", "map[string]", "cu")
-	nameField(resourceFieldMap)
 
-	jsonData, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
-	if err != nil {
-		return err
-	}
-	return uploadDynamicSchema("machine", string(jsonData), "physicalHost", []string{"service"}, true)
+	field(schema.ResourceFields, "authCertificateAuthority", "string", defaultAuth)
+	field(schema.ResourceFields, "authKey", "string", defaultAuth)
+	field(schema.ResourceFields, "dockerVersion", "string", defaultAuth)
+	field(schema.ResourceFields, "driver", "string", "")
+	field(schema.ResourceFields, "engineEnv", "map[string]", defaultAuth)
+	field(schema.ResourceFields, "engineInsecureRegistry", "array[string]", defaultAuth)
+	field(schema.ResourceFields, "engineInstallUrl", "string", defaultAuth)
+	field(schema.ResourceFields, "engineLabel", "map[string]", defaultAuth)
+	field(schema.ResourceFields, "engineOpt", "map[string]", defaultAuth)
+	field(schema.ResourceFields, "engineRegistryMirror", "array[string]", defaultAuth)
+	field(schema.ResourceFields, "engineStorageDriver", "string", defaultAuth)
+	field(schema.ResourceFields, "labels", "map[string]", defaultAuth)
+
+	return schema
 }
 
-func uploadMachineProjectJSON(drivers []string) error {
-	resourceFieldStruct := make(map[string]interface{})
-	resourceFieldMap := make(ResourceFieldConfigs)
-	resourceFieldStruct["collectionMethods"] = []string{"GET", "POST", "DELETE"}
-	resourceFieldStruct["resourceMethods"] = []string{"GET", "DELETE"}
-	resourceFieldStruct["resourceFields"] = resourceFieldMap
-	for _, driver := range drivers {
-		genFieldSchema(resourceFieldMap, driver+"Config", driver+"Config", "c")
-	}
-	genFieldSchema(resourceFieldMap, "authCertificateAuthority", "string", "c")
-	genFieldSchema(resourceFieldMap, "authKey", "string", "c")
-	genFieldSchema(resourceFieldMap, "dockerVersion", "string", "c")
-	genFieldSchema(resourceFieldMap, "engineEnv", "map[string]", "c")
-	genFieldSchema(resourceFieldMap, "engineInsecureRegistry", "array[string]", "c")
-	genFieldSchema(resourceFieldMap, "engineInstallUrl", "string", "c")
-	genFieldSchema(resourceFieldMap, "engineLabel", "map[string]", "c")
-	genFieldSchema(resourceFieldMap, "engineOpt", "map[string]", "c")
-	genFieldSchema(resourceFieldMap, "engineRegistryMirror", "array[string]", "c")
-	genFieldSchema(resourceFieldMap, "engineStorageDriver", "string", "c")
-	genFieldSchema(resourceFieldMap, "labels", "map[string]", "c")
-	nameField(resourceFieldMap)
+func uploadMachineServiceJSON(drivers []string, remove bool) error {
+	schema := baseSchema(drivers, "c")
+	schema.CollectionMethods = append(schema.CollectionMethods, "PUT")
+	schema.ResourceMethods = append(schema.ResourceMethods, "PUT")
+	field(schema.ResourceFields, "extractedConfig", "string", "u")
+	field(schema.ResourceFields, "labels", "map[string]", "cu")
 
-	jsonData, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
-	if err != nil {
-		return err
-	}
-	return uploadDynamicSchema("machine", string(jsonData), "physicalHost",
-		[]string{"project", "member", "owner"}, false)
+	return uploadMachineSchema(schema, []string{"service"}, remove)
 }
 
-func uploadMachineUserJSON(drivers []string) error {
-	resourceFieldStruct := make(map[string]interface{})
-	resourceFieldMap := make(ResourceFieldConfigs)
-	resourceFieldStruct["collectionMethods"] = []string{"GET"}
-	resourceFieldStruct["resourceMethods"] = []string{"GET"}
-	resourceFieldStruct["resourceFields"] = resourceFieldMap
-	for _, driver := range drivers {
-		genFieldSchema(resourceFieldMap, driver+"Config", driver+"Config", "")
-	}
-	genFieldSchema(resourceFieldMap, "authCertificateAuthority", "string", "")
-	genFieldSchema(resourceFieldMap, "authKey", "string", "")
-	genFieldSchema(resourceFieldMap, "dockerVersion", "string", "")
-	genFieldSchema(resourceFieldMap, "driver", "string", "")
-	genFieldSchema(resourceFieldMap, "engineEnv", "map[string]", "")
-	genFieldSchema(resourceFieldMap, "engineInsecureRegistry", "array[string]", "")
-	genFieldSchema(resourceFieldMap, "engineInstallUrl", "string", "")
-	genFieldSchema(resourceFieldMap, "engineLabel", "map[string]", "")
-	genFieldSchema(resourceFieldMap, "engineOpt", "map[string]", "")
-	genFieldSchema(resourceFieldMap, "engineRegistryMirror", "array[string]", "")
-	genFieldSchema(resourceFieldMap, "engineStorageDriver", "string", "")
-	genFieldSchema(resourceFieldMap, "labels", "map[string]", "")
-	nameField(resourceFieldMap)
-
-	jsonData, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
-	if err != nil {
-		return err
-	}
-	return uploadDynamicSchema("machine", string(jsonData), "physicalHost", []string{"admin", "user", "readAdmin"},
-		false)
+func uploadMachineProjectJSON(drivers []string, remove bool) error {
+	schema := baseSchema(drivers, "c")
+	return uploadMachineSchema(schema, []string{"project", "member", "owner"}, remove)
 }
 
-func uploadMachineReadOnlyJSON(drivers []string) error {
-	resourceFieldStruct := make(map[string]interface{})
-	resourceFieldMap := make(ResourceFieldConfigs)
-	resourceFieldStruct["collectionMethods"] = []string{"GET"}
-	resourceFieldStruct["resourceMethods"] = []string{"GET"}
-	resourceFieldStruct["resourceFields"] = resourceFieldMap
-	genFieldSchema(resourceFieldMap, "authCertificateAuthority", "string", "")
-	genFieldSchema(resourceFieldMap, "authKey", "string", "")
-	genFieldSchema(resourceFieldMap, "dockerVersion", "string", "")
-	genFieldSchema(resourceFieldMap, "driver", "string", "")
-	genFieldSchema(resourceFieldMap, "engineEnv", "map[string]", "")
-	genFieldSchema(resourceFieldMap, "engineInsecureRegistry", "array[string]", "")
-	genFieldSchema(resourceFieldMap, "engineInstallUrl", "string", "")
-	genFieldSchema(resourceFieldMap, "engineLabel", "map[string]", "")
-	genFieldSchema(resourceFieldMap, "engineOpt", "map[string]", "")
-	genFieldSchema(resourceFieldMap, "engineRegistryMirror", "array[string]", "")
-	genFieldSchema(resourceFieldMap, "engineStorageDriver", "string", "")
-	genFieldSchema(resourceFieldMap, "labels", "map[string]", "")
-	nameField(resourceFieldMap)
+func uploadMachineUserJSON(drivers []string, remove bool) error {
+	schema := baseSchema(drivers, "")
+	return uploadMachineSchema(schema, []string{"admin", "user", "readAdmin"}, remove)
+}
 
-	jsonData, err := json.MarshalIndent(resourceFieldStruct, "", "    ")
+func uploadMachineReadOnlyJSON(remove bool) error {
+	schema := baseSchema([]string{}, "")
+	return uploadMachineSchema(schema, []string{"readonly"}, remove)
+}
+
+func uploadMachineSchema(schema client.Schema, roles []string, remove bool) error {
+	json, err := toJSON(&schema)
 	if err != nil {
 		return err
 	}
-	return uploadDynamicSchema("machine", string(jsonData), "physicalHost", []string{"readonly"},
-		false)
+	return uploadDynamicSchema("machine", json, "physicalHost", roles, remove)
 }

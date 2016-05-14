@@ -34,8 +34,9 @@ import:
 - package: github.com/gorilla/websocket
   version: 3986be78bf859e01f01af631ad76da5b269d270c
 
-- package: github.com/rancher/go-rancher/client
-  version: 6ac9bd0e2ae71f2cdce394abf8ab70616d7e466d
+- package: github.com/rancher/go-rancher
+  version: 891af3b063383a2187852391c31dc5aa3bca0374
+  repo: https://github.com/ibuildthecloud/go-rancher.git
 
 - package: golang.org/x/crypto/curve25519
   version: 3760e016850398b85094c4c99e955b8c3dea5711

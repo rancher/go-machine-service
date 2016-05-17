@@ -7,9 +7,6 @@ import (
 	b64 "encoding/base64"
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/rancher/go-machine-service/events"
-	"github.com/rancher/go-rancher/client"
 	"io"
 	"io/ioutil"
 	"os"
@@ -18,6 +15,10 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/rancher/go-machine-service/events"
+	"github.com/rancher/go-rancher/client"
 )
 
 const (

@@ -6,6 +6,14 @@ import (
 	"github.com/rancher/go-rancher/client"
 )
 
+var (
+	ignoredDrivers = map[string]bool{
+		"none":         true,
+		"virtualbox":   true,
+		"vmwarefusion": true,
+	}
+)
+
 func SyncBuiltin() error {
 	apiClient, err := getClient()
 	if err != nil {
@@ -33,7 +41,7 @@ func SyncBuiltin() error {
 	}
 
 	for _, driver := range localbinary.CoreDrivers {
-		if _, ok := installed[driver]; !ok {
+		if _, ok := installed[driver]; !ok && !ignoredDrivers[driver] {
 			logrus.Infof("Installing builtin driver %s", driver)
 			apiClient.MachineDriver.Create(&client.MachineDriver{
 				Name:    driver,

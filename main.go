@@ -6,7 +6,6 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/rancher/go-machine-service/dynamic"
 	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-machine-service/handlers"
 )
@@ -33,7 +32,7 @@ func main() {
 			"machinedriver.update":     handlers.ActivateDriver,
 			"machinedriver.deactivate": handlers.DeactivateDriver,
 			"machinedriver.remove":     handlers.RemoveDriver,
-			"ping":                     handlers.PingNoOp,
+			"ping":                     handlers.DownloadDriversOnPing,
 		}
 
 		router, err := events.NewEventRouter("goMachineService-machine", 2000, apiURL, accessKey, secretKey,
@@ -59,10 +58,6 @@ func main() {
 		}
 		done <- err
 	}()
-
-	if err := dynamic.DownloadAllDrivers(); err != nil {
-		log.Fatalf("Error updating drivers: %v", err)
-	}
 
 	err := <-done
 	if err == nil {

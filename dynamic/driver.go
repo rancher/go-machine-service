@@ -249,6 +249,10 @@ func binDir() string {
 }
 
 func compare(hash hash.Hash, value string) (string, bool) {
+	if hash == nil {
+		return "", true
+	}
+
 	got := hex.EncodeToString(hash.Sum([]byte{}))
 	expected := strings.TrimSpace(strings.ToLower(value))
 

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+cd $(dirname $0)/..
+
+if [ ! -e bin/go-machine-service ]; then
+    ./scripts/build
+fi
+
+mkdir -p dist/artifacts
+cd bin/
+tar cvJf ../dist/artifacts/go-machine-service.tar.xz .

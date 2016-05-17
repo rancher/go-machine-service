@@ -6,7 +6,7 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/rancher/go-machine-service/dynamicDrivers"
+	"github.com/rancher/go-machine-service/dynamic"
 	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-machine-service/handlers"
 )
@@ -18,62 +18,58 @@ var (
 func main() {
 	processCmdLineFlags()
 
-	log.WithFields(log.Fields{
-		"gitcommit": GITCOMMIT,
-	}).Info("Starting go-machine-service...")
-
-	errs := dynamicDrivers.UpdateDrivers()
-
-	if len(errs) > 0 {
-		exit := false
-		multipleErrors := false
-		for _, err := range errs {
-			if err != nil {
-				if exit {
-					multipleErrors = true
-				}
-				exit = true
-			}
-		}
-		if exit {
-			if multipleErrors {
-				log.Error("Encountered multiple errors while updating drivers.")
-			}
-			for _, err := range errs {
-				if err != nil {
-					log.Error("Error from driver: ", err.Error())
-					exit = true
-				}
-			}
-			log.Fatal("Encourted an error while updating drivers.")
-		}
-	}
-	eventHandlers := map[string]events.EventHandler{
-		"physicalhost.create":    handlers.CreateMachine,
-		"physicalhost.bootstrap": handlers.ActivateMachine,
-		"physicalhost.remove":    handlers.PurgeMachine,
-		"ping":                   handlers.PingNoOp,
-	}
+	log.WithField("gitcommit", GITCOMMIT).Info("Starting go-machine-service...")
 
 	apiURL := os.Getenv("CATTLE_URL")
 	accessKey := os.Getenv("CATTLE_ACCESS_KEY")
 	secretKey := os.Getenv("CATTLE_SECRET_KEY")
 
-	router, err := events.NewEventRouter("goMachineService", 2000, apiURL, accessKey, secretKey,
-		nil, eventHandlers, "physicalhost", 10)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"Err": err,
-		}).Error("Unable to create EventRouter")
-	} else {
-		err := router.Start(nil)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"Err": err,
-			}).Error("Unable to start EventRouter")
+	done := make(chan error)
+
+	go func() {
+		eventHandlers := map[string]events.EventHandler{
+			"machinedriver.reactivate": handlers.ActivateDriver,
+			"machinedriver.activate":   handlers.ActivateDriver,
+			"machinedriver.update":     handlers.ActivateDriver,
+			"machinedriver.deactivate": handlers.DeactivateDriver,
+			"machinedriver.remove":     handlers.RemoveDriver,
+			"ping":                     handlers.PingNoOp,
 		}
+
+		router, err := events.NewEventRouter("goMachineService-machine", 2000, apiURL, accessKey, secretKey,
+			nil, eventHandlers, "machineDriver", 10)
+		if err == nil {
+			err = router.Start(nil)
+		}
+		done <- err
+	}()
+
+	go func() {
+		eventHandlers := map[string]events.EventHandler{
+			"physicalhost.create":    handlers.CreateMachine,
+			"physicalhost.bootstrap": handlers.ActivateMachine,
+			"physicalhost.remove":    handlers.PurgeMachine,
+			"ping":                   handlers.PingNoOp,
+		}
+
+		router, err := events.NewEventRouter("goMachineService", 2000, apiURL, accessKey, secretKey,
+			nil, eventHandlers, "physicalhost", 10)
+		if err == nil {
+			err = router.Start(nil)
+		}
+		done <- err
+	}()
+
+	if err := dynamic.DownloadAllDrivers(); err != nil {
+		log.Fatalf("Error updating drivers: %v", err)
 	}
-	log.Info("Exiting go-machine-service...")
+
+	err := <-done
+	if err == nil {
+		log.Infof("Exiting go-machine-service")
+	} else {
+		log.Fatalf("Exiting go-machine-service: %v", err)
+	}
 }
 
 func processCmdLineFlags() {

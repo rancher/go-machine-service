@@ -77,7 +77,7 @@ func (router *EventRouter) createExternalHandler() error {
 	for event := range router.eventHandlers {
 		externalHandler.ProcessConfigs[idx] = ProcessConfig{
 			Name:    event,
-			OnError: router.resourceName + ".error",
+			OnError: strings.ToLower(router.resourceName) + ".error",
 		}
 		idx++
 	}

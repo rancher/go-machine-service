@@ -7,6 +7,8 @@ const (
 type Project struct {
 	Resource
 
+	AllowSystemRole bool `json:"allowSystemRole,omitempty" yaml:"allow_system_role,omitempty"`
+
 	Created string `json:"created,omitempty" yaml:"created,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty" yaml:"data,omitempty"`
@@ -18,6 +20,8 @@ type Project struct {
 	Kubernetes bool `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
 
 	Members []interface{} `json:"members,omitempty" yaml:"members,omitempty"`
+
+	Mesos bool `json:"mesos,omitempty" yaml:"mesos,omitempty"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 

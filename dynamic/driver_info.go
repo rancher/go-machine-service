@@ -60,6 +60,10 @@ func flagToField(flag cli.Flag) (string, client.Field, error) {
 		return name, field, fmt.Errorf("unknown type of flag %v: %v", flag, reflect.TypeOf(flag))
 	}
 
+	if field.Type == "string" && field.Default != nil {
+		field.Default = fmt.Sprintf("%v", field.Default)
+	}
+
 	return name, field, nil
 }
 

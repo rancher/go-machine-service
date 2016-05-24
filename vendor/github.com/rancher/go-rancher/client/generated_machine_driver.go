@@ -7,7 +7,7 @@ const (
 type MachineDriver struct {
 	Resource
 
-	AccountId string `json:"accountId,omitempty" yaml:"account_id,omitempty"`
+	ActivateOnCreate bool `json:"activateOnCreate,omitempty" yaml:"activate_on_create,omitempty"`
 
 	Builtin bool `json:"builtin,omitempty" yaml:"builtin,omitempty"`
 

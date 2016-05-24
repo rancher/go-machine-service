@@ -12,8 +12,9 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/gorilla/websocket"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 const (

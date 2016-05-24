@@ -2,27 +2,12 @@ package handlers
 
 import (
 	"fmt"
-	"log"
-	"sync"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/go-machine-service/dynamic"
 	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-rancher/client"
 )
-
-var (
-	downloadInit = sync.Once{}
-)
-
-func DownloadDriversOnPing(event *events.Event, apiClient *client.RancherClient) error {
-	downloadInit.Do(func() {
-		if err := dynamic.DownloadAllDrivers(); err != nil {
-			log.Fatalf("Error updating drivers: %v", err)
-		}
-	})
-	return nil
-}
 
 func DeactivateDriver(event *events.Event, apiClient *client.RancherClient) error {
 	return removeDriver(event, apiClient, false)

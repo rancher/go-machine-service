@@ -283,8 +283,17 @@ func subscribeToEvents(subscribeURL string, accessKey string, secretKey string, 
 }
 
 var createNewHandler = func(externalHandler *client.ExternalHandler, apiClient *client.RancherClient) error {
-	_, err := apiClient.ExternalHandler.Create(externalHandler)
-	return err
+	handler, err := apiClient.ExternalHandler.Create(externalHandler)
+	if err != nil {
+		return err
+	}
+	return waitForTransition(func() (bool, error) {
+		handler, err := apiClient.ExternalHandler.ById(handler.Id)
+		if err != nil {
+			return false, err
+		}
+		return handler.Transitioning != "yes", nil
+	})
 }
 
 var removeOldHandler = func(name string, apiClient *client.RancherClient) error {

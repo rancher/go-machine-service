@@ -6,6 +6,7 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/rancher/go-machine-service/dynamic"
 	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-machine-service/handlers"
 )
@@ -23,6 +24,7 @@ func main() {
 	accessKey := os.Getenv("CATTLE_ACCESS_KEY")
 	secretKey := os.Getenv("CATTLE_SECRET_KEY")
 
+	ready := make(chan bool, 2)
 	done := make(chan error)
 
 	go func() {
@@ -32,13 +34,13 @@ func main() {
 			"machinedriver.update":     handlers.ActivateDriver,
 			"machinedriver.deactivate": handlers.DeactivateDriver,
 			"machinedriver.remove":     handlers.RemoveDriver,
-			"ping":                     handlers.DownloadDriversOnPing,
+			"ping":                     handlers.PingNoOp,
 		}
 
 		router, err := events.NewEventRouter("goMachineService-machine", 2000, apiURL, accessKey, secretKey,
 			nil, eventHandlers, "machineDriver", 10)
 		if err == nil {
-			err = router.Start(nil)
+			err = router.Start(ready)
 		}
 		done <- err
 	}()
@@ -54,9 +56,19 @@ func main() {
 		router, err := events.NewEventRouter("goMachineService", 2000, apiURL, accessKey, secretKey,
 			nil, eventHandlers, "physicalhost", 10)
 		if err == nil {
-			err = router.Start(nil)
+			err = router.Start(ready)
 		}
 		done <- err
+	}()
+
+	go func() {
+		log.Infof("Waiting for handler registration (1/2)")
+		<-ready
+		log.Infof("Waiting for handler registration (2/2)")
+		<-ready
+		if err := dynamic.DownloadAllDrivers(); err != nil {
+			log.Fatalf("Error updating drivers: %v", err)
+		}
 	}()
 
 	err := <-done

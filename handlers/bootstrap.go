@@ -3,16 +3,17 @@ package handlers
 import (
 	"bytes"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/fsouza/go-dockerclient"
-	"github.com/rancher/go-machine-service/events"
-	"github.com/rancher/go-rancher/client"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/fsouza/go-dockerclient"
+	"github.com/rancher/go-machine-service/events"
+	"github.com/rancher/go-rancher/client"
 )
 
 const (
@@ -21,6 +22,7 @@ const (
 	bootstrappedAtField = "bootstrappedAt"
 	parseMessage        = "Failed to parse config: [%v]"
 	bootStrappedFile    = "bootstrapped"
+	fingerprintStart    = "CA_FINGERPRINT="
 )
 
 var endpointRegEx = regexp.MustCompile("-H=[[:alnum:]]*[[:graph:]]*")
@@ -101,7 +103,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 
 	publishChan <- "Installing Rancher agent"
 
-	registrationURL, imageRepo, imageTag, err := getRegistrationURLAndImage(machine.AccountId, apiClient)
+	registrationURL, imageRepo, imageTag, fingerprint, err := getRegistrationURLAndImage(machine.AccountId, apiClient)
 	if err != nil {
 		return err
 	}
@@ -118,7 +120,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 
 	publishChan <- "Creating agent container"
 
-	container, err := createContainer(registrationURL, machine, dockerClient, imageRepo, imageTag)
+	container, err := createContainer(registrationURL, machine, dockerClient, imageRepo, imageTag, fingerprint)
 	if err != nil {
 		return err
 	}
@@ -171,9 +173,9 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 }
 
 func createContainer(registrationURL string, machine *client.Machine,
-	dockerClient *docker.Client, imageRepo, imageTag string) (*docker.Container, error) {
+	dockerClient *docker.Client, imageRepo, imageTag, fingerprint string) (*docker.Container, error) {
 	containerCmd := []string{registrationURL}
-	containerConfig := buildContainerConfig(containerCmd, machine, imageRepo, imageTag)
+	containerConfig := buildContainerConfig(containerCmd, machine, imageRepo, imageTag, fingerprint)
 	hostConfig := buildHostConfig()
 
 	opts := docker.CreateContainerOptions{
@@ -193,7 +195,7 @@ func buildHostConfig() *docker.HostConfig {
 	return hostConfig
 }
 
-func buildContainerConfig(containerCmd []string, machine *client.Machine, imgRepo, imgTag string) *docker.Config {
+func buildContainerConfig(containerCmd []string, machine *client.Machine, imgRepo, imgTag, fingerprint string) *docker.Config {
 	image := imgRepo + ":" + imgTag
 
 	volConfig := map[string]struct{}{"/var/run/docker.sock": {}}
@@ -214,6 +216,9 @@ func buildContainerConfig(containerCmd []string, machine *client.Machine, imgRep
 		labelVarsString := strings.Join(labelVars, "&")
 		labelVarsString = "CATTLE_HOST_LABELS=" + labelVarsString
 		envVars = append(envVars, labelVarsString)
+	}
+	if fingerprint != "" {
+		envVars = append(envVars, fingerprint)
 	}
 	config := &docker.Config{
 		AttachStdin: true,
@@ -240,13 +245,13 @@ func pullImage(dockerClient *docker.Client, imageRepo, imageTag string) error {
 	return nil
 }
 
-var getRegistrationURLAndImage = func(accountID string, apiClient *client.RancherClient) (string, string, string, error) {
+var getRegistrationURLAndImage = func(accountID string, apiClient *client.RancherClient) (string, string, string, string, error) {
 	listOpts := client.NewListOpts()
 	listOpts.Filters["accountId"] = accountID
 	listOpts.Filters["state"] = "active"
 	tokenCollection, err := apiClient.RegistrationToken.List(listOpts)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", err
 	}
 
 	var token client.RegistrationToken
@@ -265,27 +270,37 @@ var getRegistrationURLAndImage = func(accountID string, apiClient *client.Ranche
 
 		createToken, err = apiClient.RegistrationToken.Create(createToken)
 		if err != nil {
-			return "", "", "", err
+			return "", "", "", "", err
 		}
 		createToken, err = waitForTokenToActivate(createToken, apiClient)
 		if err != nil {
-			return "", "", "", err
+			return "", "", "", "", err
 		}
 		token = *createToken
 	}
 
 	regURL, ok := token.Links["registrationUrl"]
 	if !ok {
-		return "", "", "", fmt.Errorf("No registration url on token [%v] for account [%v].", token.Id, accountID)
+		return "", "", "", "", fmt.Errorf("No registration url on token [%v] for account [%v].", token.Id, accountID)
 	}
 
 	imageParts := strings.Split(token.Image, ":")
 	if len(imageParts) != 2 {
-		return "", "", "", fmt.Errorf("Invalid Image format in token [%v] for account [%v]", token.Id, accountID)
+		return "", "", "", "", fmt.Errorf("Invalid Image format in token [%v] for account [%v]", token.Id, accountID)
 	}
 
 	regURL = tweakRegistrationURL(regURL)
-	return regURL, imageParts[0], imageParts[1], nil
+
+	return regURL, imageParts[0], imageParts[1], parseFingerprint(token), nil
+}
+
+func parseFingerprint(token client.RegistrationToken) string {
+	for _, part := range strings.Fields(token.Command) {
+		if strings.HasPrefix(part, fingerprintStart) {
+			return part
+		}
+	}
+	return ""
 }
 
 func tweakRegistrationURL(regURL string) string {

@@ -67,7 +67,7 @@ func ActivateDriver(event *events.Event, apiClient *client.RancherClient) error 
 		"defaultActive": false,
 	}
 
-	if err := dynamic.UploadMachineSchemas(apiClient); err != nil {
+	if err := dynamic.UploadMachineSchemas(apiClient, driver.FriendlyName()); err != nil {
 		return err
 	}
 

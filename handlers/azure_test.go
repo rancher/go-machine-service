@@ -73,8 +73,8 @@ func setupAZ(subscriptionID, subscriptionCert string) {
 		return machine, nil
 	}
 
-	getRegistrationURLAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, error) {
-		return "http://1.2.3.4/v1", "rancher/agent", "v0.7.6", nil
+	getRegistrationURLAndImage = func(accountId string, apiClient *client.RancherClient) (string, string, string, string, error) {
+		return "http://1.2.3.4/v1", "rancher/agent", "v0.7.6", "", nil
 	}
 
 	publishReply = buildMockPublishReply(machine)

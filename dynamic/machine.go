@@ -7,11 +7,10 @@ import (
 	"github.com/rancher/go-rancher/client"
 )
 
-func UploadMachineSchemas(apiClient *client.RancherClient) error {
+func UploadMachineSchemas(apiClient *client.RancherClient, drivers ...string) error {
 	schemaLock.Lock()
 	defer schemaLock.Unlock()
 
-	drivers := []string{}
 	existing, err := apiClient.MachineDriver.List(&client.ListOpts{
 		Filters: map[string]interface{}{
 			"removed_null": "true",
@@ -27,7 +26,7 @@ func UploadMachineSchemas(apiClient *client.RancherClient) error {
 		}
 	}
 
-	log.Infof("Uploadating machine jsons for  %v", drivers)
+	log.Infof("Updating machine jsons for  %v", drivers)
 	if err := uploadMachineServiceJSON(drivers, true); err != nil {
 		return err
 	}

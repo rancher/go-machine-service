@@ -54,3 +54,25 @@ func TestAzureHandler(t *testing.T) {
 	}
 
 }
+
+func TestAzureHandler_DM_0_7(t *testing.T) {
+	machine := new(client.Machine)
+	machineDir := "."
+
+	machine.Driver = "azure"
+	data := make(map[string]interface{})
+	machine.Data = data
+	fields := make(map[string]interface{})
+	data["fields"] = fields
+	azureConfig := make(map[string]interface{})
+	fields["azureConfig"] = azureConfig
+
+	azureHandler := &AzureHandler{}
+
+	err := azureHandler.HandleCreate(machine, machineDir)
+
+	if err != nil {
+		t.Errorf("not Docker Machine 0.7.0 ready, err=%v", err)
+		return
+	}
+}

@@ -31,7 +31,7 @@ func (*AzureHandler) HandleCreate(machine *client.Machine, machineDir string) er
 		return errors.New(machine.Driver + "Config does not exist on Machine " + machine.Id)
 	}
 	machineConfig := driverConfig.(map[string]interface{})
-	if machineConfig["subscriptionCert"].(string) != "" {
+	if _, ok := machineConfig["subscriptionCert"]; ok {
 		value := machineConfig["subscriptionCert"].(string)
 		filename = "subscription-cert.pem"
 		path, err := saveDataToFile(filename, value, machineDir)
@@ -39,7 +39,7 @@ func (*AzureHandler) HandleCreate(machine *client.Machine, machineDir string) er
 			return err
 		}
 		machineConfig["subscriptionCert"] = path
-	} else {
+	} else if _, ok := machineConfig["publishSettingsFile"]; ok {
 		value := machineConfig["publishSettingsFile"].(string)
 		filename = "publish-settings.xml"
 		path, err := saveDataToFile(filename, value, machineDir)

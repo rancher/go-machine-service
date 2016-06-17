@@ -218,7 +218,7 @@ func buildContainerConfig(containerCmd []string, machine *client.Machine, imgRep
 		envVars = append(envVars, labelVarsString)
 	}
 	if fingerprint != "" {
-		envVars = append(envVars, fingerprint)
+		envVars = append(envVars, strings.Replace(fingerprint, "\"", "", -1))
 	}
 	config := &docker.Config{
 		AttachStdin: true,

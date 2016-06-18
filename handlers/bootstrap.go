@@ -187,7 +187,10 @@ func createContainer(registrationURL string, machine *client.Machine,
 }
 
 func buildHostConfig() *docker.HostConfig {
-	bindConfig := []string{"/var/run/docker.sock:/var/run/docker.sock"}
+	bindConfig := []string{
+		"/var/run/docker.sock:/var/run/docker.sock",
+		"/var/lib/rancher:/var/lib/rancher",
+	}
 	hostConfig := &docker.HostConfig{
 		Privileged: true,
 		Binds:      bindConfig,
@@ -198,7 +201,10 @@ func buildHostConfig() *docker.HostConfig {
 func buildContainerConfig(containerCmd []string, machine *client.Machine, imgRepo, imgTag, fingerprint string) *docker.Config {
 	image := imgRepo + ":" + imgTag
 
-	volConfig := map[string]struct{}{"/var/run/docker.sock": {}}
+	volConfig := map[string]struct{}{
+		"/var/run/docker.sock": {},
+		"/var/lib/rancher":     {},
+	}
 	envVars := []string{"CATTLE_PHYSICAL_HOST_UUID=" + machine.ExternalId}
 	labelVars := []string{}
 	for key, value := range machine.Labels {

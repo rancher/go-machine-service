@@ -3,10 +3,14 @@ set -e
 
 cd $(dirname $0)/..
 
+ARCH=${ARCH:?"ARCH not set"}
+SUFFIX=""
+[ "${ARCH}" != "amd64" ] && SUFFIX="_${ARCH}"
+
 if [ ! -e bin/go-machine-service ]; then
     ./scripts/build
 fi
 
 mkdir -p dist/artifacts
 cd bin/
-tar cvJf ../dist/artifacts/go-machine-service.tar.xz .
+tar cvJf ../dist/artifacts/go-machine-service${SUFFIX}.tar.xz .

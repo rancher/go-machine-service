@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/rancher/go-machine-service/events"
+	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/client"
 	"os"
 	"strconv"

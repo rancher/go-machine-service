@@ -43,3 +43,5 @@ import:
 - package: golang.org/x/crypto/ssh
   version: 3760e016850398b85094c4c99e955b8c3dea5711
 
+- package: github.com/rancher/event-subscriber
+  version: 2e42f210dae2234d08786806100b4ddc4ce87641

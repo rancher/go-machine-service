@@ -11,6 +11,7 @@ var (
 		"none":         true,
 		"virtualbox":   true,
 		"vmwarefusion": true,
+		"hyperv":       true,
 	}
 )
 

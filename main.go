@@ -6,8 +6,8 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-machine-service/dynamic"
-	"github.com/rancher/go-machine-service/events"
 	"github.com/rancher/go-machine-service/handlers"
 )
 
@@ -38,7 +38,7 @@ func main() {
 		}
 
 		router, err := events.NewEventRouter("goMachineService-machine", 2000, apiURL, accessKey, secretKey,
-			nil, eventHandlers, "machineDriver", 10)
+			nil, eventHandlers, "machineDriver", 10, events.DefaultPingConfig)
 		if err == nil {
 			err = router.Start(ready)
 		}
@@ -54,7 +54,7 @@ func main() {
 		}
 
 		router, err := events.NewEventRouter("goMachineService", 2000, apiURL, accessKey, secretKey,
-			nil, eventHandlers, "physicalhost", 10)
+			nil, eventHandlers, "physicalhost", 10, events.DefaultPingConfig)
 		if err == nil {
 			err = router.Start(ready)
 		}

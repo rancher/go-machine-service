@@ -87,7 +87,7 @@ func GenerateAndUploadSchema(driver string) error {
 	}
 
 	json, err := toJSON(&client.Schema{
-		CollectionMethods: []string{"GET", "POST"},
+		CollectionMethods: []string{"POST"},
 		ResourceFields:    resourceFields,
 	})
 	if err != nil {

@@ -294,7 +294,9 @@ func addDirToArchive(source string, tarfileWriter *tar.Writer) error {
 				return err
 			}
 
-			if path == source || strings.HasSuffix(info.Name(), ".iso") || strings.HasSuffix(info.Name(), ".tar.gz") {
+			if path == source || strings.HasSuffix(info.Name(), ".iso") ||
+				strings.HasSuffix(info.Name(), ".tar.gz") ||
+				strings.HasSuffix(info.Name(), ".img") {
 				return nil
 			}
 

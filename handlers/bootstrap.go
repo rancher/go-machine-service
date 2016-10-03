@@ -205,7 +205,8 @@ func buildContainerConfig(containerCmd []string, machine *client.Machine, imgRep
 		"/var/run/docker.sock": {},
 		"/var/lib/rancher":     {},
 	}
-	envVars := []string{"CATTLE_PHYSICAL_HOST_UUID=" + machine.ExternalId}
+	envVars := []string{"CATTLE_PHYSICAL_HOST_UUID=" + machine.ExternalId,
+		"CATTLE_DOCKER_UUID=" + machine.ExternalId}
 	labelVars := []string{}
 	for key, value := range machine.Labels {
 		label := ""

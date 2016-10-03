@@ -61,10 +61,16 @@ func ActivateDriver(event *events.Event, apiClient *client.RancherClient) error 
 		return err
 	}
 
+	version, err := dynamic.DriverSchemaVersion(apiClient)
+	if err != nil {
+		return err
+	}
+
 	reply := newReply(event)
 	reply.Data = map[string]interface{}{
 		"name":          driver.FriendlyName(),
 		"defaultActive": false,
+		"schemaVersion": version,
 	}
 
 	if err := dynamic.UploadMachineSchemas(apiClient, driver.FriendlyName()); err != nil {

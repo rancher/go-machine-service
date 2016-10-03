@@ -56,7 +56,7 @@ func baseSchema(drivers []string, defaultAuth string) client.Schema {
 			"name": client.Field{
 				Type:     "string",
 				Create:   true,
-				Update:   false,
+				Update:   true,
 				Required: true,
 				Nullable: false,
 			},
@@ -64,8 +64,12 @@ func baseSchema(drivers []string, defaultAuth string) client.Schema {
 	}
 
 	if strings.Contains(defaultAuth, "c") {
-		schema.CollectionMethods = append(schema.CollectionMethods, "POST", "DELETE")
+		schema.CollectionMethods = append(schema.CollectionMethods, "POST")
 		schema.ResourceMethods = append(schema.ResourceMethods, "DELETE")
+	}
+
+	if strings.Contains(defaultAuth, "u") {
+		schema.ResourceMethods = append(schema.ResourceMethods, "PUT")
 	}
 
 	for _, driver := range drivers {
@@ -89,9 +93,7 @@ func baseSchema(drivers []string, defaultAuth string) client.Schema {
 }
 
 func uploadMachineServiceJSON(drivers []string, remove bool) error {
-	schema := baseSchema(drivers, "c")
-	schema.CollectionMethods = append(schema.CollectionMethods, "PUT")
-	schema.ResourceMethods = append(schema.ResourceMethods, "PUT")
+	schema := baseSchema(drivers, "cu")
 	field(schema.ResourceFields, "extractedConfig", "string", "u")
 	field(schema.ResourceFields, "labels", "map[string]", "cu")
 
@@ -99,7 +101,7 @@ func uploadMachineServiceJSON(drivers []string, remove bool) error {
 }
 
 func uploadMachineProjectJSON(drivers []string, remove bool) error {
-	schema := baseSchema(drivers, "c")
+	schema := baseSchema(drivers, "cu")
 	return uploadMachineSchema(schema, []string{"project", "member", "owner"}, remove)
 }
 
@@ -118,5 +120,8 @@ func uploadMachineSchema(schema client.Schema, roles []string, remove bool) erro
 	if err != nil {
 		return err
 	}
-	return uploadDynamicSchema("machine", json, "physicalHost", roles, remove)
+	if err := uploadDynamicSchema("machine", json, "physicalHost", roles, remove); err != nil {
+		return err
+	}
+	return uploadDynamicSchema("host", json, "host", roles, remove)
 }

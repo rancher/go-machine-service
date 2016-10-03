@@ -7,7 +7,7 @@ import (
 
 	"errors"
 	log "github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
 func init() {

@@ -66,6 +66,9 @@ func main() {
 		<-ready
 		log.Infof("Waiting for handler registration (2/2)")
 		<-ready
+		if err := dynamic.ReactivateOldDrivers(); err != nil {
+			log.Fatalf("Error reactivating old drivers: %v", err)
+		}
 		if err := dynamic.DownloadAllDrivers(); err != nil {
 			log.Fatalf("Error updating drivers: %v", err)
 		}

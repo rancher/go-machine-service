@@ -13,7 +13,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/rancher/event-subscriber/events"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
 const (
@@ -205,7 +205,8 @@ func buildContainerConfig(containerCmd []string, machine *client.Machine, imgRep
 		"/var/run/docker.sock": {},
 		"/var/lib/rancher":     {},
 	}
-	envVars := []string{"CATTLE_PHYSICAL_HOST_UUID=" + machine.ExternalId}
+	envVars := []string{"CATTLE_PHYSICAL_HOST_UUID=" + machine.ExternalId,
+		"CATTLE_DOCKER_UUID=" + machine.ExternalId}
 	labelVars := []string{}
 	for key, value := range machine.Labels {
 		label := ""

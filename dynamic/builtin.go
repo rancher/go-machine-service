@@ -3,7 +3,7 @@ package dynamic
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
 var (

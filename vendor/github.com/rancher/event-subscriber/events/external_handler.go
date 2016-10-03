@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
 type ProcessConfig struct {
@@ -24,12 +24,12 @@ func (router *EventRouter) createExternalHandler() error {
 		Name:           router.name,
 		Uuid:           router.name,
 		Priority:       int64(router.priority),
-		ProcessConfigs: make([]interface{}, len(router.eventHandlers)),
+		ProcessConfigs: make([]client.ExternalHandlerProcessConfig, len(router.eventHandlers)),
 	}
 
 	idx := 0
 	for event := range router.eventHandlers {
-		externalHandler.ProcessConfigs[idx] = ProcessConfig{
+		externalHandler.ProcessConfigs[idx] = client.ExternalHandlerProcessConfig{
 			Name:    event,
 			OnError: strings.ToLower(router.resourceName) + ".error",
 		}

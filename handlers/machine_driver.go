@@ -6,7 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-machine-service/dynamic"
-	"github.com/rancher/go-rancher/client"
+	"github.com/rancher/go-rancher/v2"
 )
 
 func DeactivateDriver(event *events.Event, apiClient *client.RancherClient) error {
@@ -61,10 +61,16 @@ func ActivateDriver(event *events.Event, apiClient *client.RancherClient) error 
 		return err
 	}
 
+	version, err := dynamic.DriverSchemaVersion(apiClient)
+	if err != nil {
+		return err
+	}
+
 	reply := newReply(event)
 	reply.Data = map[string]interface{}{
 		"name":          driver.FriendlyName(),
 		"defaultActive": false,
+		"schemaVersion": version,
 	}
 
 	if err := dynamic.UploadMachineSchemas(apiClient, driver.FriendlyName()); err != nil {

@@ -32,6 +32,7 @@ func main() {
 			"machinedriver.reactivate": handlers.ActivateDriver,
 			"machinedriver.activate":   handlers.ActivateDriver,
 			"machinedriver.update":     handlers.ActivateDriver,
+			"machinedriver.error":      handlers.ErrorDriver,
 			"machinedriver.deactivate": handlers.DeactivateDriver,
 			"machinedriver.remove":     handlers.RemoveDriver,
 			"ping":                     handlers.PingNoOp,

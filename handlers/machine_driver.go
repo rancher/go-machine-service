@@ -49,6 +49,25 @@ func removeDriver(event *events.Event, apiClient *client.RancherClient, delete b
 	return publishReply(reply, apiClient)
 }
 
+func ErrorDriver(event *events.Event, apiClient *client.RancherClient) error {
+	logrus.WithFields(logrus.Fields{
+		"resourceId": event.ResourceID,
+		"eventId":    event.ID,
+		"name":       event.Name,
+	}).Info("Event")
+
+	driver, err := getDriver(event.ResourceID, apiClient)
+	if err != nil {
+		// mask error
+		return nil
+	}
+
+	driver.ClearError()
+
+	reply := newReply(event)
+	return publishReply(reply, apiClient)
+}
+
 func ActivateDriver(event *events.Event, apiClient *client.RancherClient) error {
 	logrus.WithFields(logrus.Fields{
 		"resourceId": event.ResourceID,

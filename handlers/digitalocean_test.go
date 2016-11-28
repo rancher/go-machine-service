@@ -156,7 +156,7 @@ func waitForDropletStatusCode(expectedStatus int, dropletID int, accessToken str
 		time.Sleep(time.Second)
 	}
 
-	return fmt.Errorf("Timed out waiting for status [%v] on droplet [%v]. Last status: [%v].", expectedStatus, dropletID, statusCode)
+	return fmt.Errorf("timed out waiting for status [%v] on droplet [%v]. Last status: [%v]", expectedStatus, dropletID, statusCode)
 }
 
 func getDropletID(machineDir, name string) (int, error) {

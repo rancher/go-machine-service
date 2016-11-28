@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -78,6 +79,40 @@ func (d *Driver) Remove() error {
 }
 
 func (d *Driver) Stage() error {
+	if err := d.getError(); err != nil {
+		return err
+	}
+
+	return d.setError(d.stage())
+}
+
+func (d *Driver) setError(err error) error {
+	errFile := d.cacheFile() + ".error"
+
+	if err != nil {
+		ioutil.WriteFile(errFile, []byte(err.Error()), 0600)
+	}
+	return err
+}
+
+func (d *Driver) getError() error {
+	errFile := d.cacheFile() + ".error"
+
+	if content, err := ioutil.ReadFile(errFile); err == nil {
+		logrus.Errorf("Returning previous error: %s", content)
+		d.ClearError()
+		return errors.New(string(content))
+	}
+
+	return nil
+}
+
+func (d *Driver) ClearError() {
+	errFile := d.cacheFile() + ".error"
+	os.Remove(errFile)
+}
+
+func (d *Driver) stage() error {
 	if d.builtin {
 		return nil
 	}

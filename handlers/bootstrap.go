@@ -244,7 +244,7 @@ func pullImage(dockerClient *docker.Client, imageRepo, imageTag string) error {
 		Tag:        imageTag,
 	}
 	imageAuth := docker.AuthConfiguration{}
-	log.Printf("Pulling %v:%v image.", imageRepo, imageTag)
+	log.Printf("pulling %v:%v image.", imageRepo, imageTag)
 	err := dockerClient.PullImage(imageOptions, imageAuth)
 	if err != nil {
 		return err
@@ -288,12 +288,12 @@ var getRegistrationURLAndImage = func(accountID string, apiClient *client.Ranche
 
 	regURL, ok := token.Links["registrationUrl"]
 	if !ok {
-		return "", "", "", "", fmt.Errorf("No registration url on token [%v] for account [%v].", token.Id, accountID)
+		return "", "", "", "", fmt.Errorf("no registration url on token [%v] for account [%v]", token.Id, accountID)
 	}
 
 	imageParts := strings.Split(token.Image, ":")
 	if len(imageParts) != 2 {
-		return "", "", "", "", fmt.Errorf("Invalid Image format in token [%v] for account [%v]", token.Id, accountID)
+		return "", "", "", "", fmt.Errorf("invalid Image format in token [%v] for account [%v]", token.Id, accountID)
 	}
 
 	regURL = tweakRegistrationURL(regURL)
@@ -335,16 +335,16 @@ func waitForTokenToActivate(token *client.RegistrationToken,
 			return nil, err
 		}
 		if token == nil {
-			return nil, fmt.Errorf("Couldn't find token %v.", tokenID)
+			return nil, fmt.Errorf("couldn't find token %v", tokenID)
 		}
 		if token.State == "active" {
 			return token, nil
 		}
 		if t.After(timeoutAt) {
-			return nil, fmt.Errorf("Timed out waiting for token to activate.")
+			return nil, fmt.Errorf("timed out waiting for token to activate")
 		}
 	}
-	return nil, fmt.Errorf("Couldn't get active token.")
+	return nil, fmt.Errorf("Couldn't get active token")
 }
 
 type tlsConnectionConfig struct {

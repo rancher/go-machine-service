@@ -34,7 +34,7 @@ var RegExMachinePluginToken = regexp.MustCompile("^" + "MACHINE_PLUGIN_TOKEN=" +
 
 var RegExMachineDriverName = regexp.MustCompile("^" + "MACHINE_PLUGIN_DRIVER_NAME=" + ".*")
 
-var errNoExtractedConfig = errors.New("Machine does not have an saved config. Cannot reinitialize.")
+var errNoExtractedConfig = errors.New("Machine does not have an saved config. Cannot reinitialize")
 
 func PingNoOp(event *events.Event, apiClient *client.RancherClient) error {
 	// No-op ping handler

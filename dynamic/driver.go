@@ -90,6 +90,7 @@ func (d *Driver) setError(err error) error {
 	errFile := d.cacheFile() + ".error"
 
 	if err != nil {
+		os.MkdirAll(path.Dir(errFile))
 		ioutil.WriteFile(errFile, []byte(err.Error()), 0600)
 	}
 	return err

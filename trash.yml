@@ -14,3 +14,4 @@ github.com/rancher/go-rancher aa54788606950f0e4683e52177821fa5e006d39f
 github.com/Sirupsen/logrus 446d1c146faa8ed3f4218f056fcd165f6bcfda81
 golang.org/x/crypto/curve25519 3760e016850398b85094c4c99e955b8c3dea5711
 golang.org/x/crypto/ssh 3760e016850398b85094c4c99e955b8c3dea5711
+github.com/docker/distribution c59995570762ec8ef1b1d5a0b147600622979cb1

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/docker/distribution/reference"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-rancher/v2"
@@ -291,14 +292,14 @@ var getRegistrationURLAndImage = func(accountID string, apiClient *client.Ranche
 		return "", "", "", "", fmt.Errorf("no registration url on token [%v] for account [%v]", token.Id, accountID)
 	}
 
-	imageParts := strings.Split(token.Image, ":")
-	if len(imageParts) != 2 {
+	repo, tag, err := parseImage(token.Image)
+	if err != nil {
 		return "", "", "", "", fmt.Errorf("invalid Image format in token [%v] for account [%v]", token.Id, accountID)
 	}
 
 	regURL = tweakRegistrationURL(regURL)
 
-	return regURL, imageParts[0], imageParts[1], parseFingerprint(token), nil
+	return regURL, repo, tag, parseFingerprint(token), nil
 }
 
 func parseFingerprint(token client.RegistrationToken) string {
@@ -418,4 +419,19 @@ func parseConnectionArgs(args string) (*tlsConnectionConfig, error) {
 	}
 
 	return config, nil
+}
+
+func parseImage(image string) (string, string, error) {
+	ref, err := reference.Parse(image)
+	if err != nil {
+		return "", "", err
+	}
+	repo, tag := "", ""
+	if named, ok := ref.(reference.Named); ok {
+		repo = named.Name()
+	}
+	if tagged, ok := ref.(reference.Tagged); ok {
+		tag = tagged.Tag()
+	}
+	return repo, tag, nil
 }

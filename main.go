@@ -39,7 +39,7 @@ func main() {
 		}
 
 		router, err := events.NewEventRouter("goMachineService-machine", 2000, apiURL, accessKey, secretKey,
-			nil, eventHandlers, "machineDriver", 10, events.DefaultPingConfig)
+			nil, eventHandlers, "machineDriver", 250, events.DefaultPingConfig)
 		if err == nil {
 			err = router.Start(ready)
 		}

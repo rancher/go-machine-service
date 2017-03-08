@@ -33,14 +33,14 @@ var (
 		"restricted"}
 )
 
-func flagToField(flag cli.Flag) (string, client.Field, error) {
+func flagToField(driver string, flag cli.Flag) (string, client.Field, error) {
 	field := client.Field{
 		Default: flag.Default(),
 		Create:  true,
 		Type:    "string",
 	}
 
-	name, err := toLowerCamelCase(flag.String())
+	name, err := toLowerCamelCase(driver, flag.String())
 	if err != nil {
 		return name, field, err
 	}
@@ -79,7 +79,7 @@ func GenerateAndUploadSchema(driver string) error {
 
 	resourceFields := map[string]client.Field{}
 	for _, flag := range flags {
-		name, field, err := flagToField(flag)
+		name, field, err := flagToField(driver, flag)
 		if err != nil {
 			return err
 		}

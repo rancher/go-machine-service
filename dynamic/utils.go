@@ -52,15 +52,20 @@ func toJSON(obj interface{}) (string, error) {
 	return string(fieldsJSON), err
 }
 
-func toLowerCamelCase(machineFlagName string) (string, error) {
-	parts := strings.SplitN(machineFlagName, "-", 2)
-	if len(parts) != 2 {
-		return "", fmt.Errorf("parameter %s does not follow expected naming convention [DRIVER]-[FLAG-NAME]", machineFlagName)
+func toLowerCamelCase(driver, machineFlagName string) (string, error) {
+	var parts []string
+	if strings.HasPrefix(machineFlagName, driver) {
+		parts = strings.SplitN(machineFlagName, "-", 2)
+		if len(parts) > 1 {
+			parts = strings.Split(parts[1], "-")
+		}
+	} else {
+		parts = strings.Split(machineFlagName, "-")
 	}
-	flagNameParts := strings.Split(parts[1], "-")
-	flagName := flagNameParts[0]
-	for _, flagNamePart := range flagNameParts[1:] {
-		flagName = flagName + strings.ToUpper(flagNamePart[:1]) + flagNamePart[1:]
+
+	flagName := parts[0]
+	for _, part := range parts[1:] {
+		flagName = flagName + strings.ToUpper(part[:1]) + part[1:]
 	}
 	return flagName, nil
 }

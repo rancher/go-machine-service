@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,18 +12,17 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/reference"
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 	"github.com/rancher/event-subscriber/events"
-	"github.com/rancher/go-rancher/v2"
+	client "github.com/rancher/go-rancher/v2"
 )
 
 const (
-	bootstrapContName   = "rancher-agent-bootstrap"
-	maxWait             = time.Duration(time.Second * 10)
-	bootstrappedAtField = "bootstrappedAt"
-	parseMessage        = "Failed to parse config: [%v]"
-	bootStrappedFile    = "bootstrapped"
-	fingerprintStart    = "CA_FINGERPRINT="
+	bootstrapContName = "rancher-agent-bootstrap"
+	maxWait           = time.Duration(time.Second * 10)
+	parseMessage      = "Failed to parse config: [%v]"
+	bootStrappedFile  = "bootstrapped"
+	fingerprintStart  = "CA_FINGERPRINT="
 )
 
 var endpointRegEx = regexp.MustCompile("-H=[[:alnum:]]*[[:graph:]]*")
@@ -34,67 +33,18 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 		"eventId":    event.ID,
 	}).Info("Activating Machine")
 
-	machine, err := getMachine(event.ResourceID, apiClient)
-	if err != nil {
-		return err
+	machine, machineDir, err := preEvent(event, apiClient)
+	if err != nil || machine == nil {
+		return nil
 	}
-	if machine == nil {
-		return notAMachineReply(event, apiClient)
-	}
-
-	baseMachineDir, err := getBaseMachineDir(machine.ExternalId)
-	if err != nil {
-		return fmt.Errorf("Unable to get base machine directory. Cannot activate machine %v. Error: %v", machine.Name, err)
-	}
-
-	dExists, err := dirExists(baseMachineDir)
-	if err != nil {
-		return fmt.Errorf("Unable to determine if machine directory exists. Cannot activate machine %v. Error: %v", machine.Name, err)
-	}
-
-	if !dExists {
-		if ignoreExtractedConfig(machine.Driver) {
-			reply := newReply(event)
-			return publishReply(reply, apiClient)
-		}
-
-		err := reinitFromExtractedConfig(machine, filepath.Dir(baseMachineDir))
-		if err != nil {
-			return err
-		}
-	}
-
-	machineDir, err := getMachineDir(machine)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			cleanupResources(machineDir, machine.Name)
-		}
-	}()
-
-	dataUpdates := map[string]interface{}{}
-	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
-
-	bootstrappedFilePath := filepath.Join(machineDir, "machines", machine.Name, bootStrappedFile)
+	defer removeMachineDir(machineDir)
 
 	// If the resource has the bootstrapped file, then it has been bootstrapped.
-	if _, err := os.Stat(bootstrappedFilePath); !os.IsNotExist(err) {
-		data, err := ioutil.ReadFile(bootstrappedFilePath)
-		if err != nil {
-			return fmt.Errorf("Unable to determine if machine was activated: %v. Error: %v", machine.Name, err)
+	if _, err := os.Stat(bootstrappedStamp(machineDir, machine)); err == nil {
+		if err := saveMachineConfig(machineDir, machine, apiClient); err != nil {
+			return err
 		}
-		dataUpdates[bootstrappedAtField] = string(data)
-		extractedConfig, extractionErr := getIdempotentExtractedConfig(machine, machineDir, apiClient)
-		if extractionErr != nil {
-			return fmt.Errorf("Unable to get extracted config. Cannot activate machine %v. Error: %v", machine.Name, err)
-		}
-		dataUpdates["+fields"] = map[string]interface{}{"extractedConfig": extractedConfig}
-		reply := newReply(event)
-		reply.Data = eventDataWrapper
-		return publishReply(reply, apiClient)
+		return publishReply(newReply(event), apiClient)
 	}
 
 	// Setup republishing timer
@@ -138,39 +88,64 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 		return err
 	}
 
+	found := false
+	for i := 0; i < 30; i++ {
+		containers, err := dockerClient.ListContainers(docker.ListContainersOptions{})
+		if err != nil {
+			return err
+		}
+		for _, c := range containers {
+			if len(c.Names) > 0 && c.Names[0] == "/rancher-agent" {
+				found = true
+				break
+			}
+		}
+		time.Sleep(2 * time.Second)
+	}
+
+	if !found {
+		log.WithFields(log.Fields{
+			"resourceId": event.ResourceID,
+			"machineId":  machine.Id,
+		}).Error("Failed to find rancher-agent container")
+		return errors.New("Failed to find rancher-agent container")
+	}
+
+	go func() {
+		images, err := collectImageNames(machine.AccountId, apiClient)
+		if err != nil {
+			return
+		}
+		for _, image := range images {
+			repo, tag, err := parseImage(image)
+			if err != nil {
+				continue
+			}
+			log.WithFields(log.Fields{
+				"resourceId":        event.ResourceID,
+				"machineExternalId": machine.ExternalId,
+				"repo":              repo,
+				"tag":               tag,
+			}).Info("Pulling image")
+			go pullImage(dockerClient, repo, tag)
+		}
+	}()
+
 	log.WithFields(log.Fields{
 		"resourceId":        event.ResourceID,
 		"machineExternalId": machine.ExternalId,
 		"containerId":       container.ID,
 	}).Info("Rancher-agent for machine started")
 
-	t := time.Now()
-	bootstrappedAt := t.Format(time.RFC3339)
-	f, err := os.OpenFile(bootstrappedFilePath, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	f.WriteString(bootstrappedAt)
-	f.Close()
-	dataUpdates[bootstrappedAtField] = bootstrappedAt
-
-	destFile, err := createExtractedConfig(event, machine)
-	if err != nil {
+	if err := touchBootstrappedStamp(machineDir, machine); err != nil {
 		return err
 	}
 
-	if destFile != "" {
-		publishChan <- "Saving Machine Config"
-		extractedConf, err := getExtractedConfig(destFile, machine, apiClient)
-		if err != nil {
-			return err
-		}
-		dataUpdates["+fields"] = map[string]string{"extractedConfig": extractedConf}
+	if err := saveMachineConfig(machineDir, machine, apiClient); err != nil {
+		return err
 	}
 
-	reply := newReply(event)
-	reply.Data = eventDataWrapper
-	return publishReply(reply, apiClient)
+	return publishReply(newReply(event), apiClient)
 }
 
 func createContainer(registrationURL string, machine *client.Machine,
@@ -421,6 +396,32 @@ func parseConnectionArgs(args string) (*tlsConnectionConfig, error) {
 	return config, nil
 }
 
+func collectImageNames(accountID string, apiClient *client.RancherClient) ([]string, error) {
+	images := []string{}
+	data, err := apiClient.Service.List(&client.ListOpts{
+		Filters: map[string]interface{}{
+			"system":       true,
+			"accountId":    accountID,
+			"removed_null": true,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, service := range data.Data {
+		if service.LaunchConfig == nil {
+			continue
+		}
+		images = append(images, strings.TrimPrefix(service.LaunchConfig.ImageUuid, "docker:"))
+		for _, service := range service.SecondaryLaunchConfigs {
+			images = append(images, strings.TrimPrefix(service.ImageUuid, "docker:"))
+		}
+	}
+
+	return images, nil
+}
+
 func parseImage(image string) (string, string, error) {
 	ref, err := reference.Parse(image)
 	if err != nil {
@@ -434,4 +435,17 @@ func parseImage(image string) (string, string, error) {
 		tag = tagged.Tag()
 	}
 	return repo, tag, nil
+}
+
+func bootstrappedStamp(base string, machine *client.Machine) string {
+	return filepath.Join(base, "machines", machine.Name, bootStrappedFile)
+}
+
+func touchBootstrappedStamp(base string, machine *client.Machine) error {
+	f, err := os.Create(createdStamp(base, machine))
+	if err != nil {
+		return err
+	}
+	f.Close()
+	return nil
 }

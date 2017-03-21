@@ -55,7 +55,21 @@ func main() {
 		}
 
 		router, err := events.NewEventRouter("goMachineService", 2000, apiURL, accessKey, secretKey,
-			nil, eventHandlers, "physicalhost", 10, events.DefaultPingConfig)
+			nil, eventHandlers, "physicalhost", 250, events.DefaultPingConfig)
+		if err == nil {
+			err = router.Start(ready)
+		}
+		done <- err
+	}()
+
+	go func() {
+		eventHandlers := map[string]events.EventHandler{
+			"pre.agent.reconnect": handlers.CheckProvider,
+			"ping":                handlers.PingNoOp,
+		}
+
+		router, err := events.NewEventRouter("goMachineService-agent", 2000, apiURL, accessKey, secretKey,
+			nil, eventHandlers, "agent", 5, events.DefaultPingConfig)
 		if err == nil {
 			err = router.Start(ready)
 		}

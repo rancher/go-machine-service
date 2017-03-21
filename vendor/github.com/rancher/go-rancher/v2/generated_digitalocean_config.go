@@ -21,6 +21,10 @@ type DigitaloceanConfig struct {
 
 	Size string `json:"size,omitempty" yaml:"size,omitempty"`
 
+	SshKeyFingerprint string `json:"sshKeyFingerprint,omitempty" yaml:"ssh_key_fingerprint,omitempty"`
+
+	SshKeyPath string `json:"sshKeyPath,omitempty" yaml:"ssh_key_path,omitempty"`
+
 	SshPort string `json:"sshPort,omitempty" yaml:"ssh_port,omitempty"`
 
 	SshUser string `json:"sshUser,omitempty" yaml:"ssh_user,omitempty"`

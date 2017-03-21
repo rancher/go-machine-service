@@ -3,10 +3,6 @@ package handlers
 import (
 	"bufio"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/rancher/event-subscriber/events"
-	"github.com/rancher/go-machine-service/handlers/providers"
-	"github.com/rancher/go-rancher/v2"
 	"io"
 	"os"
 	"os/exec"
@@ -16,63 +12,45 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/rancher/event-subscriber/events"
+	"github.com/rancher/go-machine-service/handlers/providers"
+	client "github.com/rancher/go-rancher/v2"
 )
 
 const (
 	errorCreatingMachine = "Error creating machine: "
-	CreatedFile          = "created"
+	createdFile          = "created"
 )
 
 var regExHyphen = regexp.MustCompile("([a-z])([A-Z])")
 
-func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err error) {
-	log.WithFields(log.Fields{
+func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
+	log := logrus.WithFields(logrus.Fields{
 		"resourceId": event.ResourceID,
 		"eventId":    event.ID,
-	}).Info("Creating Machine")
+	})
+	machineCreated := false
 
-	machine, err := getMachine(event.ResourceID, apiClient)
-	if err != nil {
+	log.Info("Creating Machine")
+	machine, machineDir, err := preEvent(event, apiClient)
+	if err != nil || machine == nil {
 		return err
 	}
-	if machine == nil {
-		return notAMachineReply(event, apiClient)
-	}
+	defer removeMachineDir(machineDir)
 
-	// Idempotency. If the resource has the property, we're done.
-	if _, ok := machine.Data[machineDirField]; ok {
-		reply := newReply(event)
-		return publishReply(reply, apiClient)
-	}
-
-	machineDir, err := buildBaseMachineDir(machine.ExternalId)
-	if err != nil {
-		return err
+	if _, err := os.Stat(createdStamp(machineDir, machine)); !os.IsNotExist(err) {
+		return publishReply(newReply(event), apiClient)
 	}
 
 	defer func() {
-		if err != nil {
+		if !machineCreated {
 			cleanupResources(machineDir, machine.Name)
 		}
 	}()
 
-	dataUpdates := map[string]interface{}{machineDirField: machineDir}
-	eventDataWrapper := map[string]interface{}{"+data": dataUpdates}
-
-	//Idempotency, if the same request is sent, without the machineDir & extractedConfig Field, we need to handle that
-	if _, err := os.Stat(filepath.Join(machineDir, "machines", machine.Name, CreatedFile)); !os.IsNotExist(err) {
-		extractedConfig, extractionErr := getIdempotentExtractedConfig(machine, machineDir, apiClient)
-		if extractionErr != nil {
-			return extractionErr
-		}
-		dataUpdates["+fields"] = map[string]interface{}{"extractedConfig": extractedConfig}
-		reply := newReply(event)
-		reply.Data = eventDataWrapper
-		return publishReply(reply, apiClient)
-	}
-
 	providerHandler := providers.GetProviderHandler(machine.Driver)
-
 	if err := providerHandler.HandleCreate(machine, machineDir); err != nil {
 		return err
 	}
@@ -102,9 +80,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err er
 	errChan := make(chan string, 1)
 	go logProgress(readerStdout, readerStderr, publishChan, machine, event, errChan, providerHandler)
 
-	err = command.Wait()
-
-	if err != nil {
+	if err := command.Wait(); err != nil {
 		select {
 		case errString := <-errChan:
 			if errString != "" {
@@ -116,38 +92,22 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) (err er
 		return err
 	}
 
-	log.WithFields(log.Fields{
-		"resourceId":        event.ResourceID,
-		"machineExternalId": machine.ExternalId,
-	}).Info("Machine Created")
+	log.Info("Machine Created")
+	touchCreatedStamp(machineDir, machine)
 
-	f, err := os.Create(filepath.Join(machineDir, "machines", machine.Name, CreatedFile))
-	if err != nil {
+	publishChan <- "Saving Machine Config"
+	if err := saveMachineConfig(machineDir, machine, apiClient); err != nil {
 		return err
 	}
-	f.Close()
+	log.Info("Machine config file saved.")
 
-	destFile, err := createExtractedConfig(event, machine)
-	if err != nil {
-		return err
-	}
-
-	if destFile != "" {
-		publishChan <- "Saving Machine Config"
-		extractedConf, err := getExtractedConfig(destFile, machine, apiClient)
-		if err != nil {
-			return err
-		}
-		dataUpdates["+fields"] = map[string]interface{}{"extractedConfig": extractedConf}
-	}
-
-	reply := newReply(event)
-	reply.Data = eventDataWrapper
+	removeMachineDir(machineDir)
 
 	// Explicitly close publish channel so that it doesn't conflict with final reply
 	close(publishChan)
 	alreadyClosed = true
-	return publishReply(reply, apiClient)
+	machineCreated = true
+	return publishReply(newReply(event), apiClient)
 }
 
 func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, machine *client.Machine, event *events.Event, errChan chan<- string, providerHandler providers.Provider) {
@@ -156,7 +116,7 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 	scanner := bufio.NewScanner(readerStdout)
 	for scanner.Scan() {
 		msg := scanner.Text()
-		log.WithFields(log.Fields{
+		logrus.WithFields(logrus.Fields{
 			"resourceId: ": event.ResourceID,
 		}).Infof("stdout: %s", msg)
 		transitionMsg := filterDockerMessage(msg, machine, errChan, providerHandler, false)
@@ -167,7 +127,7 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 	scanner = bufio.NewScanner(readerStderr)
 	for scanner.Scan() {
 		msg := scanner.Text()
-		log.WithFields(log.Fields{
+		logrus.WithFields(logrus.Fields{
 			"resourceId": event.ResourceID,
 		}).Infof("stderr: %s", msg)
 		filterDockerMessage(msg, machine, errChan, providerHandler, true)
@@ -276,7 +236,7 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	}
 
 	cmd = append(cmd, machine.Name)
-	log.Infof("Cmd slice: %v", cmd)
+	logrus.Infof("Cmd slice: %v", cmd)
 	return cmd, nil
 }
 
@@ -297,4 +257,17 @@ func buildEngineOpts(name string, values []string) []string {
 		opts = append(opts, name, value)
 	}
 	return opts
+}
+
+func createdStamp(base string, machine *client.Machine) string {
+	return filepath.Join(base, "machines", machine.Name, createdFile)
+}
+
+func touchCreatedStamp(base string, machine *client.Machine) error {
+	f, err := os.Create(createdStamp(base, machine))
+	if err != nil {
+		return err
+	}
+	f.Close()
+	return nil
 }

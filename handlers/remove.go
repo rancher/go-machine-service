@@ -1,13 +1,9 @@
 package handlers
 
 import (
-	"bufio"
-	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/event-subscriber/events"
-	"github.com/rancher/go-rancher/v2"
-	"os"
-	"path/filepath"
+	client "github.com/rancher/go-rancher/v2"
 )
 
 func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
@@ -16,43 +12,11 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		"eventId":    event.ID,
 	}).Info("Purging Machine")
 
-	machine, err := getMachine(event.ResourceID, apiClient)
-	if err != nil {
+	machine, machineDir, err := preEvent(event, apiClient)
+	if err != nil || machine == nil {
 		return err
 	}
-	if machine == nil {
-		return notAMachineReply(event, apiClient)
-	}
-
-	baseMachineDir, err := getBaseMachineDir(machine.ExternalId)
-	if err != nil {
-		return fmt.Errorf("Unable to determine base machine directory. Cannot purge machine %v Nothing to do. Error: %v", machine.Name, err)
-	}
-
-	// If this dir doesn't exist, we have nothing to do.
-	dExists, err := dirExists(baseMachineDir)
-	if err != nil {
-		return fmt.Errorf("Unable to determine if base machine directory exists. Cannot purge machine %v. Error: %v", machine.Name, err)
-	}
-
-	if !dExists {
-		if ignoreExtractedConfig(machine.Driver) {
-			reply := newReply(event)
-			return publishReply(reply, apiClient)
-		}
-
-		err := reinitFromExtractedConfig(machine, filepath.Dir(baseMachineDir))
-		if err != nil {
-			if err != errNoExtractedConfig {
-				return err
-			}
-		}
-	}
-
-	machineDir, err := getMachineDir(machine)
-	if err != nil {
-		return fmt.Errorf("Unable to determine machine directory. Cannot purge machine %v Nothing to do. Error: %v", machine.Name, err)
-	}
+	defer removeMachineDir(machineDir)
 
 	mExists, err := machineExists(machineDir, machine.Name)
 	if err != nil {
@@ -60,15 +24,9 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	if mExists {
-		err := deleteMachine(machineDir, machine)
-		if err != nil {
+		if err := deleteMachine(machineDir, machine); err != nil {
 			return err
 		}
-	}
-
-	err = os.RemoveAll(baseMachineDir)
-	if err != nil {
-		return err
 	}
 
 	log.WithFields(log.Fields{
@@ -77,52 +35,7 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		"machineDir":        machineDir,
 	}).Info("Machine purged")
 
-	reply := newReply(event)
-	return publishReply(reply, apiClient)
-}
+	removeMachineDir(machineDir)
 
-func deleteMachine(machineDir string, machine *client.Machine) error {
-	command := buildCommand(machineDir, []string{"rm", "-f", machine.Name})
-	err := command.Start()
-	if err != nil {
-		return err
-	}
-
-	err = command.Wait()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func machineExists(machineDir string, name string) (bool, error) {
-	command := buildCommand(machineDir, []string{"ls", "-q"})
-	r, err := command.StdoutPipe()
-	if err != nil {
-		return false, err
-	}
-
-	err = command.Start()
-	if err != nil {
-		return false, err
-	}
-
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		foundName := scanner.Text()
-		if foundName == name {
-			return true, nil
-		}
-	}
-	if err = scanner.Err(); err != nil {
-		return false, err
-	}
-
-	err = command.Wait()
-	if err != nil {
-		return false, err
-	}
-
-	return false, nil
+	return publishReply(newReply(event), apiClient)
 }

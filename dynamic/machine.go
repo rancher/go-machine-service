@@ -88,6 +88,7 @@ func baseSchema(drivers []string, defaultAuth string) client.Schema {
 	field(schema.ResourceFields, "engineRegistryMirror", "array[string]", defaultAuth)
 	field(schema.ResourceFields, "engineStorageDriver", "string", defaultAuth)
 	field(schema.ResourceFields, "labels", "map[string]", defaultAuth)
+	field(schema.ResourceFields, "hostTemplateId", "reference[hostTemplate]", strings.Replace(defaultAuth, "u", "", -1))
 
 	return schema
 }

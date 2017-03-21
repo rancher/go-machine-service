@@ -55,6 +55,8 @@ type Host struct {
 
 	ExtractedConfig string `json:"extractedConfig,omitempty" yaml:"extracted_config,omitempty"`
 
+	HostTemplateId string `json:"hostTemplateId,omitempty" yaml:"host_template_id,omitempty"`
+
 	Hostname string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 
 	Info interface{} `json:"info,omitempty" yaml:"info,omitempty"`
@@ -64,6 +66,12 @@ type Host struct {
 	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 
 	Labels map[string]interface{} `json:"labels,omitempty" yaml:"labels,omitempty"`
+
+	LocalStorageMb int64 `json:"localStorageMb,omitempty" yaml:"local_storage_mb,omitempty"`
+
+	Memory int64 `json:"memory,omitempty" yaml:"memory,omitempty"`
+
+	MilliCpu int64 `json:"milliCpu,omitempty" yaml:"milli_cpu,omitempty"`
 
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 
@@ -76,6 +84,8 @@ type Host struct {
 	RemoveTime string `json:"removeTime,omitempty" yaml:"remove_time,omitempty"`
 
 	Removed string `json:"removed,omitempty" yaml:"removed,omitempty"`
+
+	StackId string `json:"stackId,omitempty" yaml:"stack_id,omitempty"`
 
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 
@@ -114,6 +124,8 @@ type HostOperations interface {
 	ActionDockersocket(*Host) (*HostAccess, error)
 
 	ActionError(*Host) (*Host, error)
+
+	ActionEvacuate(*Host) (*Host, error)
 
 	ActionProvision(*Host) (*Host, error)
 
@@ -217,6 +229,15 @@ func (c *HostClient) ActionError(resource *Host) (*Host, error) {
 	resp := &Host{}
 
 	err := c.rancherClient.doAction(HOST_TYPE, "error", &resource.Resource, nil, resp)
+
+	return resp, err
+}
+
+func (c *HostClient) ActionEvacuate(resource *Host) (*Host, error) {
+
+	resp := &Host{}
+
+	err := c.rancherClient.doAction(HOST_TYPE, "evacuate", &resource.Resource, nil, resp)
 
 	return resp, err
 }

@@ -10,7 +10,7 @@ github.com/fsouza/go-dockerclient 2fb7694010aa553998ed513dc8805ab00708077a
 github.com/gorilla/websocket 3986be78bf859e01f01af631ad76da5b269d270c
 github.com/pkg/errors 839d9e913e063e28dfd0e6c7b7512793e0a48be9
 github.com/rancher/event-subscriber ddef5975d2b174e234d7232c811bd55e5e2bf22f
-github.com/rancher/go-rancher aa54788606950f0e4683e52177821fa5e006d39f
+github.com/rancher/go-rancher 939fd85e3c7f06f29e985fd35cb62a281a32d3b0
 github.com/Sirupsen/logrus 446d1c146faa8ed3f4218f056fcd165f6bcfda81
 golang.org/x/crypto/curve25519 3760e016850398b85094c4c99e955b8c3dea5711
 golang.org/x/crypto/ssh 3760e016850398b85094c4c99e955b8c3dea5711

@@ -334,7 +334,7 @@ type tlsConnectionConfig struct {
 func GetDockerClient(machineDir string, machineName string) (*docker.Client, error) {
 	conf, err := getConnectionConfig(machineDir, machineName)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting connection cofig: %v", err)
+		return nil, fmt.Errorf("Error getting connection config: %v", err)
 	}
 
 	client, err := docker.NewTLSClient(conf.endpoint, conf.cert, conf.key, conf.caCert)

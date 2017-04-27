@@ -1,7 +1,6 @@
 package dynamic
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/v2"
 )
 
@@ -38,7 +37,7 @@ func ReactivateOldDrivers() error {
 
 	for _, driver := range drivers.Data {
 		if driver.SchemaVersion != version {
-			logrus.Infof("Updating driver %s from %s => %s", driver.Name, driver.SchemaVersion, version)
+			logger.Infof("Updating driver %s from %s => %s", driver.Name, driver.SchemaVersion, version)
 			_, err := apiClient.MachineDriver.ActionReactivate(&driver)
 			if err != nil {
 				return err
@@ -50,12 +49,12 @@ func ReactivateOldDrivers() error {
 }
 
 func DownloadAllDrivers() error {
-	logrus.Info("Installing builtin drivers")
+	logger.Info("Installing builtin drivers")
 	if err := SyncBuiltin(); err != nil {
 		return err
 	}
 
-	logrus.Info("Downloading all drivers")
+	logger.Info("Downloading all drivers")
 	apiClient, err := getClient()
 	if err != nil {
 		return err
@@ -77,13 +76,13 @@ func DownloadAllDrivers() error {
 		}
 
 		if err != nil {
-			logrus.Errorf("Failed to download/install driver %s: %v", driverInfo.Name, err)
+			logger.Errorf("Failed to download/install driver %s: %v", driverInfo.Name, err)
 			if _, err := apiClient.MachineDriver.ActionReactivate(&driverInfo); err != nil {
 				return err
 			}
 		}
 	}
 
-	logrus.Info("Done downloading all drivers")
+	logger.Info("Done downloading all drivers")
 	return nil
 }

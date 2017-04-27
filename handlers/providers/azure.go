@@ -6,14 +6,17 @@ import (
 	"path/filepath"
 
 	"errors"
-	log "github.com/Sirupsen/logrus"
+
+	"github.com/rancher/go-machine-service/logging"
 	"github.com/rancher/go-rancher/v2"
 )
+
+var logger = logging.Logger()
 
 func init() {
 	azureHandler := &AzureHandler{}
 	if err := RegisterProvider("azure", azureHandler); err != nil {
-		log.Fatal("could not register azure provider")
+		logger.Fatal("could not register azure provider")
 	}
 }
 

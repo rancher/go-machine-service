@@ -1,7 +1,6 @@
 package dynamic
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
 	"github.com/rancher/go-rancher/v2"
 )
@@ -36,14 +35,14 @@ func SyncBuiltin() error {
 			installed[driver.Name] = driver
 		}
 		if driver.State == "inactive" && driver.DefaultActive {
-			logrus.Infof("Activating driver %s", driver.Name)
+			logger.Infof("Activating driver %s", driver.Name)
 			apiClient.MachineDriver.ActionActivate(&driver)
 		}
 	}
 
 	for _, driver := range localbinary.CoreDrivers {
 		if _, ok := installed[driver]; !ok && !ignoredDrivers[driver] {
-			logrus.Infof("Installing builtin driver %s", driver)
+			logger.Infof("Installing builtin driver %s", driver)
 			apiClient.MachineDriver.Create(&client.MachineDriver{
 				Name:    driver,
 				Builtin: true,
@@ -54,7 +53,7 @@ func SyncBuiltin() error {
 	}
 
 	for _, driver := range installed {
-		logrus.Infof("Deleting old builtin driver %s", driver)
+		logger.Infof("Deleting old builtin driver %s", driver)
 		apiClient.MachineDriver.Delete(&driver)
 	}
 

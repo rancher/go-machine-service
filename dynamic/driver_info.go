@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	log "github.com/Sirupsen/logrus"
 	cli "github.com/docker/machine/libmachine/mcnflag"
 
 	"net/rpc"
@@ -122,7 +121,7 @@ func RemoveSchemas(schemaName string, apiClient *client.RancherClient) error {
 			continue
 		}
 
-		log.Debugf("Removing %s id: %s state: %s", schemaName, schema.Id, schema.State)
+		logger.Debugf("Removing %s id: %s state: %s", schemaName, schema.Id, schema.State)
 		if err := apiClient.DynamicSchema.Delete(&schema); err != nil {
 			return err
 		}
@@ -150,7 +149,7 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string, 
 		Parent:     parent,
 		Roles:      roles,
 	})
-	log.WithField("id", schema.Id).Infof("Creating schema %s, roles %v", schemaName, roles)
+	logger.WithField("id", schema.Id).Infof("Creating schema %s, roles %v", schemaName, roles)
 	if err != nil {
 		return fmt.Errorf("Failed when uploading %s schema: %v", schemaName, err)
 	}
@@ -159,7 +158,7 @@ func uploadDynamicSchema(schemaName, definition, parent string, roles []string, 
 }
 
 func getCreateFlagsForDriver(driver string) ([]cli.Flag, error) {
-	log.Debug("Starting binary ", driver)
+	logger.Debug("Starting binary ", driver)
 	p, err := localbinary.NewPlugin(driver)
 	if err != nil {
 		return nil, err
@@ -167,7 +166,7 @@ func getCreateFlagsForDriver(driver string) ([]cli.Flag, error) {
 	go func() {
 		err := p.Serve()
 		if err != nil {
-			log.Debugf("Error serving plugin server for driver=%s, err=%v", driver, err)
+			logger.Debugf("Error serving plugin server for driver=%s, err=%v", driver, err)
 		}
 	}()
 	defer p.Close()

@@ -3,14 +3,13 @@ package providers
 import (
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/v2"
 )
 
 func init() {
 	amazonec2Handler := &AmazonEC2Handler{}
 	if err := RegisterProvider("amazonec2", amazonec2Handler); err != nil {
-		log.Fatal("could not register amazonec2 provider")
+		logger.Fatal("could not register amazonec2 provider")
 	}
 }
 

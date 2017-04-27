@@ -27,7 +27,7 @@ const (
 var regExHyphen = regexp.MustCompile("([a-z])([A-Z])")
 
 func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
-	log := logrus.WithFields(logrus.Fields{
+	log := logger.WithFields(logrus.Fields{
 		"resourceId": event.ResourceID,
 		"eventId":    event.ID,
 	})
@@ -111,12 +111,12 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 }
 
 func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, machine *client.Machine, event *events.Event, errChan chan<- string, providerHandler providers.Provider) {
-	// We will just log stdout first, then stderr, ignoring all errors.
+	// We will just logging stdout first, then stderr, ignoring all errors.
 	defer close(errChan)
 	scanner := bufio.NewScanner(readerStdout)
 	for scanner.Scan() {
 		msg := scanner.Text()
-		logrus.WithFields(logrus.Fields{
+		logger.WithFields(logrus.Fields{
 			"resourceId: ": event.ResourceID,
 		}).Infof("stdout: %s", msg)
 		transitionMsg := filterDockerMessage(msg, machine, errChan, providerHandler, false)
@@ -127,7 +127,7 @@ func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan cha
 	scanner = bufio.NewScanner(readerStderr)
 	for scanner.Scan() {
 		msg := scanner.Text()
-		logrus.WithFields(logrus.Fields{
+		logger.WithFields(logrus.Fields{
 			"resourceId": event.ResourceID,
 		}).Infof("stderr: %s", msg)
 		filterDockerMessage(msg, machine, errChan, providerHandler, true)
@@ -236,7 +236,7 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	}
 
 	cmd = append(cmd, machine.Name)
-	logrus.Infof("Cmd slice: %v", cmd)
+	logger.Infof("Cmd slice: %v", cmd)
 	return cmd, nil
 }
 

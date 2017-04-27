@@ -9,7 +9,7 @@ import (
 func CheckProvider(event *events.Event, apiClient *client.RancherClient) error {
 	err := checkProvider(event, apiClient)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
+		logger.WithFields(logrus.Fields{
 			"eventId":    event.ID,
 			"resourceId": event.ResourceID,
 		}).Errorf("Failed to check provider: %v", err)
@@ -41,7 +41,7 @@ func checkProvider(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	if state == "Error" {
-		logrus.WithFields(logrus.Fields{
+		logger.WithFields(logrus.Fields{
 			"hostId": host.Id,
 		}).Info("Deleting host")
 		_, err := apiClient.ExternalHostEvent.Create(&client.ExternalHostEvent{

@@ -5,20 +5,22 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-machine-service/dynamic"
 	"github.com/rancher/go-machine-service/handlers"
+	"github.com/rancher/go-machine-service/logging"
 )
 
 var (
 	GITCOMMIT = "HEAD"
 )
 
+var logger = logging.Logger()
+
 func main() {
 	processCmdLineFlags()
 
-	log.WithField("gitcommit", GITCOMMIT).Info("Starting go-machine-service...")
+	logger.WithField("gitcommit", GITCOMMIT).Info("Starting go-machine-service...")
 
 	apiURL := os.Getenv("CATTLE_URL")
 	accessKey := os.Getenv("CATTLE_ACCESS_KEY")
@@ -77,64 +79,32 @@ func main() {
 	}()
 
 	go func() {
-		log.Infof("Waiting for handler registration (1/2)")
+		logger.Infof("Waiting for handler registration (1/2)")
 		<-ready
-		log.Infof("Waiting for handler registration (2/2)")
+		logger.Infof("Waiting for handler registration (2/2)")
 		<-ready
 		if err := dynamic.ReactivateOldDrivers(); err != nil {
-			log.Fatalf("Error reactivating old drivers: %v", err)
+			logger.Fatalf("Error reactivating old drivers: %v", err)
 		}
 		if err := dynamic.DownloadAllDrivers(); err != nil {
-			log.Fatalf("Error updating drivers: %v", err)
+			logger.Fatalf("Error updating drivers: %v", err)
 		}
 	}()
 
 	err := <-done
 	if err == nil {
-		log.Infof("Exiting go-machine-service")
+		logger.Infof("Exiting go-machine-service")
 	} else {
-		log.Fatalf("Exiting go-machine-service: %v", err)
+		logger.Fatalf("Exiting go-machine-service: %v", err)
 	}
 }
 
 func processCmdLineFlags() {
 	// Define command line flags
-	logLevel := flag.String("loglevel", "info", "Set the default loglevel (default:info) [debug|info|warn|error]")
 	version := flag.Bool("v", false, "read the version of the go-machine-service")
-	output := flag.String("o", "", "set the output file to write logs into, default is stdout")
-
 	flag.Parse()
-
-	if *output != "" {
-		var f *os.File
-		if _, err := os.Stat(*output); os.IsNotExist(err) {
-			f, err = os.Create(*output)
-			if err != nil {
-				fmt.Printf("could not create file=%s for logging, err=%v\n", *output, err)
-				os.Exit(1)
-			}
-		} else {
-			var err error
-			f, err = os.OpenFile(*output, os.O_RDWR|os.O_APPEND, 0)
-			if err != nil {
-				fmt.Printf("could not open file=%s for writing, err=%v\n", *output, err)
-				os.Exit(1)
-			}
-		}
-		log.SetFormatter(&log.JSONFormatter{})
-		log.SetOutput(f)
-	}
-
 	if *version {
 		fmt.Printf("go-machine-service\t gitcommit=%s\n", GITCOMMIT)
 		os.Exit(0)
-	}
-
-	// Process log level.  If an invalid level is passed in, we simply default to info.
-	if parsedLogLevel, err := log.ParseLevel(*logLevel); err == nil {
-		log.WithFields(log.Fields{
-			"logLevel": *logLevel,
-		}).Info("Setting log level")
-		log.SetLevel(parsedLogLevel)
 	}
 }

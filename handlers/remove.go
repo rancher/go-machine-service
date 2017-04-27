@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/rancher/event-subscriber/events"
 	client "github.com/rancher/go-rancher/v2"
 )
 
 func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
-	log.WithFields(log.Fields{
+	logger.WithFields(logrus.Fields{
 		"resourceId": event.ResourceID,
 		"eventId":    event.ID,
 	}).Info("Purging Machine")
@@ -29,7 +29,7 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		}
 	}
 
-	log.WithFields(log.Fields{
+	logger.WithFields(logrus.Fields{
 		"resourceId":        event.ResourceID,
 		"machineExternalId": machine.ExternalId,
 		"machineDir":        machineDir,

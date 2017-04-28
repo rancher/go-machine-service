@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -20,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/rancher/go-machine-service/logging"
 )
 
@@ -171,21 +171,28 @@ func (d *Driver) Install() error {
 		return nil
 	}
 
-	f, err := os.OpenFile(path.Join(binDir(), d.name), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	binaryPath := path.Join(binDir(), d.name)
+	tmpPath := binaryPath + "-tmp"
+	f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "Couldn't open %v for writing", tmpPath)
 	}
 	defer f.Close()
 
 	src, err := os.Open(d.srcBinName())
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "Couldn't open %v for copying", d.srcBinName())
 	}
 	defer src.Close()
 
-	logger.Infof("Copying %s => %s", d.srcBinName(), path.Join(binDir(), d.name))
+	logger.Infof("Copying %v => %v", d.srcBinName(), tmpPath)
 	_, err = io.Copy(f, src)
-	return err
+	if err != nil {
+		return errors.Wrapf(err, "Couldn't copy %v to %v", d.srcBinName(), tmpPath)
+	}
+
+	err = os.Rename(tmpPath, binaryPath)
+	return errors.Wrapf(err, "Couldn't copy driver %v to %v", d.Name(), binaryPath)
 }
 
 func isElf(input string) bool {

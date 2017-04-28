@@ -3,14 +3,13 @@ package providers
 import (
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/v2"
 )
 
 func init() {
 	digitaloceanHandler := &DigitaloceanHandler{}
 	if err := RegisterProvider("digitalocean", digitaloceanHandler); err != nil {
-		log.Fatal("could not register digitalocean provider")
+		logger.Fatal("could not register digitalocean provider")
 	}
 }
 

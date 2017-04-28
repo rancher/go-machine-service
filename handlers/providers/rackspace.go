@@ -1,14 +1,13 @@
 package providers
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/v2"
 )
 
 func init() {
 	rackspaceHandler := &RackspaceHandler{}
 	if err := RegisterProvider("rackspace", rackspaceHandler); err != nil {
-		log.Fatal("could not register rackspace provider")
+		logger.Fatal("could not register rackspace provider")
 	}
 }
 

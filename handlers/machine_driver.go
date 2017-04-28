@@ -18,7 +18,7 @@ func RemoveDriver(event *events.Event, apiClient *client.RancherClient) error {
 }
 
 func removeDriver(event *events.Event, apiClient *client.RancherClient, delete bool) error {
-	logrus.WithFields(logrus.Fields{
+	logger.WithFields(logrus.Fields{
 		"resourceId": event.ResourceID,
 		"eventId":    event.ID,
 		"name":       event.Name,
@@ -36,7 +36,7 @@ func removeDriver(event *events.Event, apiClient *client.RancherClient, delete b
 	if driverInfo.Checksum == "" || delete {
 		driver, err := getDriver(event.ResourceID, apiClient)
 		if err == nil {
-			logrus.Infof("Removing driver %s", driverInfo.Name)
+			logger.Infof("Removing driver %s", driverInfo.Name)
 			driver.Remove()
 		}
 	}
@@ -50,7 +50,7 @@ func removeDriver(event *events.Event, apiClient *client.RancherClient, delete b
 }
 
 func ErrorDriver(event *events.Event, apiClient *client.RancherClient) error {
-	logrus.WithFields(logrus.Fields{
+	logger.WithFields(logrus.Fields{
 		"resourceId": event.ResourceID,
 		"eventId":    event.ID,
 		"name":       event.Name,
@@ -69,7 +69,7 @@ func ErrorDriver(event *events.Event, apiClient *client.RancherClient) error {
 }
 
 func ActivateDriver(event *events.Event, apiClient *client.RancherClient) error {
-	logrus.WithFields(logrus.Fields{
+	logger.WithFields(logrus.Fields{
 		"resourceId": event.ResourceID,
 		"eventId":    event.ID,
 		"name":       event.Name,
@@ -131,6 +131,7 @@ func activate(id string, apiClient *client.RancherClient) (*dynamic.Driver, erro
 	}
 
 	if err := driver.Install(); err != nil {
+		logger.Errorf("Failed to download/install driver %s: %v", driver.Name(), err)
 		return nil, err
 	}
 

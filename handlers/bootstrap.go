@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/reference"
 	docker "github.com/fsouza/go-dockerclient"
 	"github.com/rancher/event-subscriber/events"
@@ -28,7 +28,7 @@ const (
 var endpointRegEx = regexp.MustCompile("-H=[[:alnum:]]*[[:graph:]]*")
 
 func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err error) {
-	log.WithFields(log.Fields{
+	logger.WithFields(logrus.Fields{
 		"resourceId": event.ResourceID,
 		"eventId":    event.ID,
 	}).Info("Activating Machine")
@@ -75,7 +75,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 	if err != nil {
 		return err
 	}
-	log.WithFields(log.Fields{
+	logger.WithFields(logrus.Fields{
 		"resourceId":  event.ResourceID,
 		"machineId":   machine.Id,
 		"containerId": container.ID,
@@ -104,7 +104,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 	}
 
 	if !found {
-		log.WithFields(log.Fields{
+		logger.WithFields(logrus.Fields{
 			"resourceId": event.ResourceID,
 			"machineId":  machine.Id,
 		}).Error("Failed to find rancher-agent container")
@@ -121,7 +121,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 			if err != nil {
 				continue
 			}
-			log.WithFields(log.Fields{
+			logger.WithFields(logrus.Fields{
 				"resourceId":        event.ResourceID,
 				"machineExternalId": machine.ExternalId,
 				"repo":              repo,
@@ -131,7 +131,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 		}
 	}()
 
-	log.WithFields(log.Fields{
+	logger.WithFields(logrus.Fields{
 		"resourceId":        event.ResourceID,
 		"machineExternalId": machine.ExternalId,
 		"containerId":       container.ID,
@@ -220,7 +220,7 @@ func pullImage(dockerClient *docker.Client, imageRepo, imageTag string) error {
 		Tag:        imageTag,
 	}
 	imageAuth := docker.AuthConfiguration{}
-	log.Printf("pulling %v:%v image.", imageRepo, imageTag)
+	logger.Printf("pulling %v:%v image.", imageRepo, imageTag)
 	err := dockerClient.PullImage(imageOptions, imageAuth)
 	if err != nil {
 		return err
@@ -239,12 +239,12 @@ var getRegistrationURLAndImage = func(accountID string, apiClient *client.Ranche
 
 	var token client.RegistrationToken
 	if len(tokenCollection.Data) >= 1 {
-		log.WithFields(log.Fields{
+		logger.WithFields(logrus.Fields{
 			"accountId": accountID,
 		}).Debug("Found token for account")
 		token = tokenCollection.Data[0]
 	} else {
-		log.WithFields(log.Fields{
+		logger.WithFields(logrus.Fields{
 			"accountId": accountID,
 		}).Debug("Creating new token for account")
 		createToken := &client.RegistrationToken{

@@ -20,8 +20,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/rancher/go-machine-service/logging"
 )
+
+var logger = logging.Logger()
 
 type Driver struct {
 	builtin bool
@@ -100,7 +102,7 @@ func (d *Driver) getError() error {
 	errFile := d.cacheFile() + ".error"
 
 	if content, err := ioutil.ReadFile(errFile); err == nil {
-		logrus.Errorf("Returning previous error: %s", content)
+		logger.Errorf("Returning previous error: %s", content)
 		d.ClearError()
 		return errors.New(string(content))
 	}
@@ -181,7 +183,7 @@ func (d *Driver) Install() error {
 	}
 	defer src.Close()
 
-	logrus.Infof("Copying %s => %s", d.srcBinName(), path.Join(binDir(), d.name))
+	logger.Infof("Copying %s => %s", d.srcBinName(), path.Join(binDir(), d.name))
 	_, err = io.Copy(f, src)
 	return err
 }
@@ -268,7 +270,7 @@ func (d *Driver) copyBinary(cacheFile, input string) (string, error) {
 		return "", err
 	}
 
-	logrus.Infof("Found driver %s", driverName)
+	logger.Infof("Found driver %s", driverName)
 	return driverName, ioutil.WriteFile(cacheFile, []byte(driverName), 0644)
 }
 
@@ -313,7 +315,7 @@ func getHasher(hash string) (hash.Hash, error) {
 }
 
 func (d *Driver) download(dest io.Writer) error {
-	logrus.Infof("Download %s", d.url)
+	logger.Infof("Download %s", d.url)
 	resp, err := http.Get(d.url)
 	if err != nil {
 		return err

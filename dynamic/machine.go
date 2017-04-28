@@ -3,7 +3,6 @@ package dynamic
 import (
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/v2"
 )
 
@@ -26,7 +25,7 @@ func UploadMachineSchemas(apiClient *client.RancherClient, drivers ...string) er
 		}
 	}
 
-	log.Infof("Updating machine jsons for  %v", drivers)
+	logger.Infof("Updating machine jsons for  %v", drivers)
 	if err := uploadMachineServiceJSON(drivers, true); err != nil {
 		return err
 	}

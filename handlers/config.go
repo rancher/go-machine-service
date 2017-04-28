@@ -12,9 +12,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
+	"github.com/rancher/go-machine-service/logging"
 	client "github.com/rancher/go-rancher/v2"
 )
+
+var logger = logging.Logger()
 
 func restoreMachineDir(machine *client.Machine, baseDir string) error {
 	machineBaseDir := filepath.Dir(baseDir)
@@ -48,7 +51,7 @@ func restoreMachineDir(machine *client.Machine, baseDir string) error {
 
 		filename := header.Name
 		filePath := filepath.Join(machineBaseDir, filename)
-		log.Infof("Extracting %v", filePath)
+		logger.Infof("Extracting %v", filePath)
 
 		info := header.FileInfo()
 		if info.IsDir() {
@@ -72,7 +75,7 @@ func restoreMachineDir(machine *client.Machine, baseDir string) error {
 }
 
 func createExtractedConfig(baseDir string, machine *client.Machine) (string, error) {
-	log.WithFields(log.Fields{
+	logger.WithFields(logrus.Fields{
 		"resourceId": machine.Id,
 	}).Info("Creating and uploading extracted machine config")
 

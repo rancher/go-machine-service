@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/event-subscriber/events"
 	client "github.com/rancher/go-rancher/v2"
 )
@@ -204,7 +204,7 @@ func newReply(event *events.Event) *client.Publish {
 }
 
 func cleanupResources(machineDir, name string) error {
-	log.WithFields(log.Fields{
+	logger.WithFields(logrus.Fields{
 		"machine name": name,
 	}).Info("starting cleanup...")
 	dExists, err := dirExists(machineDir)
@@ -235,7 +235,7 @@ func cleanupResources(machineDir, name string) error {
 
 	removeMachineDir(machineDir)
 
-	log.WithFields(log.Fields{
+	logger.WithFields(logrus.Fields{
 		"machine name": name,
 	}).Info("cleanup successful")
 	return nil

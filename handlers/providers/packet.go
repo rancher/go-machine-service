@@ -3,14 +3,13 @@ package providers
 import (
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/rancher/go-rancher/v2"
 )
 
 func init() {
 	packetHandler := &PacketHandler{}
 	if err := RegisterProvider("packet", packetHandler); err != nil {
-		log.Fatal("could not register packet provider")
+		logger.Fatal("could not register packet provider")
 	}
 }
 

@@ -65,9 +65,9 @@ func main() {
 	}()
 
 	go func() {
+		// Can not remove this as nothing will delete the handler entries
 		eventHandlers := map[string]events.EventHandler{
-			"pre.agent.reconnect": handlers.CheckProvider,
-			"ping":                handlers.PingNoOp,
+			"ping": handlers.PingNoOp,
 		}
 
 		router, err := events.NewEventRouter("goMachineService-agent", 2000, apiURL, accessKey, secretKey,

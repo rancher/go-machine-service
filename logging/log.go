@@ -9,3 +9,8 @@ var log = logrus.WithFields(logrus.Fields{
 func Logger() *logrus.Entry {
 	return log
 }
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetFormatter(&logrus.TextFormatter{ForceColors: true})
+}

@@ -188,8 +188,10 @@ func (d *Driver) Install() error {
 	logger.Infof("Copying %v => %v", d.srcBinName(), tmpPath)
 	_, err = io.Copy(f, src)
 	if err != nil {
+		logger.Debugf("Error Copying %v => %v", d.srcBinName(), tmpPath)
 		return errors.Wrapf(err, "Couldn't copy %v to %v", d.srcBinName(), tmpPath)
 	}
+	logger.Debugf("Done Copying %v => %v", d.srcBinName(), tmpPath)
 
 	err = os.Rename(tmpPath, binaryPath)
 	return errors.Wrapf(err, "Couldn't copy driver %v to %v", d.Name(), binaryPath)

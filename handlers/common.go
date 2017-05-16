@@ -275,9 +275,13 @@ func preEvent(event *events.Event, apiClient *client.RancherClient) (*client.Mac
 
 func addRancherConfig(machine *client.Machine, event *events.Event) {
 	fields := machine.Data["fields"].(map[string]interface{})
-	rancherConfig := event.Data["rancherConfig"].(map[string]interface{})
-	flavor := rancherConfig["flavor"].(string)
-	rancherConfigAppendFieldsData(rancherConfig, fields, flavor[:strings.Index(flavor, "-")])
+	rancherConfig, ok := event.Data["rancherConfig"].(map[string]interface{})
+	if ok {
+		flavor := rancherConfig["flavor"].(string)
+		rancherConfigAppendFieldsData(rancherConfig, fields, flavor[:strings.Index(flavor, "-")])
+	} else {
+		rancherConfig = map[string]interface{}{}
+	}
 	fields["rancherConfig"] = rancherConfig
 }
 

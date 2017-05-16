@@ -33,7 +33,16 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 
 	mExists, err := machineExists(machineDir, machine.Name)
 	if err != nil {
-		return err
+		logger.WithFields(logrus.Fields{
+			"resourceId":        event.ResourceID,
+			"machineExternalId": machine.ExternalId,
+			"machineDir":        machineDir,
+		}).Warnf("Error getting machine: %s", err)
+		logger.WithFields(logrus.Fields{
+			"resourceId":        event.ResourceID,
+			"machineExternalId": machine.ExternalId,
+			"machineDir":        machineDir,
+		}).Warn("Assuming machine no longer exists")
 	}
 
 	if mExists {
@@ -49,8 +58,6 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		"machineExternalId": machine.ExternalId,
 		"machineDir":        machineDir,
 	}).Info("Machine purged")
-
-	removeMachineDir(machineDir)
 
 	return publishReply(newReply(event), apiClient)
 }

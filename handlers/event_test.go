@@ -37,6 +37,23 @@ var (
 
 		Data: map[string]interface{}{},
 	}
+
+	eventFlavorHostBootstrap = &events.Event{
+		Name:         "physicalhost.bootstrap;handler=goMachineService",
+		ID:           "0b513573-57be-4905-84d7-4d4b6d8e9c37",
+		ReplyTo:      "reply.3249066143597845078",
+		ResourceID:   "1ph8",
+		ResourceType: "physicalHost",
+
+		Data: map[string]interface{}{
+			"name":          "ivan-do3",
+			"kind":          "machine",
+			"externalId":    "921d6c24-d22b-4032-a1bd-b3a7318b402e",
+			"rancherConfig": map[string]interface{}{"flavor": "digitalocean-sfo2-2gb"},
+			"accountId":     5,
+			"hostname":      "ivan-do3",
+		},
+	}
 )
 
 var apiClient, err = client.NewRancherClient(&client.ClientOpts{
@@ -58,6 +75,24 @@ func TestDeleteMachine1(t *testing.T) {
 
 	err := PurgeMachine(eventFlavorHostDelete1, apiClient)
 	assert.Nil(err)
+}
+
+func TestActivateMachine(t *testing.T) {
+	assert := require.New(t)
+
+	err := ActivateMachine(eventFlavorHostBootstrap, apiClient)
+	assert.Nil(err)
+}
+
+func TestGetConnectionConfig(t *testing.T) {
+	assert := require.New(t)
+
+	machineDir := "/Users/ivan/.cattle/machine/machines/921d6c24-d22b-4032-a1bd-b3a7318b402e"
+	machineName := "ivan-do3"
+
+	conf, err := getConnectionConfig(machineDir, machineName)
+	assert.Nil(err)
+	assert.NotNil(conf)
 }
 
 func TestMachineExists(t *testing.T) {

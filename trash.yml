@@ -16,3 +16,7 @@ golang.org/x/crypto/curve25519 3760e016850398b85094c4c99e955b8c3dea5711
 golang.org/x/crypto/ssh 3760e016850398b85094c4c99e955b8c3dea5711
 github.com/docker/distribution c59995570762ec8ef1b1d5a0b147600622979cb1
 github.com/patrickmn/go-cache 1881a9bccb818787f68c52bfba648c6cf34c34fa
+
+github.com/stretchr/testify             v1.1.4
+github.com/pmezard/go-difflib	          v1.0.0
+github.com/davecgh/go-spew              5215b55

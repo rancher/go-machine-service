@@ -151,7 +151,50 @@ func apply(m *client.Machine, ht *client.HostTemplate, apiClient *client.Rancher
 		return err
 	}
 
+	if err := populateFields(m); err != nil {
+		return err
+	}
+
 	return err
+}
+
+func populateFields(m *client.Machine) error {
+	content, err := json.Marshal(m)
+	if err != nil {
+		return errors.Wrap(err, "populateFields marshall")
+	}
+	mm := map[string]interface{}{}
+	if err := json.Unmarshal(content, &mm); err != nil {
+		return errors.Wrap(err, "populateFields unmarshall to mm")
+	}
+	machineConfig := mm[m.Driver+"Config"]
+	if machineConfig == nil {
+		return nil
+	}
+	machineConfigContent, err := json.Marshal(machineConfig)
+	if err != nil {
+		return errors.Wrap(err, "populateFields marshall machineConfig")
+	}
+	if m.Data == nil {
+		m.Data = map[string]interface{}{}
+	}
+	fields, ok := m.Data["fields"].(map[string]interface{})
+	if !ok {
+		fields = map[string]interface{}{}
+	}
+	driverConfig, ok := fields[m.Driver+"Config"].(map[string]interface{})
+	if !ok {
+		driverConfig = map[string]interface{}{}
+	}
+	if err := json.Unmarshal(machineConfigContent, &driverConfig); err != nil {
+		return errors.Wrap(err, "populateFields unmarshall to fields")
+	}
+	for _, key := range []string{"id", "type", "links", "actions"} {
+		delete(driverConfig, key)
+	}
+	fields[m.Driver+"Config"] = driverConfig
+	m.Data["fields"] = fields
+	return nil
 }
 
 func copyData(m *client.Machine, from interface{}) error {

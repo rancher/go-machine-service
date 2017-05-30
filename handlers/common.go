@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -303,10 +304,34 @@ func preEvent(event *events.Event, apiClient *client.RancherClient) (*client.Mac
 		return nil, "", notAMachineReply(event, apiClient)
 	}
 
+	if machine.Driver == "rancher" {
+		addRancherConfig(machine, event)
+	}
+
 	machineDir, err := buildBaseMachineDir(machine)
 	if err != nil {
 		return nil, "", err
 	}
 
 	return machine, machineDir, restoreMachineDir(machine, machineDir)
+}
+
+func addRancherConfig(machine *client.Machine, event *events.Event) {
+	fields := machine.Data["fields"].(map[string]interface{})
+	rancherConfig, ok := event.Data["rancherConfig"].(map[string]interface{})
+	if ok {
+		flavor := rancherConfig["flavor"].(string)
+		rancherConfigAppendFieldsData(rancherConfig, fields, flavor[:strings.Index(flavor, "-")])
+	} else {
+		rancherConfig = map[string]interface{}{}
+	}
+	fields["rancherConfig"] = rancherConfig
+}
+
+func rancherConfigAppendFieldsData(rancherConfig map[string]interface{}, fields map[string]interface{}, provider string) {
+	if providerFields := fields[provider+"Config"].(map[string]interface{}); providerFields != nil {
+		for k, v := range providerFields {
+			rancherConfig[provider+strings.ToUpper(k[:1])+k[1:]] = v
+		}
+	}
 }

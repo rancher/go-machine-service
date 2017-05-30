@@ -55,6 +55,7 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return err
 	}
 
+	log.Debug("Build dm create command")
 	command, err := buildCreateCommand(machine, machineDir)
 	if err != nil {
 		return err

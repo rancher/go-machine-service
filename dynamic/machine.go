@@ -56,8 +56,8 @@ func baseSchema(drivers []string, defaultAuth string) client.Schema {
 				Type:     "string",
 				Create:   true,
 				Update:   true,
-				Required: false,
-				Nullable: true,
+				Required: true,
+				Nullable: false,
 			},
 		},
 	}

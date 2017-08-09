@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	client "github.com/rancher/go-rancher/v2"
+	v3 "github.com/rancher/go-rancher/v3"
 )
 
 var (
@@ -16,8 +16,8 @@ var (
 	RegExMachineDriverName  = regexp.MustCompile("^" + "MACHINE_PLUGIN_DRIVER_NAME=" + ".*")
 )
 
-func deleteMachine(machineDir string, machine *client.Machine) error {
-	command := buildCommand(machineDir, []string{"rm", "-f", machine.Name})
+func deleteMachine(hostDir string, host *v3.Host) error {
+	command := buildCommand(hostDir, []string{"rm", "-f", host.Name})
 	err := command.Start()
 	if err != nil {
 		return err
@@ -31,8 +31,8 @@ func deleteMachine(machineDir string, machine *client.Machine) error {
 	return nil
 }
 
-func getState(machineDir string, machine *client.Machine) (string, error) {
-	command := buildCommand(machineDir, []string{"ls", "-f", "{{.State}}", machine.Name})
+func getState(hostDir string, host *v3.Host) (string, error) {
+	command := buildCommand(hostDir, []string{"ls", "-f", "{{.State}}", host.Name})
 	output, err := command.CombinedOutput()
 	return strings.TrimSpace(string(output)), err
 }

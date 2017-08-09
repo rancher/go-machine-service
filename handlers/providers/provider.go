@@ -3,11 +3,11 @@ package providers
 import (
 	"fmt"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 type Provider interface {
-	HandleCreate(machine *client.Machine, machineDir string) error
+	HandleCreate(host *client.Host, hostDir string) error
 
 	HandleError(msg string) string
 }
@@ -15,7 +15,7 @@ type Provider interface {
 type DefaultProvider struct {
 }
 
-func (*DefaultProvider) HandleCreate(machine *client.Machine, machineDir string) error {
+func (*DefaultProvider) HandleCreate(host *client.Host, hostDir string) error {
 	return nil
 }
 

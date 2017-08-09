@@ -6,7 +6,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/patrickmn/go-cache"
 	"github.com/rancher/event-subscriber/events"
-	client "github.com/rancher/go-rancher/v2"
+	client "github.com/rancher/go-rancher/v3"
+	"os"
 )
 
 var removeCache = cache.New(5*time.Minute, 30*time.Second)
@@ -25,19 +26,23 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return publishReply(newReply(event), apiClient)
 	}
 
-	machine, machineDir, err := preEvent(event, apiClient)
-	if err != nil || machine == nil {
+	host, hostDir, err := getHostAndHostDir(event, apiClient)
+	if err != nil || host == nil {
 		return err
 	}
-	defer removeMachineDir(machineDir)
+	err = restoreMachineDir(host, hostDir)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(hostDir)
 
-	mExists, err := machineExists(machineDir, machine.Name)
+	mExists, err := machineExists(hostDir, host.Name)
 	if err != nil {
 		return err
 	}
 
 	if mExists {
-		if err := deleteMachine(machineDir, machine); err != nil {
+		if err := deleteMachine(hostDir, host); err != nil {
 			return err
 		}
 	}
@@ -46,11 +51,11 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 
 	logger.WithFields(logrus.Fields{
 		"resourceId":        event.ResourceID,
-		"machineExternalId": machine.ExternalId,
-		"machineDir":        machineDir,
+		"machineExternalId": host.Uuid,
+		"machineDir":        hostDir,
 	}).Info("Machine purged")
 
-	removeMachineDir(machineDir)
+	defer os.RemoveAll(hostDir)
 
 	return publishReply(newReply(event), apiClient)
 }

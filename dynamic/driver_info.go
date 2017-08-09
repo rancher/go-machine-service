@@ -12,7 +12,7 @@ import (
 
 	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
 	rpcdriver "github.com/docker/machine/libmachine/drivers/rpc"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 const (

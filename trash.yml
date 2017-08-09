@@ -1,4 +1,4 @@
-github.com/docker/docker/pkg/term 954613fb248ee31ed1a919f72153eb43268f2c30
+github.com/docker/docker 89658bed64c2a8fe05a978e5b87dbec409d57a0f
 github.com/docker/machine/libmachine/drivers 7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84
 github.com/docker/machine/libmachine/log 7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84
 github.com/docker/machine/libmachine/mcnflag 7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84
@@ -6,16 +6,20 @@ github.com/docker/machine/libmachine/mcnutils 7246b2c9650c505b6bd3cbeb8b95d0d0f9
 github.com/docker/machine/libmachine/ssh 7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84
 github.com/docker/machine/libmachine/state 7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84
 github.com/docker/machine/libmachine/version 7246b2c9650c505b6bd3cbeb8b95d0d0f9983f84
-github.com/fsouza/go-dockerclient 2fb7694010aa553998ed513dc8805ab00708077a
 github.com/gorilla/websocket 3986be78bf859e01f01af631ad76da5b269d270c
 github.com/pkg/errors 839d9e913e063e28dfd0e6c7b7512793e0a48be9
-github.com/rancher/event-subscriber ddef5975d2b174e234d7232c811bd55e5e2bf22f
-github.com/rancher/go-rancher 939fd85e3c7f06f29e985fd35cb62a281a32d3b0
+github.com/rancher/event-subscriber d3bd4e5241fb884dcb0f99ba222623250115fb56
+github.com/rancher/go-rancher 3ce282a25812c3876a55bae174a0980bac08870f
 github.com/Sirupsen/logrus 446d1c146faa8ed3f4218f056fcd165f6bcfda81
 golang.org/x/crypto/curve25519 3760e016850398b85094c4c99e955b8c3dea5711
 golang.org/x/crypto/ssh 3760e016850398b85094c4c99e955b8c3dea5711
-github.com/docker/distribution c59995570762ec8ef1b1d5a0b147600622979cb1
 github.com/patrickmn/go-cache 1881a9bccb818787f68c52bfba648c6cf34c34fa
+github.com/docker/go-connections 3ede32e2033de7505e6500d6c868c2b9ed9f169d
+golang.org/x/net 167db312be3be3d239e24dbe0ab099ab5b9aa783
+github.com/docker/distribution 3da015f8aaa8653690917031108bd45a2bed5cfa
+github.com/docker/go-units 0dadbb0345b35ec7ef35e228dabb8de89a65bf52
+github.com/docker/libtrust aabc10ec26b754e797f9028f4589c5b7bd90dc20
+github.com/opencontainers/go-digest 279bed98673dd5bef374d3b6e4b09e2af76183bf
 
 github.com/stretchr/testify             v1.1.4
 github.com/pmezard/go-difflib	          v1.0.0

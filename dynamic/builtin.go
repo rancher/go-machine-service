@@ -2,7 +2,7 @@ package dynamic
 
 import (
 	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 var (

@@ -4,44 +4,20 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rancher/event-subscriber/events"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
-func TestReplyForPhysicalHost(t *testing.T) {
-	// Assert that when the event is for a phyiscal host and not a machine that
-	// the create handler simply replies.
-	event := &events.Event{
-		ResourceID: "foo",
-		ID:         "event-id",
-		ReplyTo:    "reply-to-id",
-	}
-	mockAPIClient := &client.RancherClient{}
-	mockAPIClient.Machine = &MockMachineOperations{}
-	publishReply = func(reply *client.Publish, apiClient *client.RancherClient) error {
-		if reply.Name != "reply-to-id" {
-			t.Logf("%+v", reply)
-			t.Fatalf("Reply not as expected: %+v", reply)
-		}
-		return nil
-	}
-	err := CreateMachine(event, mockAPIClient)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 type MockMachineOperations struct {
-	client.MachineClient
+	client.HostClient
 }
 
-func (c *MockMachineOperations) ById(id string) (*client.Machine, error) {
+func (c *MockMachineOperations) ById(id string) (*client.Host, error) {
 	// Return nil to indicate a 404
 	return nil, nil
 }
 
 func TestBuildMachineNoEngineOptsCreateCommand(t *testing.T) {
-	machine := new(client.Machine)
+	machine := new(client.Host)
 	machine.Driver = "rackspace"
 
 	data := make(map[string]interface{})
@@ -53,7 +29,7 @@ func TestBuildMachineNoEngineOptsCreateCommand(t *testing.T) {
 	machine.Data = data
 	machine.Name = "fakeMachine"
 
-	cmd, err := buildMachineCreateCmd(machine)
+	cmd, err := buildMachineCreateCmd(machine, machine.Driver)
 	if err != nil {
 		t.Fatal("Error while building machine craete command", err)
 	}
@@ -64,15 +40,15 @@ func TestBuildMachineNoEngineOptsCreateCommand(t *testing.T) {
 }
 
 func TestBuildMachineCreateCommand(t *testing.T) {
-	machine := new(client.Machine)
-	machine.Driver = "rackspace"
-	machine.EngineInstallUrl = "test.com"
-	machine.EngineOpt = map[string]interface{}{"key1": "val1", "key2": "val2"}
-	machine.EngineEnv = map[string]interface{}{"key3": "val3"}
-	machine.EngineInsecureRegistry = []string{}
-	machine.EngineLabel = map[string]interface{}{"io.rancher.label": "123"}
-	machine.EngineRegistryMirror = []string{}
-	machine.EngineStorageDriver = "deviceMapper"
+	host := new(client.Host)
+	host.Driver = "rackspace"
+	host.EngineInstallUrl = "test.com"
+	host.EngineOpt = map[string]interface{}{"key1": "val1", "key2": "val2"}
+	host.EngineEnv = map[string]interface{}{"key3": "val3"}
+	host.EngineInsecureRegistry = []string{}
+	host.EngineLabel = map[string]interface{}{"io.rancher.label": "123"}
+	host.EngineRegistryMirror = []string{}
+	host.EngineStorageDriver = "deviceMapper"
 
 	data := make(map[string]interface{})
 	fields := make(map[string]interface{})
@@ -82,12 +58,12 @@ func TestBuildMachineCreateCommand(t *testing.T) {
 	rackspaceConfig["apiKey"] = "fakeAPiKey"
 	rackspaceConfig["username"] = "fakeUser"
 
-	machine.Data = data
-	machine.Name = "fakeMachine"
+	host.Data = data
+	host.Name = "fakeMachine"
 
-	cmd, err := buildMachineCreateCmd(machine)
+	cmd, err := buildMachineCreateCmd(host, host.Driver)
 	if err != nil {
-		t.Fatal("Error while building machine craete command", err)
+		t.Fatal("Error while building host craete command", err)
 	}
 
 	command := strings.Join(cmd, " ")
@@ -98,14 +74,14 @@ func TestBuildMachineCreateCommand(t *testing.T) {
 }
 
 func TestBuildMacineCreateCommandWithInterfaceLists(t *testing.T) {
-	machine := new(client.Machine)
-	machine.Driver = "rackspace"
-	machine.EngineInstallUrl = "test.com"
-	machine.EngineEnv = map[string]interface{}{"key3": "val3"}
-	machine.EngineInsecureRegistry = []string{}
-	machine.EngineLabel = map[string]interface{}{"io.rancher.label": "123"}
-	machine.EngineRegistryMirror = []string{}
-	machine.EngineStorageDriver = "deviceMapper"
+	host := new(client.Host)
+	host.Driver = "rackspace"
+	host.EngineInstallUrl = "test.com"
+	host.EngineEnv = map[string]interface{}{"key3": "val3"}
+	host.EngineInsecureRegistry = []string{}
+	host.EngineLabel = map[string]interface{}{"io.rancher.label": "123"}
+	host.EngineRegistryMirror = []string{}
+	host.EngineStorageDriver = "deviceMapper"
 
 	data := make(map[string]interface{})
 	fields := make(map[string]interface{})
@@ -116,10 +92,10 @@ func TestBuildMacineCreateCommandWithInterfaceLists(t *testing.T) {
 	rackspaceConfig["username"] = "fakeUser"
 	rackspaceConfig["interfaceList"] = []interface{}{"str1", "str2"}
 
-	machine.Data = data
-	machine.Name = "fakeMachine"
+	host.Data = data
+	host.Name = "fakeMachine"
 
-	cmd, err := buildMachineCreateCmd(machine)
+	cmd, err := buildMachineCreateCmd(host, host.Driver)
 	if err != nil {
 		t.Fatal("Error while building machine craete command", err)
 	}
@@ -188,4 +164,24 @@ func TestBuildMachineEngineOptsCommand3(t *testing.T) {
 	if len(cmd) != 0 {
 		t.Error("Expected empty command")
 	}
+}
+
+func TestBuildContainerConfig(t *testing.T) {
+	machine := new(client.Host)
+
+	machine.ExternalId = "externalId"
+	labels := make(map[string]interface{})
+
+	labels["abc"] = "def"
+	labels["foo"] = "bar"
+
+	machine.Labels = labels
+	config := buildContainerConfig([]string{}, machine, "rancher/agent", "0.7.8", "")
+
+	for _, elem := range config.Env {
+		if elem == "CATTLE_HOST_LABELS=abc=def&foo=bar" || elem == "CATTLE_HOST_LABELS=foo=bar&abc=def" {
+			return
+		}
+	}
+	t.Error("label is not being set!")
 }

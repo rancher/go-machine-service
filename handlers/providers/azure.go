@@ -8,7 +8,7 @@ import (
 	"errors"
 
 	"github.com/rancher/go-machine-service/logging"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 var logger = logging.Logger()
@@ -23,21 +23,21 @@ func init() {
 type AzureHandler struct {
 }
 
-func (*AzureHandler) HandleCreate(machine *client.Machine, machineDir string) error {
+func (*AzureHandler) HandleCreate(host *client.Host, hostDir string) error {
 	var filename string
-	fields := machine.Data["fields"]
+	fields := host.Data["fields"]
 	if fields == nil {
-		return errors.New(machine.Driver + "Config does not exist on Machine " + machine.Id)
+		return errors.New("AzureConfig does not exist on Machine " + host.Id)
 	}
-	driverConfig := fields.(map[string]interface{})[machine.Driver+"Config"]
+	driverConfig := fields.(map[string]interface{})[host.Driver+"Config"]
 	if driverConfig == nil {
-		return errors.New(machine.Driver + "Config does not exist on Machine " + machine.Id)
+		return errors.New("AzureConfig does not exist on Machine " + host.Id)
 	}
 	machineConfig := driverConfig.(map[string]interface{})
 	if _, ok := machineConfig["subscriptionCert"]; ok {
 		value := machineConfig["subscriptionCert"].(string)
 		filename = "subscription-cert.pem"
-		path, err := saveDataToFile(filename, value, machineDir)
+		path, err := saveDataToFile(filename, value, hostDir)
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ func (*AzureHandler) HandleCreate(machine *client.Machine, machineDir string) er
 	} else if _, ok := machineConfig["publishSettingsFile"]; ok {
 		value := machineConfig["publishSettingsFile"].(string)
 		filename = "publish-settings.xml"
-		path, err := saveDataToFile(filename, value, machineDir)
+		path, err := saveDataToFile(filename, value, hostDir)
 		if err != nil {
 			return err
 		}

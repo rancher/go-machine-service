@@ -3,7 +3,7 @@ package dynamic
 import (
 	"strings"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 func UploadMachineSchemas(apiClient *client.RancherClient, drivers ...string) error {
@@ -75,20 +75,6 @@ func baseSchema(drivers []string, defaultAuth string) client.Schema {
 		field(schema.ResourceFields, driver+"Config", driver+"Config", defaultAuth)
 	}
 
-	field(schema.ResourceFields, "authCertificateAuthority", "string", defaultAuth)
-	field(schema.ResourceFields, "authKey", "string", defaultAuth)
-	field(schema.ResourceFields, "dockerVersion", "string", defaultAuth)
-	field(schema.ResourceFields, "driver", "string", "")
-	field(schema.ResourceFields, "engineEnv", "map[string]", defaultAuth)
-	field(schema.ResourceFields, "engineInsecureRegistry", "array[string]", defaultAuth)
-	field(schema.ResourceFields, "engineInstallUrl", "string", defaultAuth)
-	field(schema.ResourceFields, "engineLabel", "map[string]", defaultAuth)
-	field(schema.ResourceFields, "engineOpt", "map[string]", defaultAuth)
-	field(schema.ResourceFields, "engineRegistryMirror", "array[string]", defaultAuth)
-	field(schema.ResourceFields, "engineStorageDriver", "string", defaultAuth)
-	field(schema.ResourceFields, "labels", "map[string]", defaultAuth)
-	field(schema.ResourceFields, "hostTemplateId", "reference[hostTemplate]", strings.Replace(defaultAuth, "u", "", -1))
-
 	return schema
 }
 
@@ -120,8 +106,6 @@ func uploadMachineSchema(schema client.Schema, roles []string, remove bool) erro
 	if err != nil {
 		return err
 	}
-	if err := uploadDynamicSchema("machine", json, "physicalHost", roles, remove); err != nil {
-		return err
-	}
-	return uploadDynamicSchema("host", json, "host", roles, remove)
+	err = uploadDynamicSchema("host", json, "host", roles, remove)
+	return err
 }

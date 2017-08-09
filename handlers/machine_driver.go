@@ -6,7 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-machine-service/dynamic"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 func DeactivateDriver(event *events.Event, apiClient *client.RancherClient) error {

@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/rancher/event-subscriber/events"
-	client "github.com/rancher/go-rancher/v2"
+	client "github.com/rancher/go-rancher/v3"
 )
 
 const (
@@ -24,8 +24,8 @@ func PingNoOp(event *events.Event, apiClient *client.RancherClient) error {
 	return nil
 }
 
-func buildBaseMachineDir(m *client.Machine) (string, error) {
-	machineDir := filepath.Join(getWorkDir(), "machines", m.ExternalId)
+func buildBaseHostDir(h *client.Host) (string, error) {
+	machineDir := filepath.Join(getWorkDir(), "machines", h.Uuid)
 	return machineDir, os.MkdirAll(machineDir, 0740)
 }
 
@@ -81,38 +81,19 @@ func republishTransitioningReply(publishChan <-chan string, event *events.Event,
 	}
 }
 
-var getMachine = func(id string, apiClient *client.RancherClient) (*client.Machine, error) {
-	m, err := apiClient.Machine.ById(id)
-	if err != nil || m == nil {
-		return nil, err
-	}
-
-	host, err := getHost(m, apiClient)
-	if err != nil || host == nil {
-		return m, err
-	}
-
-	err = applyHostTemplate(host, m, apiClient)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to apply host template")
-	}
-
-	return m, nil
-}
-
-func applyHostTemplate(host *client.Host, m *client.Machine, apiClient *client.RancherClient) error {
+func applyHostTemplate(host *client.Host, apiClient *client.RancherClient) error {
 	if host.HostTemplateId != "" {
 		ht, err := apiClient.HostTemplate.ById(host.HostTemplateId)
 		if err != nil {
 			return err
 		}
-		return apply(m, ht, apiClient, true)
+		return apply(host, ht, apiClient, true)
 	}
 
 	templates, err := apiClient.HostTemplate.List(&client.ListOpts{
 		Filters: map[string]interface{}{
-			"accountId":    m.AccountId,
-			"driver":       m.Driver,
+			"accountId":    host.AccountId,
+			"driver":       host.Driver,
 			"removed_null": "true",
 			"state":        "active",
 		},
@@ -123,20 +104,20 @@ func applyHostTemplate(host *client.Host, m *client.Machine, apiClient *client.R
 	// If we find more than one we apply all secret values, but not public
 	if len(templates.Data) > 0 {
 		for _, ht := range templates.Data {
-			if err := apply(m, &ht, apiClient, false); err != nil {
+			if err := apply(host, &ht, apiClient, false); err != nil {
 				return err
 			}
 		}
 	} else if len(templates.Data) == 1 {
-		return apply(m, &templates.Data[0], apiClient, true)
+		return apply(host, &templates.Data[0], apiClient, true)
 	}
 
 	return nil
 }
 
-func apply(m *client.Machine, ht *client.HostTemplate, apiClient *client.RancherClient, public bool) error {
+func apply(host *client.Host, ht *client.HostTemplate, apiClient *client.RancherClient, public bool) error {
 	if public {
-		if err := copyData(m, ht.PublicValues); err != nil {
+		if err := copyData(host, ht.PublicValues); err != nil {
 			return err
 		}
 	}
@@ -146,19 +127,18 @@ func apply(m *client.Machine, ht *client.HostTemplate, apiClient *client.Rancher
 		return errors.Wrap(err, "Get secretValues link")
 	}
 
-	err := copyData(m, secretValues)
+	err := copyData(host, secretValues)
 	if err != nil {
 		return err
 	}
-
-	if err := populateFields(m); err != nil {
+	if err := populateFields(host); err != nil {
 		return err
 	}
 
-	return err
+	return nil
 }
 
-func populateFields(m *client.Machine) error {
+func populateFields(m *client.Host) error {
 	content, err := json.Marshal(m)
 	if err != nil {
 		return errors.Wrap(err, "populateFields marshall")
@@ -197,46 +177,22 @@ func populateFields(m *client.Machine) error {
 	return nil
 }
 
-func copyData(m *client.Machine, from interface{}) error {
+func copyData(host *client.Host, from interface{}) error {
 	content, err := json.Marshal(from)
 	if err != nil {
 		return errors.Wrap(err, "copyData marshall")
 	}
-	err = json.Unmarshal(content, m)
+	err = json.Unmarshal(content, host)
 	if err != nil {
 		return errors.Wrap(err, "copyData unmarshall")
 	}
-	fields := m.Data["fields"]
+	fields := host.Data["fields"]
 	err = json.Unmarshal(content, &fields)
 	if err != nil {
 		return errors.Wrap(err, "copyData unmarshall to fields")
 	}
-	m.Data["fields"] = fields
+	host.Data["fields"] = fields
 	return nil
-}
-
-func getHost(m *client.Machine, apiClient *client.RancherClient) (*client.Host, error) {
-	hosts, err := apiClient.Host.List(&client.ListOpts{
-		Filters: map[string]interface{}{
-			"physicalHostId": m.Id,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(hosts.Data) == 0 {
-		return nil, err
-	}
-
-	return &hosts.Data[0], nil
-}
-
-func notAMachineReply(event *events.Event, apiClient *client.RancherClient) error {
-	// Called when machine.ById() returned a 404, which indicates this is a
-	// physicalHost but not a machine. Just reply.
-	reply := newReply(event)
-	return publishReply(reply, apiClient)
 }
 
 func newReply(event *events.Event) *client.Publish {
@@ -276,7 +232,7 @@ func cleanupResources(machineDir, name string) error {
 		return err
 	}
 
-	removeMachineDir(machineDir)
+	os.RemoveAll(machineDir)
 
 	logger.WithFields(logrus.Fields{
 		"machine name": name,
@@ -294,19 +250,19 @@ func dirExists(machineDir string) (bool, error) {
 	}
 }
 
-func preEvent(event *events.Event, apiClient *client.RancherClient) (*client.Machine, string, error) {
-	machine, err := getMachine(event.ResourceID, apiClient)
+func getHostAndHostDir(event *events.Event, apiClient *client.RancherClient) (*client.Host, string, error) {
+	host, err := apiClient.Host.ById(event.ResourceID)
 	if err != nil {
 		return nil, "", err
 	}
-	if machine == nil {
-		return nil, "", notAMachineReply(event, apiClient)
+	if host == nil {
+		return nil, "", errors.Errorf("can't find host with resourceId %v", host.Id)
 	}
 
-	machineDir, err := buildBaseMachineDir(machine)
+	hostDir, err := buildBaseHostDir(host)
 	if err != nil {
 		return nil, "", err
 	}
 
-	return machine, machineDir, restoreMachineDir(machine, machineDir)
+	return host, hostDir, nil
 }

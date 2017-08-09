@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/rancher/go-machine-service/handlers/providers"
 	"github.com/rancher/go-rancher/v3"
-	"testing"
 )
 
 // Test the filterDockerMessage to make sure are filtering the right messages
@@ -13,7 +14,7 @@ func TestFilterDockerMessages(t *testing.T) {
 	defer close(errChan)
 	host := &client.Host{
 		ExternalId: "uuid-1",
-		Name:       "machine-1",
+		Hostname:   "machine-1",
 	}
 
 	testString := "Error creating machine: Message"
@@ -103,10 +104,10 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 	digitaloceanConfig["backups"] = false
 
 	host := &client.Host{
-		Data:   data,
-		Kind:   "machine",
-		Driver: "digitalocean",
-		Hostname:   "testDO",
+		Data:     data,
+		Kind:     "machine",
+		Driver:   "digitalocean",
+		Hostname: "testDO",
 	}
 	checkCommands(testCmd, host, t)
 
@@ -122,10 +123,10 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 	data["fields"].(map[string]interface{})["virtualboxConfig"] = make(map[string]interface{})
 
 	host = &client.Host{
-		Data:   data,
-		Kind:   "machine",
-		Driver: "virtualbox",
-		Hostname:   "testVB",
+		Data:     data,
+		Kind:     "machine",
+		Driver:   "virtualbox",
+		Hostname: "testVB",
 	}
 	checkCommands(testCmd, host, t)
 }

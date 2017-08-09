@@ -36,7 +36,7 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 	defer os.RemoveAll(hostDir)
 
-	mExists, err := machineExists(hostDir, host.Name)
+	mExists, err := machineExists(hostDir, host.Hostname)
 	if err != nil {
 		return err
 	}

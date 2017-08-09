@@ -17,7 +17,7 @@ var (
 )
 
 func deleteMachine(hostDir string, host *v3.Host) error {
-	command := buildCommand(hostDir, []string{"rm", "-f", host.Name})
+	command := buildCommand(hostDir, []string{"rm", "-f", host.Hostname})
 	err := command.Start()
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func deleteMachine(hostDir string, host *v3.Host) error {
 }
 
 func getState(hostDir string, host *v3.Host) (string, error) {
-	command := buildCommand(hostDir, []string{"ls", "-f", "{{.State}}", host.Name})
+	command := buildCommand(hostDir, []string{"ls", "-f", "{{.State}}", host.Hostname})
 	output, err := command.CombinedOutput()
 	return strings.TrimSpace(string(output)), err
 }

@@ -3,7 +3,7 @@ package providers
 import (
 	"strings"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 func init() {
@@ -16,7 +16,7 @@ func init() {
 type PacketHandler struct {
 }
 
-func (*PacketHandler) HandleCreate(machine *client.Machine, machineDir string) error {
+func (*PacketHandler) HandleCreate(host *client.Host, hostDir string) error {
 	return nil
 }
 

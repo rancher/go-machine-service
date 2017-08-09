@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/rancher/event-subscriber/events"
 	"github.com/rancher/go-machine-service/dynamic"
 	"github.com/rancher/go-machine-service/handlers"
@@ -19,6 +20,7 @@ var logger = logging.Logger()
 
 func main() {
 	processCmdLineFlags()
+	logrus.SetLevel(logrus.DebugLevel)
 
 	logger.WithField("gitcommit", GITCOMMIT).Info("Starting go-machine-service...")
 
@@ -40,7 +42,7 @@ func main() {
 			"ping":                     handlers.PingNoOp,
 		}
 
-		router, err := events.NewEventRouter("goMachineService-machine", 2000, apiURL, accessKey, secretKey,
+		router, err := events.NewEventRouter("machine-service", 2000, apiURL, accessKey, secretKey,
 			nil, eventHandlers, "machineDriver", 250, events.DefaultPingConfig)
 		if err == nil {
 			err = router.Start(ready)
@@ -50,14 +52,13 @@ func main() {
 
 	go func() {
 		eventHandlers := map[string]events.EventHandler{
-			"physicalhost.create":    handlers.CreateMachine,
-			"physicalhost.bootstrap": handlers.ActivateMachine,
-			"physicalhost.remove":    handlers.PurgeMachine,
-			"ping":                   handlers.PingNoOp,
+			"host.provision": handlers.CreateMachineAndActivateMachine,
+			"host.remove":    handlers.PurgeMachine,
+			"ping":           handlers.PingNoOp,
 		}
 
-		router, err := events.NewEventRouter("goMachineService", 2000, apiURL, accessKey, secretKey,
-			nil, eventHandlers, "physicalhost", 250, events.DefaultPingConfig)
+		router, err := events.NewEventRouter("machine-service", 2000, apiURL, accessKey, secretKey,
+			nil, eventHandlers, "host", 250, events.DefaultPingConfig)
 		if err == nil {
 			err = router.Start(ready)
 		}
@@ -70,7 +71,7 @@ func main() {
 			"ping": handlers.PingNoOp,
 		}
 
-		router, err := events.NewEventRouter("goMachineService-agent", 2000, apiURL, accessKey, secretKey,
+		router, err := events.NewEventRouter("machine-service", 2000, apiURL, accessKey, secretKey,
 			nil, eventHandlers, "agent", 5, events.DefaultPingConfig)
 		if err == nil {
 			err = router.Start(ready)

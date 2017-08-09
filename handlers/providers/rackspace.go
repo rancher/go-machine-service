@@ -1,7 +1,7 @@
 package providers
 
 import (
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 func init() {
@@ -14,7 +14,7 @@ func init() {
 type RackspaceHandler struct {
 }
 
-func (*RackspaceHandler) HandleCreate(machine *client.Machine, machineDir string) error {
+func (*RackspaceHandler) HandleCreate(host *client.Host, hostDir string) error {
 	return nil
 }
 

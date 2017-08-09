@@ -2,34 +2,35 @@ package handlers
 
 import (
 	"archive/tar"
-	"bytes"
-	"compress/gzip"
 	b64 "encoding/base64"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"compress/gzip"
+
+	"bytes"
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/rancher/go-machine-service/logging"
-	client "github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 var logger = logging.Logger()
 
-func restoreMachineDir(machine *client.Machine, baseDir string) error {
+func restoreMachineDir(host *client.Host, baseDir string) error {
 	machineBaseDir := filepath.Dir(baseDir)
 	if err := os.MkdirAll(machineBaseDir, 0740); err != nil {
 		return fmt.Errorf("Error reinitializing config (MkdirAll). Config Dir: %v. Error: %v", machineBaseDir, err)
 	}
 
-	if machine.ExtractedConfig == "" {
+	if host.ExtractedConfig == "" {
 		return nil
 	}
 
-	configBytes, err := b64.StdEncoding.DecodeString(machine.ExtractedConfig)
+	configBytes, err := b64.StdEncoding.DecodeString(host.ExtractedConfig)
 	if err != nil {
 		return fmt.Errorf("Error reinitializing config (base64.DecodeString). Config Dir: %v. Error: %v", machineBaseDir, err)
 	}
@@ -74,13 +75,13 @@ func restoreMachineDir(machine *client.Machine, baseDir string) error {
 	}
 }
 
-func createExtractedConfig(baseDir string, machine *client.Machine) (string, error) {
+func createExtractedConfig(baseDir string, host *client.Host) (string, error) {
 	logger.WithFields(logrus.Fields{
-		"resourceId": machine.Id,
+		"resourceId": host.Id,
 	}).Info("Creating and uploading extracted machine config")
 
 	// create the tar.gz file
-	destFile := filepath.Join(baseDir, machine.Name+".tar.gz")
+	destFile := filepath.Join(baseDir, host.Name+".tar.gz")
 	tarfile, err := os.Create(destFile)
 	if err != nil {
 		return "", err
@@ -151,31 +152,4 @@ func encodeFile(destFile string) (string, error) {
 	}
 
 	return extractedEncodedConfig, nil
-}
-
-func saveMachineConfig(machineDir string, machine *client.Machine, apiClient *client.RancherClient) error {
-	var err error
-	destFile, err := createExtractedConfig(machineDir, machine)
-	if err != nil {
-		return err
-	}
-
-	extractedConf, err := encodeFile(destFile)
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < 3; i++ {
-		_, err = apiClient.Machine.Update(machine, &client.Machine{
-			ExtractedConfig: extractedConf,
-		})
-		if err == nil {
-			return err
-		}
-	}
-	return err
-}
-
-func removeMachineDir(machineDir string) {
-	os.RemoveAll(machineDir)
 }

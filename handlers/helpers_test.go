@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 	"github.com/rancher/go-machine-service/handlers/providers"
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 	"testing"
 )
 
@@ -11,23 +11,23 @@ import (
 func TestFilterDockerMessages(t *testing.T) {
 	errChan := make(chan string, 2)
 	defer close(errChan)
-	machine := &client.Machine{
+	host := &client.Host{
 		ExternalId: "uuid-1",
 		Name:       "machine-1",
 	}
 
 	testString := "Error creating machine: Message"
-	filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}, false)
+	filterDockerMessage(testString, host, errChan, &providers.DefaultProvider{}, false)
 	checkField("Test1", "Message", <-errChan, t)
 
 	testString = "Message with externalId=uuid-1"
-	checkField("Test2", "", filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}, false), t)
+	checkField("Test2", "", filterDockerMessage(testString, host, errChan, &providers.DefaultProvider{}, false), t)
 
 	testString = "Message with name=machine-1"
-	checkField("Test3", "", filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}, false), t)
+	checkField("Test3", "", filterDockerMessage(testString, host, errChan, &providers.DefaultProvider{}, false), t)
 
 	testString = "Message with random characters: =\"=\""
-	checkField("Test4", "Message with random characters: =\"=\"", filterDockerMessage(testString, machine, errChan, &providers.DefaultProvider{}, false), t)
+	checkField("Test4", "Message with random characters: =\"=\"", filterDockerMessage(testString, host, errChan, &providers.DefaultProvider{}, false), t)
 }
 
 // Tests the simplest case of successfully receiving, routing, and handling
@@ -102,13 +102,13 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 	digitaloceanConfig["size"] = "1gb"
 	digitaloceanConfig["backups"] = false
 
-	machine := &client.Machine{
+	host := &client.Host{
 		Data:   data,
 		Kind:   "machine",
 		Driver: "digitalocean",
 		Name:   "testDO",
 	}
-	checkCommands(testCmd, machine, t)
+	checkCommands(testCmd, host, t)
 
 	// Test for no params
 	testCmd = []string{
@@ -121,13 +121,13 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 	data["fields"] = make(map[string]interface{})
 	data["fields"].(map[string]interface{})["virtualboxConfig"] = make(map[string]interface{})
 
-	machine = &client.Machine{
+	host = &client.Host{
 		Data:   data,
 		Kind:   "machine",
 		Driver: "virtualbox",
 		Name:   "testVB",
 	}
-	checkCommands(testCmd, machine, t)
+	checkCommands(testCmd, host, t)
 }
 
 func strsEquals(a, b []string) bool {
@@ -142,8 +142,8 @@ func strsEquals(a, b []string) bool {
 	return true
 }
 
-func checkCommands(testCmd []string, machine *client.Machine, t *testing.T) {
-	cmd, err := buildMachineCreateCmd(machine)
+func checkCommands(testCmd []string, host *client.Host, t *testing.T) {
+	cmd, err := buildMachineCreateCmd(host, host.Driver)
 	if err != nil {
 		t.Fatalf("Error building command %v", err)
 	}

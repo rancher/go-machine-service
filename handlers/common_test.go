@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/rancher/go-rancher/v2"
+	v3 "github.com/rancher/go-rancher/v3"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -9,9 +9,9 @@ import (
 func Test_populateFields(t *testing.T) {
 	assert := require.New(t)
 
-	m := &client.Machine{
+	m := &v3.Host{
 		Driver: "digitalocean",
-		DigitaloceanConfig: &client.DigitaloceanConfig{
+		DigitaloceanConfig: &v3.DigitaloceanConfig{
 			Region: "sfo2",
 			Size:   "1gb",
 		},

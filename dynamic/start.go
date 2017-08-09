@@ -1,7 +1,7 @@
 package dynamic
 
 import (
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 func DriverSchemaVersion(apiClient *client.RancherClient) (string, error) {

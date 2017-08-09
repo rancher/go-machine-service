@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/rancher/go-rancher/v2"
+	"github.com/rancher/go-rancher/v3"
 )
 
 /* This file contains unit tests for azure.go
  */
 
 func TestAzureHandler(t *testing.T) {
-	machine := new(client.Machine)
+	machine := new(client.Host)
 	machineDir := "."
 
 	machine.Driver = "azure"
@@ -56,7 +56,7 @@ func TestAzureHandler(t *testing.T) {
 }
 
 func TestAzureHandler_DM_0_7(t *testing.T) {
-	machine := new(client.Machine)
+	machine := new(client.Host)
 	machineDir := "."
 
 	machine.Driver = "azure"

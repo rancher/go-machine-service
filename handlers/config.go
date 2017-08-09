@@ -81,7 +81,7 @@ func createExtractedConfig(baseDir string, host *client.Host) (string, error) {
 	}).Info("Creating and uploading extracted machine config")
 
 	// create the tar.gz file
-	destFile := filepath.Join(baseDir, host.Name+".tar.gz")
+	destFile := filepath.Join(baseDir, host.Hostname+".tar.gz")
 	tarfile, err := os.Create(destFile)
 	if err != nil {
 		return "", err

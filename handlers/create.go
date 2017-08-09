@@ -70,7 +70,7 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 
 	defer func() {
 		if !machineCreated {
-			cleanupResources(hostDir, host.Name)
+			cleanupResources(hostDir, host.Hostname)
 		}
 	}()
 
@@ -135,6 +135,15 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		return err
 	}
 
+	for i := 0; i < 3; i++ {
+		_, err = apiClient.Host.Update(host, &v3.Host{
+			ExtractedConfig: extractedConf,
+		})
+		if err == nil {
+			break
+		}
+	}
+
 	log.Info("Machine config file saved.")
 
 	defer os.RemoveAll(hostDir)
@@ -153,7 +162,7 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		return err
 	}
 
-	dockerClient, err := GetDockerClient(hostDir, host.Name)
+	dockerClient, err := GetDockerClient(hostDir, host.Hostname)
 	if err != nil {
 		return err
 	}
@@ -238,14 +247,6 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		return err
 	}
 
-	for i := 0; i < 3; i++ {
-		_, err = apiClient.Host.Update(host, &v3.Host{
-			ExtractedConfig: extractedConf,
-		})
-		if err == nil {
-			break
-		}
-	}
 	close(publishChan)
 	alreadyClosed = true
 
@@ -281,7 +282,7 @@ func filterDockerMessage(msg string, host *v3.Host, errChan chan<- string, provi
 		errChan <- providerHandler.HandleError(strings.Replace(msg, errorCreatingMachine, "", 1))
 		return ""
 	}
-	if strings.Contains(msg, host.ExternalId) || strings.Contains(msg, host.Name) {
+	if strings.Contains(msg, host.ExternalId) || strings.Contains(msg, host.Hostname) {
 		return ""
 	}
 	return msg
@@ -402,7 +403,7 @@ func buildEngineOpts(name string, values []string) []string {
 }
 
 func createdStamp(base string, host *v3.Host) string {
-	return filepath.Join(base, "machines", host.Name, createdFile)
+	return filepath.Join(base, "machines", host.Hostname, createdFile)
 }
 
 func touchCreatedStamp(base string, machine *v3.Host) error {
@@ -723,10 +724,6 @@ func parseImage(image string) (string, string, error) {
 		tag = tagged.Tag()
 	}
 	return repo, tag, nil
-}
-
-func bootstrappedStamp(base string, host *v3.Host) string {
-	return filepath.Join(base, "machines", host.Name, bootStrappedFile)
 }
 
 func touchBootstrappedStamp(base string, host *v3.Host) error {

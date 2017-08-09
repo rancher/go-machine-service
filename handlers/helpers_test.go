@@ -106,7 +106,7 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		Data:   data,
 		Kind:   "machine",
 		Driver: "digitalocean",
-		Name:   "testDO",
+		Hostname:   "testDO",
 	}
 	checkCommands(testCmd, host, t)
 
@@ -125,7 +125,7 @@ func TestBuildMachineCreateCmd(t *testing.T) {
 		Data:   data,
 		Kind:   "machine",
 		Driver: "virtualbox",
-		Name:   "testVB",
+		Hostname:   "testVB",
 	}
 	checkCommands(testCmd, host, t)
 }

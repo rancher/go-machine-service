@@ -27,7 +27,7 @@ func TestBuildMachineNoEngineOptsCreateCommand(t *testing.T) {
 	data["fields"].(map[string]interface{})["rackspaceConfig"].(map[string]interface{})["username"] = "fakeUser"
 
 	machine.Data = data
-	machine.Name = "fakeMachine"
+	machine.Hostname = "fakeMachine"
 
 	cmd, err := buildMachineCreateCmd(machine, machine.Driver)
 	if err != nil {
@@ -59,7 +59,7 @@ func TestBuildMachineCreateCommand(t *testing.T) {
 	rackspaceConfig["username"] = "fakeUser"
 
 	host.Data = data
-	host.Name = "fakeMachine"
+	host.Hostname = "fakeMachine"
 
 	cmd, err := buildMachineCreateCmd(host, host.Driver)
 	if err != nil {
@@ -93,7 +93,7 @@ func TestBuildMacineCreateCommandWithInterfaceLists(t *testing.T) {
 	rackspaceConfig["interfaceList"] = []interface{}{"str1", "str2"}
 
 	host.Data = data
-	host.Name = "fakeMachine"
+	host.Hostname = "fakeMachine"
 
 	cmd, err := buildMachineCreateCmd(host, host.Driver)
 	if err != nil {

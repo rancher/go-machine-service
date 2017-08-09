@@ -377,7 +377,7 @@ func buildMachineCreateCmd(host *v3.Host, driver string) ([]string, error) {
 
 	}
 
-	cmd = append(cmd, host.Name)
+	cmd = append(cmd, host.Hostname)
 	logger.Infof("Cmd slice: %v", cmd)
 	return cmd, nil
 }

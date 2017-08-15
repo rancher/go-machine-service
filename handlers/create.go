@@ -206,9 +206,6 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		time.Sleep(2 * time.Second)
 	}
 
-	// swallow the error as we don't care if it is deleted or not
-	dockerClient.ContainerRemove(context.Background(), contID, types.ContainerRemoveOptions{Force: true})
-
 	if !found {
 		logger.WithFields(logrus.Fields{
 			"resourceId": event.ResourceID,
@@ -216,6 +213,28 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		}).Error("Failed to find rancher-agent container")
 		return errors.New("Failed to find rancher-agent container")
 	}
+
+	foundAgentID := false
+	for i := 0; i < 150; i++ {
+		host, err := apiClient.Host.ById(host.Id)
+		if err != nil {
+			logrus.Errorf("failed to get host. err: %v", err)
+			continue
+		}
+		if host.AgentId != "" {
+			foundAgentID = true
+			break
+		}
+		time.Sleep(2 * time.Second)
+	}
+
+	if !foundAgentID {
+		logrus.Errorf("host is not registered correctly. ResourceId: %v, hostId: %v", event.ResourceID, host.Id)
+		return errors.New("Host is not registered correctly")
+	}
+
+	// swallow the error as we don't care if it is deleted or not
+	dockerClient.ContainerRemove(context.Background(), contID, types.ContainerRemoveOptions{Force: true})
 
 	go func() {
 		images, err := collectImageNames(host.AccountId, apiClient)

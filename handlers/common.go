@@ -92,7 +92,7 @@ func applyHostTemplate(host *client.Host, apiClient *client.RancherClient) error
 
 	templates, err := apiClient.HostTemplate.List(&client.ListOpts{
 		Filters: map[string]interface{}{
-			"accountId":    host.AccountId,
+			"clusterId":    host.ClusterId,
 			"driver":       host.Driver,
 			"removed_null": "true",
 			"state":        "active",

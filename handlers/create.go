@@ -37,7 +37,6 @@ const (
 	bootstrapContName    = "rancher-agent-bootstrap"
 	maxWait              = time.Duration(time.Second * 10)
 	parseMessage         = "Failed to parse config: [%v]"
-	bootStrappedFile     = "bootstrapped"
 	fingerprintStart     = "CA_FINGERPRINT="
 	defaultVersion       = "1.22"
 )
@@ -157,7 +156,12 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 
 	publishChan <- "Installing Rancher agent"
 
-	registrationURL, imageRepo, imageTag, fingerprint, err := getRegistrationURLAndImage(host.AccountId, apiClient)
+	accountID, err := getAccountID(host, apiClient)
+	if err != nil {
+		return err
+	}
+
+	registrationURL, imageRepo, imageTag, fingerprint, err := getRegistrationURLAndImage(accountID, apiClient)
 	if err != nil {
 		return err
 	}
@@ -206,9 +210,6 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		time.Sleep(2 * time.Second)
 	}
 
-	// swallow the error as we don't care if it is deleted or not
-	dockerClient.ContainerRemove(context.Background(), contID, types.ContainerRemoveOptions{Force: true})
-
 	if !found {
 		logger.WithFields(logrus.Fields{
 			"resourceId": event.ResourceID,
@@ -218,7 +219,7 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 	}
 
 	go func() {
-		images, err := collectImageNames(host.AccountId, apiClient)
+		images, err := collectImageNames(accountID, apiClient)
 		if err != nil {
 			return
 		}
@@ -237,6 +238,30 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		}
 	}()
 
+	publishChan <- "Waiting for agent initialization"
+
+	foundAgentID := false
+	for i := 0; i < 150; i++ {
+		host, err := apiClient.Host.ById(host.Id)
+		if err != nil {
+			logrus.Errorf("failed to get host. err: %v", err)
+			continue
+		}
+		if host.AgentId != "" {
+			foundAgentID = true
+			break
+		}
+		time.Sleep(2 * time.Second)
+	}
+
+	if !foundAgentID {
+		logrus.Errorf("host is not registered correctly. ResourceId: %v, hostId: %v", event.ResourceID, host.Id)
+		return errors.New("Host is not registered correctly")
+	}
+
+	// swallow the error as we don't care if it is deleted or not
+	dockerClient.ContainerRemove(context.Background(), contID, types.ContainerRemoveOptions{Force: true})
+
 	logger.WithFields(logrus.Fields{
 		"resourceId":        event.ResourceID,
 		"machineExternalId": host.Uuid,
@@ -251,6 +276,24 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 	alreadyClosed = true
 
 	return publishReply(newReply(event), apiClient)
+}
+
+func getAccountID(host *v3.Host, apiClient *v3.RancherClient) (string, error) {
+	accounts, err := apiClient.Account.List(&v3.ListOpts{
+		Filters: map[string]interface{}{
+			"clusterId":    host.ClusterId,
+			"clusterOwner": true,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if len(accounts.Data) != 1 {
+		return "", fmt.Errorf("Failed to find account for host, %d found", len(accounts.Data))
+	}
+
+	return accounts.Data[0].Id, nil
 }
 
 func logProgress(readerStdout io.Reader, readerStderr io.Reader, publishChan chan<- string, host *v3.Host, event *events.Event, errChan chan<- string, providerHandler providers.Provider) {

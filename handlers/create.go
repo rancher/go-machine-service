@@ -35,9 +35,7 @@ const (
 	errorCreatingMachine = "Error creating machine: "
 	createdFile          = "created"
 	bootstrapContName    = "rancher-agent-bootstrap"
-	maxWait              = time.Duration(time.Second * 10)
 	parseMessage         = "Failed to parse config: [%v]"
-	fingerprintStart     = "CA_FINGERPRINT="
 	defaultVersion       = "1.22"
 )
 
@@ -156,12 +154,7 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 
 	publishChan <- "Installing Rancher agent"
 
-	accountID, err := getAccountID(host, apiClient)
-	if err != nil {
-		return err
-	}
-
-	registrationURL, imageRepo, imageTag, fingerprint, err := getRegistrationURLAndImage(accountID, apiClient)
+	registrationURL, imageRepo, imageTag, err := getRegistrationURLAndImage(host.ClusterId, apiClient)
 	if err != nil {
 		return err
 	}
@@ -178,7 +171,7 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 
 	publishChan <- "Creating agent container"
 
-	contID, err := createContainer(registrationURL, host, dockerClient, imageRepo, imageTag, fingerprint)
+	contID, err := createContainer(registrationURL, host, dockerClient, imageRepo, imageTag)
 	if err != nil {
 		return err
 	}
@@ -219,6 +212,11 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 	}
 
 	go func() {
+		accountID, err := getAccountID(host, apiClient)
+		if err != nil {
+			return
+		}
+
 		images, err := collectImageNames(accountID, apiClient)
 		if err != nil {
 			return
@@ -459,9 +457,9 @@ func touchCreatedStamp(base string, machine *v3.Host) error {
 }
 
 func createContainer(registrationURL string, host *v3.Host,
-	dockerClient *client.Client, imageRepo, imageTag, fingerprint string) (string, error) {
+	dockerClient *client.Client, imageRepo, imageTag string) (string, error) {
 	containerCmd := []string{registrationURL}
-	containerConfig := buildContainerConfig(containerCmd, host, imageRepo, imageTag, fingerprint)
+	containerConfig := buildContainerConfig(containerCmd, host, imageRepo, imageTag)
 	hostConfig := buildHostConfig()
 
 	resp, err := dockerClient.ContainerCreate(context.Background(), containerConfig, hostConfig, nil, bootstrapContName)
@@ -484,7 +482,7 @@ func buildHostConfig() *container.HostConfig {
 	return hostConfig
 }
 
-func buildContainerConfig(containerCmd []string, host *v3.Host, imgRepo, imgTag, fingerprint string) *container.Config {
+func buildContainerConfig(containerCmd []string, host *v3.Host, imgRepo, imgTag string) *container.Config {
 	image := imgRepo + ":" + imgTag
 
 	volConfig := map[string]struct{}{
@@ -508,9 +506,6 @@ func buildContainerConfig(containerCmd []string, host *v3.Host, imgRepo, imgTag,
 		labelVarsString := strings.Join(labelVars, "&")
 		labelVarsString = "CATTLE_HOST_LABELS=" + labelVarsString
 		envVars = append(envVars, labelVarsString)
-	}
-	if fingerprint != "" {
-		envVars = append(envVars, strings.Replace(fingerprint, "\"", "", -1))
 	}
 	config := &container.Config{
 		AttachStdin: true,
@@ -537,62 +532,25 @@ func pullImage(dockerClient *client.Client, imageRepo, imageTag string) error {
 	return nil
 }
 
-var getRegistrationURLAndImage = func(accountID string, apiClient *v3.RancherClient) (string, string, string, string, error) {
-	listOpts := v3.NewListOpts()
-	listOpts.Filters["accountId"] = accountID
-	listOpts.Filters["state"] = "active"
-	tokenCollection, err := apiClient.RegistrationToken.List(listOpts)
+var getRegistrationURLAndImage = func(clusterId string, apiClient *v3.RancherClient) (string, string, string, error) {
+	cluster, err := apiClient.Cluster.ById(clusterId)
 	if err != nil {
-		return "", "", "", "", err
+		return "", "", "", err
 	}
 
-	var token v3.RegistrationToken
-	if len(tokenCollection.Data) >= 1 {
-		logger.WithFields(logrus.Fields{
-			"accountId": accountID,
-		}).Debug("Found token for account")
-		token = tokenCollection.Data[0]
-	} else {
-		logger.WithFields(logrus.Fields{
-			"accountId": accountID,
-		}).Debug("Creating new token for account")
-		createToken := &v3.RegistrationToken{
-			AccountId: accountID,
-		}
-
-		createToken, err = apiClient.RegistrationToken.Create(createToken)
-		if err != nil {
-			return "", "", "", "", err
-		}
-		createToken, err = waitForTokenToActivate(createToken, apiClient)
-		if err != nil {
-			return "", "", "", "", err
-		}
-		token = *createToken
+	if cluster.RegistrationToken == nil {
+		return "", "", "", errors.New("Failed to find registration token")
 	}
 
-	regURL, ok := token.Links["registrationUrl"]
-	if !ok {
-		return "", "", "", "", fmt.Errorf("no registration url on token [%v] for account [%v]", token.Id, accountID)
-	}
-
-	repo, tag, err := parseImage(token.Image)
+	regURL := cluster.RegistrationToken.RegistrationUrl
+	repo, tag, err := parseImage(cluster.RegistrationToken.Image)
 	if err != nil {
-		return "", "", "", "", fmt.Errorf("invalid Image format in token [%v] for account [%v]", token.Id, accountID)
+		return "", "", "", fmt.Errorf("invalid Image format in token %s", cluster.RegistrationToken.Image)
 	}
 
 	regURL = tweakRegistrationURL(regURL)
 
-	return regURL, repo, tag, parseFingerprint(token), nil
-}
-
-func parseFingerprint(token v3.RegistrationToken) string {
-	for _, part := range strings.Fields(token.Command) {
-		if strings.HasPrefix(part, fingerprintStart) {
-			return part
-		}
-	}
-	return ""
+	return regURL, repo, tag, nil
 }
 
 func tweakRegistrationURL(regURL string) string {
@@ -606,30 +564,6 @@ func tweakRegistrationURL(regURL string) string {
 
 	regURL = strings.Replace(regURL, "localhost", localHostReplace, 1)
 	return regURL
-}
-
-func waitForTokenToActivate(token *v3.RegistrationToken,
-	apiClient *v3.RancherClient) (*v3.RegistrationToken, error) {
-	timeoutAt := time.Now().Add(maxWait)
-	ticker := time.NewTicker(time.Millisecond * 250)
-	defer ticker.Stop()
-	tokenID := token.Id
-	for t := range ticker.C {
-		token, err := apiClient.RegistrationToken.ById(tokenID)
-		if err != nil {
-			return nil, err
-		}
-		if token == nil {
-			return nil, fmt.Errorf("couldn't find token %v", tokenID)
-		}
-		if token.State == "active" {
-			return token, nil
-		}
-		if t.After(timeoutAt) {
-			return nil, fmt.Errorf("timed out waiting for token to activate")
-		}
-	}
-	return nil, fmt.Errorf("Couldn't get active token")
 }
 
 type tlsConnectionConfig struct {

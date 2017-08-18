@@ -92,7 +92,7 @@ func uploadMachineProjectJSON(drivers []string, remove bool) error {
 }
 
 func uploadMachineUserJSON(drivers []string, remove bool) error {
-	schema := baseSchema(drivers, "")
+	schema := baseSchema(drivers, "cu")
 	return uploadMachineSchema(schema, []string{"admin", "user", "readAdmin"}, remove)
 }
 

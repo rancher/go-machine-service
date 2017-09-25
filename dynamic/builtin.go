@@ -1,6 +1,8 @@
 package dynamic
 
 import (
+	"time"
+
 	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
 	"github.com/rancher/go-rancher/v2"
 )
@@ -18,6 +20,22 @@ func SyncBuiltin() error {
 	apiClient, err := getClient()
 	if err != nil {
 		return err
+	}
+
+	// this code block waits for handler to activate on the cattle side
+	// this is necessary to make sure machine drivers show up when adding hosts
+Loop:
+	for {
+		opts := client.NewListOpts()
+		collection, _ := apiClient.ExternalHandlerProcess.List(opts)
+		for _, event := range collection.Data {
+			time.Sleep(3 * time.Second)
+			if event.Name == "machinedriver.activate" && event.State == "active" {
+				logger.Infoln("machinedriver.activate event detected")
+				break Loop
+			}
+			logger.Infoln("Waiting for machinedriver.activate event")
+		}
 	}
 
 	opts := client.NewListOpts()

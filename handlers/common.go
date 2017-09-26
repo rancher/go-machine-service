@@ -59,7 +59,7 @@ func republishTransitioningReply(publishChan <-chan string, event *events.Event,
 	// we will simply republish transitioning messages until the next one is added.
 	// Because this ticker is going to republish every X seconds, it's will most likely republish a message sooner
 	// In all likelihood, we will remove this method later.
-	defaultWaitTime := time.Second * 15
+	defaultWaitTime := time.Second * 5
 	ticker := time.NewTicker(defaultWaitTime)
 	var lastMsg string
 	for {

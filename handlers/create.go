@@ -48,23 +48,51 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		"resourceId": event.ResourceID,
 		"eventId":    event.ID,
 	})
-	machineCreated := false
 
-	log.Info("Creating Machine")
+	//Setup republishing timer
+	publishChan := make(chan string, 10)
+	go republishTransitioningReply(publishChan, event, apiClient)
+	defer close(publishChan)
+
 	host, hostDir, err := getHostAndHostDir(event, apiClient)
 	if err != nil || host == nil {
 		return err
 	}
+	defer os.RemoveAll(hostDir)
+	// first check if host is already created. If so we restore the config
+	restored, err := isHostAlreadyCreated(host, hostDir)
+	if err != nil {
+		return err
+	}
 
+	if !restored {
+		if err := createMachine(event, apiClient, publishChan, log); err != nil {
+			return err
+		}
+	}
+	if err := registerRancherAgent(event, apiClient, publishChan); err != nil {
+		return err
+	}
+	if err := touchBootstrappedStamp(hostDir, host); err != nil {
+		return err
+	}
+
+	return publishReply(newReply(event), apiClient)
+}
+
+func createMachine(event *events.Event, apiClient *v3.RancherClient, publishChan chan string, log *logrus.Entry) error {
+	log.Info("Creating Host")
+	machineCreated := false
+	host, hostDir, err := getHostAndHostDir(event, apiClient)
+	if err != nil || host == nil {
+		return err
+	}
 	if err := applyHostTemplate(host, apiClient); err != nil {
 		return err
 	}
-	defer os.RemoveAll(hostDir)
-
 	if _, err := os.Stat(createdStamp(hostDir, host)); !os.IsNotExist(err) {
 		return publishReply(newReply(event), apiClient)
 	}
-
 	defer func() {
 		if !machineCreated {
 			cleanupResources(hostDir, host.Hostname)
@@ -87,17 +115,7 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		return err
 	}
 
-	//Setup republishing timer
-	publishChan := make(chan string, 10)
-	go republishTransitioningReply(publishChan, event, apiClient)
-
 	publishChan <- "Contacting " + driver
-	alreadyClosed := false
-	defer func() {
-		if !alreadyClosed {
-			close(publishChan)
-		}
-	}()
 
 	readerStdout, readerStderr, err := startReturnOutput(command)
 	if err != nil {
@@ -120,6 +138,7 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 	}
 
 	log.Info("Machine Created")
+	machineCreated = true
 	touchCreatedStamp(hostDir, host)
 
 	destFile, err := createExtractedConfig(hostDir, host)
@@ -132,7 +151,7 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		return err
 	}
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 100; i++ {
 		_, err = apiClient.Host.Update(host, &v3.Host{
 			ExtractedConfig: extractedConf,
 		})
@@ -140,19 +159,21 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 			break
 		}
 	}
-
 	log.Info("Machine config file saved.")
+	return nil
+}
 
-	defer os.RemoveAll(hostDir)
-
-	machineCreated = true
-
+func registerRancherAgent(event *events.Event, apiClient *v3.RancherClient, publishChan chan string) error {
 	logger.WithFields(logrus.Fields{
 		"resourceId": event.ResourceID,
 		"eventId":    event.ID,
 	}).Info("Activating Machine")
 
 	publishChan <- "Installing Rancher agent"
+	host, hostDir, err := getHostAndHostDir(event, apiClient)
+	if err != nil || host == nil {
+		return err
+	}
 
 	registrationURL, imageRepo, imageTag, err := getRegistrationURLAndImage(host.ClusterId, apiClient)
 	if err != nil {
@@ -265,15 +286,25 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		"machineExternalId": host.Uuid,
 		"containerId":       contID,
 	}).Info("Rancher-agent for machine started")
+	return nil
+}
 
-	if err := touchBootstrappedStamp(hostDir, host); err != nil {
-		return err
+func isHostAlreadyCreated(host *v3.Host, hostDir string) (bool, error) {
+	if host.ExtractedConfig == "" {
+		return false, nil
 	}
+	err := restoreMachineDir(host, hostDir)
+	if err != nil {
+		return false, err
+	}
+	mExists, err := machineExists(hostDir, host.Hostname)
+	if err != nil {
+		return false, err
+	}
+	if mExists {
 
-	close(publishChan)
-	alreadyClosed = true
-
-	return publishReply(newReply(event), apiClient)
+	}
+	return true, nil
 }
 
 func getAccountID(host *v3.Host, apiClient *v3.RancherClient) (string, error) {

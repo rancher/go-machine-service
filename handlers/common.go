@@ -131,11 +131,7 @@ func apply(host *client.Host, ht *client.HostTemplate, apiClient *client.Rancher
 	if err != nil {
 		return err
 	}
-	if err := populateFields(host); err != nil {
-		return err
-	}
-
-	return nil
+	return populateFields(host)
 }
 
 func populateFields(m *client.Host) error {

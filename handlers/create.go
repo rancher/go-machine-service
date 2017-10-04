@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,11 +15,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"bytes"
-
-	"io/ioutil"
-	"net/http"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/reference"
@@ -49,56 +47,69 @@ func CreateMachineAndActivateMachine(event *events.Event, apiClient *v3.RancherC
 		"eventId":    event.ID,
 	})
 
-	//Setup republishing timer
-	publishChan := make(chan string, 10)
-	go republishTransitioningReply(publishChan, event, apiClient)
-	defer close(publishChan)
-
+	// get host and hostDir then apply hostTemplate onto it
 	host, hostDir, err := getHostAndHostDir(event, apiClient)
 	if err != nil || host == nil {
 		return err
 	}
 	defer os.RemoveAll(hostDir)
+	originalLabels := map[string]interface{}{}
+	for k, v := range host.Labels {
+		originalLabels[k] = v
+	}
+	if err := applyHostTemplate(host, apiClient); err != nil {
+		return err
+	}
+	// we should respect host's original labels so that they are not overridden
+	for k, v := range originalLabels {
+		host.Labels[k] = v
+	}
+
+	//Setup republishing timer
+	closed := false
+	publishChan := make(chan string, 10)
+	go republishTransitioningReply(publishChan, event, apiClient)
+	defer func() {
+		if !closed {
+			close(publishChan)
+		}
+	}()
+
 	// first check if host is already created. If so we restore the config
 	restored, err := isHostAlreadyCreated(host, hostDir)
 	if err != nil {
 		return err
 	}
-
 	if !restored {
-		if err := createMachine(event, apiClient, publishChan, log); err != nil {
+		if err := createMachine(event, apiClient, publishChan, log, host, hostDir); err != nil {
 			return err
 		}
 	}
-	if err := registerRancherAgent(event, apiClient, publishChan); err != nil {
+
+	// register host with rancher-agent
+	if err := registerRancherAgent(event, apiClient, publishChan, host, hostDir); err != nil {
 		return err
 	}
-	if err := touchBootstrappedStamp(hostDir, host); err != nil {
-		return err
-	}
+
+	// close before we publish event in case there are conflicts
+	close(publishChan)
+	closed = true
 
 	return publishReply(newReply(event), apiClient)
 }
 
-func createMachine(event *events.Event, apiClient *v3.RancherClient, publishChan chan string, log *logrus.Entry) error {
+func createMachine(event *events.Event, apiClient *v3.RancherClient, publishChan chan string, log *logrus.Entry, host *v3.Host, hostDir string) error {
 	log.Info("Creating Host")
 	machineCreated := false
-	host, hostDir, err := getHostAndHostDir(event, apiClient)
-	if err != nil || host == nil {
-		return err
-	}
-	if err := applyHostTemplate(host, apiClient); err != nil {
-		return err
-	}
-	if _, err := os.Stat(createdStamp(hostDir, host)); !os.IsNotExist(err) {
-		return publishReply(newReply(event), apiClient)
-	}
 	defer func() {
 		if !machineCreated {
 			cleanupResources(hostDir, host.Hostname)
 		}
 	}()
 
+	if _, err := os.Stat(createdStamp(hostDir, host)); !os.IsNotExist(err) {
+		return nil
+	}
 	hostTemplate, err := apiClient.HostTemplate.ById(host.HostTemplateId)
 	if err != nil {
 		return err
@@ -152,10 +163,11 @@ func createMachine(event *events.Event, apiClient *v3.RancherClient, publishChan
 	}
 
 	for i := 0; i < 100; i++ {
-		_, err = apiClient.Host.Update(host, &v3.Host{
+		v, err := apiClient.Host.Update(host, &v3.Host{
 			ExtractedConfig: extractedConf,
 		})
 		if err == nil {
+			fmt.Printf("host debugggg %+v", v)
 			break
 		}
 	}
@@ -163,16 +175,17 @@ func createMachine(event *events.Event, apiClient *v3.RancherClient, publishChan
 	return nil
 }
 
-func registerRancherAgent(event *events.Event, apiClient *v3.RancherClient, publishChan chan string) error {
+func registerRancherAgent(event *events.Event, apiClient *v3.RancherClient, publishChan chan string, host *v3.Host, hostDir string) error {
 	logger.WithFields(logrus.Fields{
 		"resourceId": event.ResourceID,
 		"eventId":    event.ID,
 	}).Info("Activating Machine")
 
 	publishChan <- "Installing Rancher agent"
-	host, hostDir, err := getHostAndHostDir(event, apiClient)
-	if err != nil || host == nil {
-		return err
+
+	//check if host.Agent is empty for idempotency
+	if host.AgentId != "" {
+		return nil
 	}
 
 	registrationURL, imageRepo, imageTag, err := getRegistrationURLAndImage(host.ClusterId, apiClient)
@@ -301,10 +314,7 @@ func isHostAlreadyCreated(host *v3.Host, hostDir string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if mExists {
-
-	}
-	return true, nil
+	return mExists, nil
 }
 
 func getAccountID(host *v3.Host, apiClient *v3.RancherClient) (string, error) {
@@ -732,13 +742,4 @@ func parseImage(image string) (string, string, error) {
 		tag = tagged.Tag()
 	}
 	return repo, tag, nil
-}
-
-func touchBootstrappedStamp(base string, host *v3.Host) error {
-	f, err := os.Create(createdStamp(base, host))
-	if err != nil {
-		return err
-	}
-	f.Close()
-	return nil
 }

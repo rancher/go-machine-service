@@ -236,7 +236,7 @@ func buildMachineCreateCmd(machine *client.Machine) ([]string, error) {
 	}
 
 	cmd = append(cmd, machine.Name)
-	logger.Infof("Cmd slice: %v", cmd)
+	logger.Debugf("Cmd slice: %v", cmd)
 	return cmd, nil
 }
 

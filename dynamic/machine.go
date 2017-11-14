@@ -35,7 +35,7 @@ func UploadMachineSchemas(apiClient *client.RancherClient, drivers ...string) er
 	if err := uploadMachineUserJSON(drivers, false); err != nil {
 		return err
 	}
-	return uploadMachineReadOnlyJSON(false)
+	return uploadMachineReadOnlyAndRestrictedJSON(false)
 }
 
 func field(resourceFields map[string]client.Field, field, fieldType, auth string) {
@@ -110,9 +110,9 @@ func uploadMachineUserJSON(drivers []string, remove bool) error {
 	return uploadMachineSchema(schema, []string{"admin", "user", "readAdmin"}, remove)
 }
 
-func uploadMachineReadOnlyJSON(remove bool) error {
+func uploadMachineReadOnlyAndRestrictedJSON(remove bool) error {
 	schema := baseSchema([]string{}, "")
-	return uploadMachineSchema(schema, []string{"readonly"}, remove)
+	return uploadMachineSchema(schema, []string{"readonly", "restricted"}, remove)
 }
 
 func uploadMachineSchema(schema client.Schema, roles []string, remove bool) error {

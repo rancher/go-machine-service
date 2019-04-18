@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -33,15 +34,15 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 		"eventId":    event.ID,
 	}).Info("Activating Machine")
 
-	machine, machineDir, err := preEvent(event, apiClient)
+	machine, machineDirs, err := preEvent(event, apiClient)
 	if err != nil || machine == nil {
 		return nil
 	}
-	defer removeMachineDir(machineDir)
+	defer removeMachineDir(machineDirs.jailDir)
 
 	// If the resource has the bootstrapped file, then it has been bootstrapped.
-	if _, err := os.Stat(bootstrappedStamp(machineDir, machine)); err == nil {
-		if err := saveMachineConfig(machineDir, machine, apiClient); err != nil {
+	if _, err := os.Stat(bootstrappedStamp(machineDirs.fullMachinePath, machine)); err == nil {
+		if err := saveMachineConfig(machineDirs.fullMachinePath, machine, apiClient); err != nil {
 			return err
 		}
 		return publishReply(newReply(event), apiClient)
@@ -59,7 +60,7 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 		return err
 	}
 
-	dockerClient, err := GetDockerClient(machineDir, machine.Name)
+	dockerClient, err := GetDockerClient(machineDirs.jailDir, machine.Name)
 	if err != nil {
 		return err
 	}
@@ -137,11 +138,11 @@ func ActivateMachine(event *events.Event, apiClient *client.RancherClient) (err 
 		"containerId":       container.ID,
 	}).Info("Rancher-agent for machine started")
 
-	if err := touchBootstrappedStamp(machineDir, machine); err != nil {
+	if err := touchBootstrappedStamp(machineDirs.fullMachinePath, machine); err != nil {
 		return err
 	}
 
-	if err := saveMachineConfig(machineDir, machine, apiClient); err != nil {
+	if err := saveMachineConfig(machineDirs.fullMachinePath, machine, apiClient); err != nil {
 		return err
 	}
 
@@ -345,7 +346,10 @@ func GetDockerClient(machineDir string, machineName string) (*docker.Client, err
 }
 
 func getConnectionConfig(machineDir string, machineName string) (*tlsConnectionConfig, error) {
-	command := buildCommand(machineDir, []string{"config", machineName})
+	command, err := buildCommand(machineDir, []string{"config", machineName})
+	if err != nil {
+		return nil, err
+	}
 	output, err := command.Output()
 	if err != nil {
 		return nil, err
@@ -355,6 +359,14 @@ func getConnectionConfig(machineDir string, machineName string) (*tlsConnectionC
 	connConfig, err := parseConnectionArgs(args)
 	if err != nil {
 		return nil, err
+	}
+
+	if os.Getenv("DISABLE_DRIVER_JAIL") != "true" {
+		// Docker reads from the local file system, it does not exec a docker-machine command
+		// so give it the full path if running in jail mode
+		connConfig.caCert = path.Join(machineDir, connConfig.caCert)
+		connConfig.cert = path.Join(machineDir, connConfig.cert)
+		connConfig.key = path.Join(machineDir, connConfig.key)
 	}
 
 	return connConfig, nil

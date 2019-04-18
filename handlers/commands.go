@@ -4,9 +4,13 @@ import (
 	"bufio"
 	"os"
 	"os/exec"
+	"os/user"
 	"regexp"
+	"strconv"
 	"strings"
+	"syscall"
 
+	"github.com/pkg/errors"
 	client "github.com/rancher/go-rancher/v2"
 )
 
@@ -17,8 +21,11 @@ var (
 )
 
 func deleteMachine(machineDir string, machine *client.Machine) error {
-	command := buildCommand(machineDir, []string{"rm", "-f", machine.Name})
-	err := command.Start()
+	command, err := buildCommand(machineDir, []string{"rm", "-f", machine.Name})
+	if err != nil {
+		return err
+	}
+	err = command.Start()
 	if err != nil {
 		return err
 	}
@@ -32,13 +39,19 @@ func deleteMachine(machineDir string, machine *client.Machine) error {
 }
 
 func getState(machineDir string, machine *client.Machine) (string, error) {
-	command := buildCommand(machineDir, []string{"ls", "-f", "{{.State}}", machine.Name})
+	command, err := buildCommand(machineDir, []string{"ls", "-f", "{{.State}}", machine.Name})
+	if err != nil {
+		return "", err
+	}
 	output, err := command.CombinedOutput()
 	return strings.TrimSpace(string(output)), err
 }
 
 func machineExists(machineDir string, name string) (bool, error) {
-	command := buildCommand(machineDir, []string{"ls", "-q"})
+	command, err := buildCommand(machineDir, []string{"ls", "-q"})
+	if err != nil {
+		return false, err
+	}
 	r, err := command.StdoutPipe()
 	if err != nil {
 		return false, err
@@ -68,11 +81,29 @@ func machineExists(machineDir string, name string) (bool, error) {
 	return false, nil
 }
 
-func buildCommand(machineDir string, cmdArgs []string) *exec.Cmd {
+func buildCommand(machineDir string, cmdArgs []string) (*exec.Cmd, error) {
+	if os.Getenv("DISABLE_DRIVER_JAIL") == "true" {
+		command := exec.Command(machineCmd, cmdArgs...)
+		env := initEnviron(machineDir)
+		command.Env = env
+		return command, nil
+	}
+
+	cred, err := getUserCred()
+	if err != nil {
+		return nil, errors.WithMessage(err, "get user cred error")
+	}
+
 	command := exec.Command(machineCmd, cmdArgs...)
-	env := initEnviron(machineDir)
-	command.Env = env
-	return command
+	command.SysProcAttr = &syscall.SysProcAttr{}
+	command.SysProcAttr.Credential = cred
+	command.SysProcAttr.Chroot = machineDir
+	command.Env = []string{
+		machineDirEnvKey + machineDir,
+		"PATH=/usr/bin:/usr/local/bin",
+	}
+	return command, nil
+
 }
 
 func initEnviron(machineDir string) []string {
@@ -94,4 +125,30 @@ func initEnviron(machineDir string) []string {
 		env = append(env, machineDirEnvKey+machineDir)
 	}
 	return env
+}
+
+// getUserCred looks up the user and provides it in syscall.Credential
+func getUserCred() (*syscall.Credential, error) {
+	u, err := user.Current()
+	if err != nil {
+		uID := os.Getuid()
+		u, err = user.LookupId(strconv.Itoa(uID))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	i, err := strconv.ParseUint(u.Uid, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	uid := uint32(i)
+
+	i, err = strconv.ParseUint(u.Gid, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	gid := uint32(i)
+
+	return &syscall.Credential{Uid: uid, Gid: gid}, nil
 }

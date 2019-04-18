@@ -34,28 +34,29 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	machineCreated := false
 
 	log.Info("Creating Machine")
-	machine, machineDir, err := preEvent(event, apiClient)
+	machine, machineDirs, err := preEvent(event, apiClient)
 	if err != nil || machine == nil {
 		return err
 	}
-	defer removeMachineDir(machineDir)
+	defer removeMachineDir(machineDirs.jailDir)
 
-	if _, err := os.Stat(createdStamp(machineDir, machine)); !os.IsNotExist(err) {
+	if _, err := os.Stat(createdStamp(machineDirs.fullMachinePath, machine)); !os.IsNotExist(err) {
 		return publishReply(newReply(event), apiClient)
 	}
 
 	defer func() {
 		if !machineCreated {
-			cleanupResources(machineDir, machine.Name)
+			cleanupResources(machineDirs.jailDir, machine.Name)
+
 		}
 	}()
 
 	providerHandler := providers.GetProviderHandler(machine.Driver)
-	if err := providerHandler.HandleCreate(machine, machineDir); err != nil {
+	if err := providerHandler.HandleCreate(machine, machineDirs.fullMachinePath); err != nil {
 		return err
 	}
 
-	command, err := buildCreateCommand(machine, machineDir)
+	command, err := buildCreateCommand(machine, machineDirs.jailDir)
 	if err != nil {
 		return err
 	}
@@ -93,15 +94,15 @@ func CreateMachine(event *events.Event, apiClient *client.RancherClient) error {
 	}
 
 	log.Info("Machine Created")
-	touchCreatedStamp(machineDir, machine)
+	touchCreatedStamp(machineDirs.fullMachinePath, machine)
 
 	publishChan <- "Saving Machine Config"
-	if err := saveMachineConfig(machineDir, machine, apiClient); err != nil {
+	if err := saveMachineConfig(machineDirs.fullMachinePath, machine, apiClient); err != nil {
 		return err
 	}
 	log.Info("Machine config file saved.")
 
-	removeMachineDir(machineDir)
+	removeMachineDir(machineDirs.jailDir)
 
 	// Explicitly close publish channel so that it doesn't conflict with final reply
 	close(publishChan)
@@ -172,7 +173,10 @@ func buildCreateCommand(machine *client.Machine, machineDir string) (*exec.Cmd, 
 		return nil, err
 	}
 
-	command := buildCommand(machineDir, cmdArgs)
+	command, err := buildCommand(machineDir, cmdArgs)
+	if err != nil {
+		return nil, err
+	}
 	return command, nil
 }
 

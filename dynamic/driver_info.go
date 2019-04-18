@@ -2,16 +2,14 @@ package dynamic
 
 import (
 	"fmt"
+	"net/rpc"
 	"reflect"
 	"strings"
 	"sync"
 
-	cli "github.com/docker/machine/libmachine/mcnflag"
-
-	"net/rpc"
-
 	"github.com/docker/machine/libmachine/drivers/plugin/localbinary"
 	rpcdriver "github.com/docker/machine/libmachine/drivers/rpc"
+	cli "github.com/docker/machine/libmachine/mcnflag"
 	"github.com/rancher/go-rancher/v2"
 )
 
@@ -30,6 +28,21 @@ var (
 		"readAdmin",
 		"readonly",
 		"restricted"}
+
+	driverFields = map[string][]string{
+		"aliyunecs":    []string{"sshKeypath"},
+		"amazonec2":    []string{"keypairName", "sshKeypath", "userdata"},
+		"azure":        []string{"customData"},
+		"digitalocean": []string{"sshKeyPath", "userdata"},
+		"ecl":          []string{"privateKeyFile"},
+		"exoscale":     []string{"sshKey", "userdata"},
+		"generic":      []string{"sshKey"},
+		"hetzner":      []string{"existingKeyId", "existingKeyPath"},
+		"openstack":    []string{"privateKeyFile"},
+		"otc":          []string{"privateKeyFile"},
+		"qingcloud":    []string{"sshKeypath"},
+		"vultr":        []string{"userdata"},
+	}
 )
 
 func flagToField(flag cli.Flag) (string, client.Field, error) {
@@ -83,6 +96,12 @@ func GenerateAndUploadSchema(driver string) error {
 			return err
 		}
 		resourceFields[name] = field
+	}
+
+	if fields, ok := driverFields[driverName]; ok {
+		for _, field := range fields {
+			delete(resourceFields, field)
+		}
 	}
 
 	json, err := toJSON(&client.Schema{

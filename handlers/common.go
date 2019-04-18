@@ -2,13 +2,15 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
-
 	"github.com/rancher/event-subscriber/events"
 	client "github.com/rancher/go-rancher/v2"
 )
@@ -18,6 +20,13 @@ const (
 	machineCmd        = "docker-machine"
 	defaultCattleHome = "/var/lib/cattle"
 )
+
+type machineInfo struct {
+	// full path including jailDir - jailDir + /var/lib/cattle/machine/machines/{ExternalId}
+	fullMachinePath string
+	// path to base of jail
+	jailDir string
+}
 
 func PingNoOp(event *events.Event, apiClient *client.RancherClient) error {
 	// No-op ping handler
@@ -264,7 +273,10 @@ func cleanupResources(machineDir, name string) error {
 		return nil
 	}
 
-	command := buildCommand(machineDir, []string{"rm", "-f", name})
+	command, err := buildCommand(machineDir, []string{"rm", "-f", name})
+	if err != nil {
+		return err
+	}
 
 	err = command.Start()
 	if err != nil {
@@ -294,19 +306,56 @@ func dirExists(machineDir string) (bool, error) {
 	}
 }
 
-func preEvent(event *events.Event, apiClient *client.RancherClient) (*client.Machine, string, error) {
+func preEvent(event *events.Event, apiClient *client.RancherClient) (*client.Machine, *machineInfo, error) {
 	machine, err := getMachine(event.ResourceID, apiClient)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 	if machine == nil {
-		return nil, "", notAMachineReply(event, apiClient)
+		return nil, nil, notAMachineReply(event, apiClient)
 	}
 
 	machineDir, err := buildBaseMachineDir(machine)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
-	return machine, machineDir, restoreMachineDir(machine, machineDir)
+	mInfo := &machineInfo{
+		fullMachinePath: machineDir,
+		jailDir:         machineDir,
+	}
+
+	if os.Getenv("DISABLE_DRIVER_JAIL") != "true" {
+		err = createJail(machineDir)
+		if err != nil {
+			return nil, nil, err
+		}
+		mInfo.fullMachinePath = path.Join(machineDir, machineDir)
+	}
+
+	err = restoreMachineDir(machine, mInfo.fullMachinePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return machine, mInfo, nil
+}
+
+// createJail sets up the named directory for use with chroot
+func createJail(machineDir string) error {
+	logrus.Debugf("Creating jail for %v", machineDir)
+	// This creates a nested dir, the first nest is the jail root, the 2nd makes everything
+	// appear normal for commands being called in the jail - Something like:
+	// "/var/lib/cattle/machine/machines/{ExternalId}/var/lib/cattle/machine/machines/{ExternalId}"
+	err := os.MkdirAll(path.Join(machineDir, machineDir), 0740)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("/usr/bin/jailer.sh", machineDir)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.WithMessage(err, fmt.Sprintf("error running the jail command: %v", string(out)))
+	}
+	logrus.Debugf("Output from create jail command %v", string(out))
+	return nil
 }

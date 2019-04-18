@@ -25,19 +25,19 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 		return publishReply(newReply(event), apiClient)
 	}
 
-	machine, machineDir, err := preEvent(event, apiClient)
+	machine, machineDirs, err := preEvent(event, apiClient)
 	if err != nil || machine == nil {
 		return err
 	}
-	defer removeMachineDir(machineDir)
+	defer removeMachineDir(machineDirs.jailDir)
 
-	mExists, err := machineExists(machineDir, machine.Name)
+	mExists, err := machineExists(machineDirs.jailDir, machine.Name)
 	if err != nil {
 		return err
 	}
 
 	if mExists {
-		if err := deleteMachine(machineDir, machine); err != nil {
+		if err := deleteMachine(machineDirs.jailDir, machine); err != nil {
 			return err
 		}
 	}
@@ -47,10 +47,10 @@ func PurgeMachine(event *events.Event, apiClient *client.RancherClient) error {
 	logger.WithFields(logrus.Fields{
 		"resourceId":        event.ResourceID,
 		"machineExternalId": machine.ExternalId,
-		"machineDir":        machineDir,
+		"machineDir":        machineDirs.jailDir,
 	}).Info("Machine purged")
 
-	removeMachineDir(machineDir)
+	removeMachineDir(machineDirs.jailDir)
 
 	return publishReply(newReply(event), apiClient)
 }

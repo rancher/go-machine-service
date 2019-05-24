@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -14,6 +16,8 @@ import (
 	"github.com/rancher/event-subscriber/events"
 	client "github.com/rancher/go-rancher/v2"
 )
+
+var lock = sync.Mutex{}
 
 const (
 	machineDirEnvKey  = "MACHINE_STORAGE_PATH="
@@ -343,15 +347,36 @@ func preEvent(event *events.Event, apiClient *client.RancherClient) (*client.Mac
 
 // createJail sets up the named directory for use with chroot
 func createJail(machineDir string) error {
+	lock.Lock()
+	defer lock.Unlock()
+
+	// Check for the done file, if that exists the jail is ready to be used
+	_, err := os.Stat(path.Join(machineDir, "done"))
+	if err == nil {
+		return nil
+	}
+
+	// If the base dir exists without the done file rebuild the directory
+	_, err = os.Stat(machineDir)
+	if err == nil {
+		if err := os.RemoveAll(machineDir); err != nil {
+			return err
+		}
+	}
+
 	logrus.Debugf("Creating jail for %v", machineDir)
 	// This creates a nested dir, the first nest is the jail root, the 2nd makes everything
 	// appear normal for commands being called in the jail - Something like:
 	// "/var/lib/cattle/machine/machines/{ExternalId}/var/lib/cattle/machine/machines/{ExternalId}"
-	err := os.MkdirAll(path.Join(machineDir, machineDir), 0740)
+	err = os.MkdirAll(path.Join(machineDir, machineDir), 0740)
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("/usr/bin/jailer.sh", machineDir)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "/usr/bin/jailer.sh", machineDir)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.WithMessage(err, fmt.Sprintf("error running the jail command: %v", string(out)))
